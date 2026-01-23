@@ -1,6 +1,11 @@
-use derive_more::Display;
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
+use serde::Serialize;
 
-/// All possible Errors returned inside functions of the vink crate
+/// All possible Errors returned inside functions of the auto crate
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("AxumError: {0}")]
@@ -11,21 +16,46 @@ pub enum Error {
     SqlxError(#[from] sqlx::Error),
     #[error("SqlxMigrateError: {0}")]
     SqlxMigrateError(#[from] sqlx::migrate::MigrateError),
-    #[error("AutoError: {0}")]
-    AutoError(#[from] AutoError),
+    #[error("{0}")]
+    NotFound(String),
+    #[error("{0}")]
+    ValidationError(String),
+    #[error("{0}")]
+    Conflict(String),
 }
 
-#[derive(Debug, thiserror::Error, Display)]
-pub enum AutoError {
-    Placeholder,
+/// Error response body for API endpoints
+#[derive(Debug, Serialize)]
+struct ErrorResponse {
+    error: String,
+    message: String,
 }
 
-impl axum::response::IntoResponse for Error {
-    fn into_response(self) -> axum::response::Response {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            self.to_string().into_response(),
-        )
-            .into_response()
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        let (status, error_type, message) = match &self {
+            Error::NotFound(msg) => (StatusCode::NOT_FOUND, "not_found", msg.clone()),
+            Error::ValidationError(msg) => (StatusCode::BAD_REQUEST, "validation_error", msg.clone()),
+            Error::Conflict(msg) => (StatusCode::CONFLICT, "conflict", msg.clone()),
+            Error::SqlxError(sqlx::Error::RowNotFound) => {
+                (StatusCode::NOT_FOUND, "not_found", "Resource not found".to_string())
+            }
+            Error::SqlxError(sqlx::Error::Database(db_err)) => {
+                // Handle unique constraint violations
+                if db_err.is_unique_violation() {
+                    (StatusCode::CONFLICT, "conflict", "Resource already exists".to_string())
+                } else {
+                    (StatusCode::INTERNAL_SERVER_ERROR, "database_error", "Database error".to_string())
+                }
+            }
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "Internal server error".to_string()),
+        };
+
+        let body = ErrorResponse {
+            error: error_type.to_string(),
+            message,
+        };
+
+        (status, Json(body)).into_response()
     }
 }

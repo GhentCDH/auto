@@ -6,9 +6,28 @@ use axum::{Form, Json, Router};
 
 use crate::AppState;
 
+mod applications;
+mod clients;
+mod dashboard;
+mod domains;
+mod hosts;
+mod notes;
+mod people;
+mod search;
+mod shares;
+
 pub fn api_routes(state: AppState) -> Router<AppState> {
-    axum::Router::new()
+    Router::new()
         .route("/health", get(healthcheck))
+        .nest("/applications", applications::routes())
+        .nest("/hosts", hosts::routes())
+        .nest("/domains", domains::routes())
+        .nest("/people", people::routes())
+        .nest("/clients", clients::routes())
+        .nest("/shares", shares::routes())
+        .nest("/notes", notes::routes())
+        .nest("/dashboard", dashboard::routes())
+        .nest("/search", search::routes())
         .with_state(state)
 }
 
