@@ -1,0 +1,33 @@
+[package]
+name = "auto"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.49.0", features = ["full"] }
+axum = { version = "0.8.8", features = ["macros", "multipart"] }
+axum-extra = { version = "0.12.5", features = [
+  "cookie",
+  "form",
+  "typed-header",
+] }
+chrono = "0.4.43"
+chrono-humanize = "0.2.3"
+time = "0.3.44"
+uuid = { version = "1.19.0", features = ["v4", "serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+derive_more = { version = "2.1.1", features = ["full"] }
+thiserror = "2.0.18"
+dotenvy = "0.15.7"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+tower-http = { version = "0.6.8", features = [
+  "trace",
+  "timeout",
+  "cors",
+  "compression-gzip",
+] }
+rust-embed = { version = "8.11.0", features = ["axum-ex"] }
+mime_guess = "2.0.5"
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
