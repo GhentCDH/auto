@@ -119,34 +119,6 @@ function formatDate(date: string | null): string {
             </ul>
           </div>
         </div>
-
-        <div class="card bg-base-200">
-          <div class="card-body">
-            <h2 class="card-title text-error">
-              Expiring SSL Certificates (30 days)
-            </h2>
-            <div
-              v-if="stats.expiring_ssl.length === 0"
-              class="text-base-content/70"
-            >
-              No SSL certificates expiring soon
-            </div>
-            <ul v-else class="space-y-2">
-              <li
-                v-for="s in stats.expiring_ssl"
-                :key="s.id"
-                class="flex justify-between items-center"
-              >
-                <router-link :to="`/domains/${s.id}`" class="link link-hover">{{
-                  s.name
-                }}</router-link>
-                <span class="badge badge-error">{{
-                  formatDate(s.ssl_expires_at)
-                }}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
   </div>
