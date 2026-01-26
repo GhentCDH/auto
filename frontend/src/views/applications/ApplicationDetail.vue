@@ -8,6 +8,7 @@ import {
   peopleApi,
   clientsApi,
   sharesApi,
+  notesApi,
 } from '@/api';
 import type {
   ApplicationWithRelations,
@@ -26,6 +27,9 @@ import type {
   PersonRelation,
   ClientRelation,
   NetworkShareRelation,
+  Note,
+  CreateNote,
+  UpdateNote,
 } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -43,6 +47,9 @@ import LinkDomainForm from '@/components/forms/LinkDomainForm.vue';
 import LinkPersonForm from '@/components/forms/LinkPersonForm.vue';
 import LinkClientForm from '@/components/forms/LinkClientForm.vue';
 import LinkShareForm from '@/components/forms/LinkShareForm.vue';
+import NoteForm from '@/components/forms/NoteForm.vue';
+import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
+import { Pin, ExternalLink } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -76,6 +83,15 @@ const editingDomain = ref<DomainRelation | null>(null);
 const editingPerson = ref<PersonRelation | null>(null);
 const editingClient = ref<ClientRelation | null>(null);
 const editingShare = ref<NetworkShareRelation | null>(null);
+
+// Note modal states
+const showCreateNoteModal = ref(false);
+const showEditNoteModal = ref(false);
+const showViewNoteModal = ref(false);
+const showDeleteNoteDialog = ref(false);
+const editingNote = ref<Note | null>(null);
+const viewingNote = ref<Note | null>(null);
+const deletingNote = ref<Note | null>(null);
 
 // Unlink confirm states
 const unlinkType = ref<string>('');
@@ -365,6 +381,56 @@ async function handleEditShare(data: LinkNetworkShare) {
     loadData();
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to update share link';
+  }
+}
+
+// Note handlers
+function openViewNote(note: Note) {
+  viewingNote.value = note;
+  showViewNoteModal.value = true;
+}
+
+function openEditNote(note: Note) {
+  editingNote.value = note;
+  showEditNoteModal.value = true;
+}
+
+function confirmDeleteNote(note: Note) {
+  deletingNote.value = note;
+  showDeleteNoteDialog.value = true;
+}
+
+async function handleCreateNote(data: CreateNote) {
+  try {
+    await notesApi.create(data);
+    showCreateNoteModal.value = false;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to create note';
+  }
+}
+
+async function handleEditNote(data: UpdateNote) {
+  if (!editingNote.value) return;
+  try {
+    await notesApi.update(editingNote.value.id, data);
+    showEditNoteModal.value = false;
+    editingNote.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to update note';
+  }
+}
+
+async function handleDeleteNote() {
+  if (!deletingNote.value) return;
+  try {
+    await notesApi.delete(deletingNote.value.id);
+    showDeleteNoteDialog.value = false;
+    deletingNote.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to delete note';
   }
 }
 
@@ -762,7 +828,15 @@ onMounted(loadData);
           <!-- Notes Card -->
           <div class="card bg-base-200">
             <div class="card-body">
-              <h2 class="card-title">Notes ({{ app.notes.length }})</h2>
+              <div class="flex justify-between items-center">
+                <h2 class="card-title">Notes ({{ app.notes.length }})</h2>
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="showCreateNoteModal = true"
+                >
+                  + Add
+                </button>
+              </div>
               <div v-if="app.notes.length === 0" class="text-base-content/70">
                 No notes
               </div>
@@ -772,20 +846,47 @@ onMounted(loadData);
                   :key="n.id"
                   class="border-b border-base-300 pb-2 last:border-0"
                 >
-                  <div class="font-medium">{{ n.title }}</div>
-                  <div
-                    v-if="n.content"
-                    class="text-sm text-base-content/70 line-clamp-2"
-                  >
-                    {{ n.content }}
+                  <div class="flex items-start justify-between gap-2">
+                    <div
+                      class="flex-1 min-w-0 cursor-pointer hover:bg-base-300/50 rounded p-1 -m-1 transition-colors"
+                      @click="openViewNote(n)"
+                    >
+                      <div class="flex items-center gap-2">
+                        <Pin v-if="n.is_pinned" class="h-3 w-3 text-primary flex-shrink-0" />
+                        <span class="font-medium hover:text-primary truncate">
+                          {{ n.title }}
+                        </span>
+                        <span class="badge badge-xs badge-ghost">{{ n.note_type }}</span>
+                      </div>
+                      <div
+                        v-if="n.content"
+                        class="text-sm text-base-content/70 line-clamp-3 mt-1 overflow-hidden"
+                      >
+                        <MarkdownRenderer :content="n.content" />
+                      </div>
+                      <div
+                        v-if="n.url"
+                        class="text-sm text-primary inline-flex items-center gap-1 mt-1"
+                      >
+                        <ExternalLink class="h-3 w-3" />
+                        Link attached
+                      </div>
+                    </div>
+                    <div class="flex gap-1 flex-shrink-0">
+                      <button
+                        class="btn btn-ghost btn-xs"
+                        @click.stop="openEditNote(n)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="btn btn-ghost btn-xs text-error"
+                        @click.stop="confirmDeleteNote(n)"
+                      >
+                        X
+                      </button>
+                    </div>
                   </div>
-                  <a
-                    v-if="n.url"
-                    :href="n.url"
-                    target="_blank"
-                    class="link link-primary text-sm"
-                    >View Link</a
-                  >
                 </li>
               </ul>
             </div>
@@ -1056,5 +1157,90 @@ onMounted(loadData);
         @cancel="showEditShareModal = false"
       />
     </Modal>
+
+    <!-- Create Note Modal -->
+    <Modal
+      title="Create Note"
+      :open="showCreateNoteModal"
+      @close="showCreateNoteModal = false"
+    >
+      <NoteForm
+        entity-type="application"
+        :entity-id="id"
+        @submit="handleCreateNote"
+        @cancel="showCreateNoteModal = false"
+      />
+    </Modal>
+
+    <!-- Edit Note Modal -->
+    <Modal
+      title="Edit Note"
+      :open="showEditNoteModal"
+      @close="showEditNoteModal = false"
+    >
+      <NoteForm
+        v-if="editingNote"
+        :note="editingNote"
+        entity-type="application"
+        :entity-id="id"
+        @submit="handleEditNote"
+        @cancel="showEditNoteModal = false"
+      />
+    </Modal>
+
+    <!-- View Note Modal -->
+    <Modal
+      :title="viewingNote?.title || 'Note'"
+      :open="showViewNoteModal"
+      @close="showViewNoteModal = false"
+    >
+      <div v-if="viewingNote" class="space-y-4">
+        <div class="flex items-center gap-2 text-sm text-base-content/70">
+          <span class="badge badge-sm">{{ viewingNote.note_type }}</span>
+          <span v-if="viewingNote.is_pinned" class="badge badge-sm badge-primary">Pinned</span>
+        </div>
+        <div v-if="viewingNote.content" class="bg-base-100 rounded-lg p-4">
+          <MarkdownRenderer :content="viewingNote.content" />
+        </div>
+        <div v-else class="text-base-content/50 italic">No content</div>
+        <a
+          v-if="viewingNote.url"
+          :href="viewingNote.url"
+          target="_blank"
+          class="link link-primary inline-flex items-center gap-1"
+        >
+          <ExternalLink class="h-4 w-4" />
+          {{ viewingNote.url }}
+        </a>
+        <div class="text-xs text-base-content/50 pt-2 border-t border-base-300">
+          Created: {{ new Date(viewingNote.created_at).toLocaleString() }}
+          <span v-if="viewingNote.updated_at !== viewingNote.created_at">
+            | Updated: {{ new Date(viewingNote.updated_at).toLocaleString() }}
+          </span>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button class="btn btn-ghost" @click="showViewNoteModal = false">
+            Close
+          </button>
+          <button
+            class="btn btn-primary"
+            @click="showViewNoteModal = false; openEditNote(viewingNote)"
+          >
+            Edit
+          </button>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- Delete Note Confirmation -->
+    <ConfirmDialog
+      :open="showDeleteNoteDialog"
+      title="Delete Note"
+      :message="`Are you sure you want to delete '${deletingNote?.title}'? This action cannot be undone.`"
+      confirm-label="Delete"
+      danger
+      @confirm="handleDeleteNote"
+      @cancel="showDeleteNoteDialog = false"
+    />
   </div>
 </template>

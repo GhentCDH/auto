@@ -43,3 +43,11 @@ export const contributionTypes = {
   support: 'Support',
   stakeholder: 'Stakeholder',
 };
+
+export const noteTypes = {
+  general: 'General',
+  documentation: 'Documentation',
+  changelog: 'Changelog',
+  issue: 'Issue',
+  link: 'Link',
+};
