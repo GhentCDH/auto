@@ -113,7 +113,6 @@ async fn link_domain(
         &domain_id,
         &input.record_type,
         input.target.as_deref(),
-        input.target_host_id.as_deref(),
         input.is_primary,
         input.notes.as_deref(),
     )

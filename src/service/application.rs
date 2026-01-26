@@ -287,7 +287,6 @@ pub async fn link_domain(
     domain_id: &str,
     record_type: &str,
     target: Option<&str>,
-    target_host_id: Option<&str>,
     is_primary: bool,
     notes: Option<&str>,
 ) -> Result<()> {
@@ -296,9 +295,9 @@ pub async fn link_domain(
 
     sqlx::query(
         r#"
-        INSERT INTO application_domain (application_id, domain_id, record_type, target, is_primary, notes, target_host_id)
+        INSERT INTO application_domain (application_id, domain_id, record_type, target, is_primary, notes)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, is_primary = ?5, notes = ?6, target_host_id = ?7
+        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, is_primary = ?5, notes = ?6
         "#,
     )
     .bind(app_id)
@@ -307,7 +306,6 @@ pub async fn link_domain(
     .bind(target)
     .bind(is_primary)
     .bind(notes)
-    .bind(target_host_id)
     .execute(pool)
     .await?;
 
