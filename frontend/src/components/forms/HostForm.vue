@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import type { Host, CreateHost, UpdateHost } from '@/types';
+import { hostTypes } from '@/values';
 
 const props = defineProps<{
   host?: Host;
@@ -60,10 +61,9 @@ function handleSubmit() {
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Type *</legend>
         <select v-model="form.host_type" class="select w-full" required>
-          <option value="physical">Physical</option>
-          <option value="vm">Virtual Machine</option>
-          <option value="nomad">Nomad Job</option>
-          <option value="container">Container</option>
+          <option v-for="(visual, value) in hostTypes" :value="value">
+            {{ visual }}
+          </option>
         </select>
       </fieldset>
 

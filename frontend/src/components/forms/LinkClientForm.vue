@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { LinkClient } from '@/types';
+import { relationshipTypes } from '@/values';
 
 defineProps<{
   clientName: string;
@@ -33,10 +34,9 @@ function handleSubmit() {
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Relationship Type</legend>
         <select v-model="form.relationship_type" class="select w-full">
-          <option value="customer">Customer</option>
-          <option value="sponsor">Sponsor</option>
-          <option value="internal">Internal</option>
-          <option value="partner">Partner</option>
+          <option v-for="(visual, value) in relationshipTypes" :value="value">
+            {{ visual }}
+          </option>
         </select>
       </fieldset>
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { LinkNetworkShare } from '@/types';
+import { shareUsages } from '@/values';
 
 defineProps<{
   shareName: string;
@@ -34,12 +35,9 @@ function handleSubmit() {
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Usage</legend>
         <select v-model="form.usage" class="select w-full">
-          <option value="">Select usage...</option>
-          <option value="config">Configuration</option>
-          <option value="data">Data Storage</option>
-          <option value="logs">Logs</option>
-          <option value="backup">Backup</option>
-          <option value="media">Media</option>
+          <option v-for="(visual, value) in shareUsages" :value="value">
+            {{ visual }}
+          </option>
         </select>
         <div class="label">optional</div>
       </fieldset>

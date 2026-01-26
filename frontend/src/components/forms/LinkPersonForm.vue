@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { LinkPerson } from '@/types';
+import { contributionTypes } from '@/values';
 
 defineProps<{
   personName: string;
@@ -33,11 +34,9 @@ function handleSubmit() {
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Contribution Type</legend>
       <select v-model="form.contribution_type" class="select w-full">
-        <option value="developer">Developer</option>
-        <option value="maintainer">Maintainer</option>
-        <option value="owner">Owner</option>
-        <option value="support">Support</option>
-        <option value="stakeholder">Stakeholder</option>
+        <option v-for="(visual, value) in contributionTypes" :value="value">
+          {{ visual }}
+        </option>
       </select>
     </fieldset>
 

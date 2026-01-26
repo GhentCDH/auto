@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { LinkHost } from '@/types';
+import { hostRoles } from '@/values';
 
 defineProps<{
   hostName: string;
@@ -11,10 +12,14 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const form = ref<LinkHost>({
-  role: 'primary',
-  notes: '',
-});
+const selectedRole = ref('production');
+const customRole = ref('');
+const notes = ref('');
+
+const form = computed<LinkHost>(() => ({
+  role: selectedRole.value === 'other' ? customRole.value : selectedRole.value,
+  notes: notes.value,
+}));
 
 function handleSubmit() {
   emit('submit', form.value);
@@ -29,12 +34,19 @@ function handleSubmit() {
 
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Role</legend>
-      <select v-model="form.role" class="select w-full">
-        <option value="primary">Primary</option>
-        <option value="backup">Backup</option>
-        <option value="staging">Staging</option>
-        <option value="development">Development</option>
+      <select v-model="selectedRole" class="select w-full">
+        <option v-for="(visual, value) in hostRoles" :value="value">
+          {{ visual }}
+        </option>
       </select>
+      <input
+        v-if="selectedRole === 'other'"
+        v-model="customRole"
+        type="text"
+        class="input w-full mt-2"
+        placeholder="Enter custom role"
+        required
+      />
     </fieldset>
 
     <fieldset class="fieldset">

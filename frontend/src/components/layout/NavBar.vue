@@ -44,7 +44,7 @@ function handleSearch() {
         </div>
         <ul
           tabindex="0"
-          class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow"
+          class="menu menu-md dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
         >
           <li v-for="item in navItems" :key="item.path">
             <router-link :to="item.path">{{ item.name }}</router-link>
@@ -56,7 +56,7 @@ function handleSearch() {
     <div class="navbar-center hidden lg:flex">
       <ul class="menu menu-horizontal px-1">
         <li v-for="item in navItems" :key="item.path">
-          <router-link :to="item.path" class="btn btn-ghost btn-sm">{{
+          <router-link :to="item.path" class="btn btn-ghost btn-md">{{
             item.name
           }}</router-link>
         </li>
@@ -69,9 +69,9 @@ function handleSearch() {
             v-model="searchQuery"
             type="text"
             placeholder="Search..."
-            class="input input-bordered input-sm w-40 md:w-64"
+            class="input input-bordered input-sm md:input-md w-40 md:w-64"
           />
-          <button type="submit" class="btn btn-sm btn-square">
+          <button type="submit" class="btn input-sm md:btn-md btn-square">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-4 w-4"

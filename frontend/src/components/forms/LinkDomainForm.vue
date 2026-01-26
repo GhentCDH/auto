@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { LinkDomain } from '@/types';
+import { domainTypes } from '@/values';
 
 defineProps<{
   domainName: string;
@@ -34,11 +35,9 @@ function handleSubmit() {
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Record Type</legend>
         <select v-model="form.record_type" class="select w-full">
-          <option value="A">A</option>
-          <option value="AAAA">AAAA</option>
-          <option value="CNAME">CNAME</option>
-          <option value="MX">MX</option>
-          <option value="TXT">TXT</option>
+          <option v-for="(visual, value) in domainTypes" :value="value">
+            {{ visual }}
+          </option>
         </select>
       </fieldset>
 
