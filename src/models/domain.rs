@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use uuid::Uuid;
 
 /// Domain entity - DNS records and SSL info
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

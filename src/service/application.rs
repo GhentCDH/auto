@@ -280,6 +280,7 @@ pub async fn unlink_host(pool: &SqlitePool, app_id: &str, host_id: &str) -> Resu
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn link_domain(
     pool: &SqlitePool,
     app_id: &str,
