@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-use crate::models::{new_id, CreateNote, Note, PaginatedResponse, PaginationParams, UpdateNote};
+use crate::models::{CreateNote, Note, PaginatedResponse, PaginationParams, UpdateNote, new_id};
 use crate::{Error, Result};
 
 pub async fn list_for_entity(
@@ -28,13 +28,12 @@ pub async fn list_for_entity(
     .fetch_all(pool)
     .await?;
 
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM note WHERE entity_type = ?1 AND entity_id = ?2",
-    )
-    .bind(entity_type)
-    .bind(entity_id)
-    .fetch_one(pool)
-    .await?;
+    let count: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM note WHERE entity_type = ?1 AND entity_id = ?2")
+            .bind(entity_type)
+            .bind(entity_id)
+            .fetch_one(pool)
+            .await?;
 
     Ok(PaginatedResponse::new(notes, count.0, params))
 }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use uuid::Uuid;
 
 /// Domain entity - DNS records and SSL info
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -60,6 +61,7 @@ pub struct DomainRelation {
     pub status: String,
     pub record_type: String,
     pub target: Option<String>,
+    pub target_host_id: Option<String>,
     pub is_primary: bool,
     pub relation_notes: Option<String>,
 }
@@ -70,6 +72,7 @@ pub struct LinkDomain {
     #[serde(default = "default_record_type")]
     pub record_type: String,
     pub target: Option<String>,
+    pub target_host_id: Option<String>,
     #[serde(default)]
     pub is_primary: bool,
     pub notes: Option<String>,

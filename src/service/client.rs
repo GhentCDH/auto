@@ -1,12 +1,15 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    new_id, ApplicationClientRelation, Client, ClientWithRelations, CreateClient, PaginatedResponse,
-    PaginationParams, UpdateClient,
+    ApplicationClientRelation, Client, ClientWithRelations, CreateClient, PaginatedResponse,
+    PaginationParams, UpdateClient, new_id,
 };
 use crate::{Error, Result};
 
-pub async fn list(pool: &SqlitePool, params: &PaginationParams) -> Result<PaginatedResponse<Client>> {
+pub async fn list(
+    pool: &SqlitePool,
+    params: &PaginationParams,
+) -> Result<PaginatedResponse<Client>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
 
@@ -89,7 +92,10 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<ClientWit
     .fetch_all(pool)
     .await?;
 
-    Ok(ClientWithRelations { client, applications })
+    Ok(ClientWithRelations {
+        client,
+        applications,
+    })
 }
 
 pub async fn create(pool: &SqlitePool, input: CreateClient) -> Result<Client> {
@@ -157,7 +163,10 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
         .await?;
 
     if result.rows_affected() == 0 {
-        return Err(Error::NotFound(format!("Client with id '{}' not found", id)));
+        return Err(Error::NotFound(format!(
+            "Client with id '{}' not found",
+            id
+        )));
     }
 
     Ok(())

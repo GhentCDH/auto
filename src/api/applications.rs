@@ -1,7 +1,7 @@
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     routing::{get, post},
-    Json, Router,
 };
 
 use crate::models::{
@@ -17,10 +17,22 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}", get(get_one).put(update).delete(delete_one))
         // Relationship management
         .route("/{id}/hosts/{host_id}", post(link_host).delete(unlink_host))
-        .route("/{id}/domains/{domain_id}", post(link_domain).delete(unlink_domain))
-        .route("/{id}/people/{person_id}", post(link_person).delete(unlink_person))
-        .route("/{id}/clients/{client_id}", post(link_client).delete(unlink_client))
-        .route("/{id}/shares/{share_id}", post(link_share).delete(unlink_share))
+        .route(
+            "/{id}/domains/{domain_id}",
+            post(link_domain).delete(unlink_domain),
+        )
+        .route(
+            "/{id}/people/{person_id}",
+            post(link_person).delete(unlink_person),
+        )
+        .route(
+            "/{id}/clients/{client_id}",
+            post(link_client).delete(unlink_client),
+        )
+        .route(
+            "/{id}/shares/{share_id}",
+            post(link_share).delete(unlink_share),
+        )
 }
 
 async fn list(
@@ -71,7 +83,14 @@ async fn link_host(
     Path((app_id, host_id)): Path<(String, String)>,
     Json(input): Json<LinkHost>,
 ) -> Result<impl axum::response::IntoResponse> {
-    application::link_host(&state.pool, &app_id, &host_id, &input.role, input.notes.as_deref()).await?;
+    application::link_host(
+        &state.pool,
+        &app_id,
+        &host_id,
+        &input.role,
+        input.notes.as_deref(),
+    )
+    .await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
@@ -94,6 +113,7 @@ async fn link_domain(
         &domain_id,
         &input.record_type,
         input.target.as_deref(),
+        input.target_host_id.as_deref(),
         input.is_primary,
         input.notes.as_deref(),
     )

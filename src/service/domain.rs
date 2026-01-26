@@ -1,12 +1,15 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    new_id, ApplicationDomainRelation, CreateDomain, Domain, DomainWithRelations, PaginatedResponse,
-    PaginationParams, UpdateDomain,
+    ApplicationDomainRelation, CreateDomain, Domain, DomainWithRelations, PaginatedResponse,
+    PaginationParams, UpdateDomain, new_id,
 };
 use crate::{Error, Result};
 
-pub async fn list(pool: &SqlitePool, params: &PaginationParams) -> Result<PaginatedResponse<Domain>> {
+pub async fn list(
+    pool: &SqlitePool,
+    params: &PaginationParams,
+) -> Result<PaginatedResponse<Domain>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
 
@@ -27,12 +30,11 @@ pub async fn list(pool: &SqlitePool, params: &PaginationParams) -> Result<Pagina
         .fetch_all(pool)
         .await?;
 
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM domain WHERE name LIKE ?1 OR registrar LIKE ?1",
-        )
-        .bind(&search_pattern)
-        .fetch_one(pool)
-        .await?;
+        let count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM domain WHERE name LIKE ?1 OR registrar LIKE ?1")
+                .bind(&search_pattern)
+                .fetch_one(pool)
+                .await?;
 
         (items, count.0)
     } else {
@@ -89,7 +91,10 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<DomainWit
     .fetch_all(pool)
     .await?;
 
-    Ok(DomainWithRelations { domain, applications })
+    Ok(DomainWithRelations {
+        domain,
+        applications,
+    })
 }
 
 pub async fn create(pool: &SqlitePool, input: CreateDomain) -> Result<Domain> {
@@ -157,7 +162,10 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
         .await?;
 
     if result.rows_affected() == 0 {
-        return Err(Error::NotFound(format!("Domain with id '{}' not found", id)));
+        return Err(Error::NotFound(format!(
+            "Domain with id '{}' not found",
+            id
+        )));
     }
 
     Ok(())

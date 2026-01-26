@@ -1,7 +1,7 @@
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     routing::get,
-    Json, Router,
 };
 
 use crate::models::{CreateClient, PaginationParams, UpdateClient};

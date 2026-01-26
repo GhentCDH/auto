@@ -1,13 +1,16 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    new_id, Application, ApplicationWithRelations, ClientRelation, CreateApplication,
-    DomainRelation, HostRelation, NetworkShareRelation, Note, PaginatedResponse, PaginationParams,
-    PersonRelation, UpdateApplication,
+    Application, ApplicationWithRelations, ClientRelation, CreateApplication, DomainRelation,
+    HostRelation, NetworkShareRelation, Note, PaginatedResponse, PaginationParams, PersonRelation,
+    UpdateApplication, new_id,
 };
 use crate::{Error, Result};
 
-pub async fn list(pool: &SqlitePool, params: &PaginationParams) -> Result<PaginatedResponse<Application>> {
+pub async fn list(
+    pool: &SqlitePool,
+    params: &PaginationParams,
+) -> Result<PaginatedResponse<Application>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
 
@@ -94,7 +97,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
     let domains = sqlx::query_as::<_, DomainRelation>(
         r#"
         SELECT d.id, d.name, d.registrar, d.expires_at, d.ssl_expires_at, d.status,
-               ad.record_type, ad.target, ad.is_primary, ad.notes as relation_notes
+               ad.record_type, ad.target, ad.target_host_id, ad.is_primary, ad.notes as relation_notes
         FROM domain d
         JOIN application_domain ad ON d.id = ad.domain_id
         WHERE ad.application_id = ?1
@@ -223,7 +226,10 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
         .await?;
 
     if result.rows_affected() == 0 {
-        return Err(Error::NotFound(format!("Application with id '{}' not found", id)));
+        return Err(Error::NotFound(format!(
+            "Application with id '{}' not found",
+            id
+        )));
     }
 
     Ok(())
@@ -231,7 +237,13 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
 
 // Relationship management
 
-pub async fn link_host(pool: &SqlitePool, app_id: &str, host_id: &str, role: &str, notes: Option<&str>) -> Result<()> {
+pub async fn link_host(
+    pool: &SqlitePool,
+    app_id: &str,
+    host_id: &str,
+    role: &str,
+    notes: Option<&str>,
+) -> Result<()> {
     // Verify both entities exist
     get(pool, app_id).await?;
     crate::service::host::get(pool, host_id).await?;
@@ -254,13 +266,12 @@ pub async fn link_host(pool: &SqlitePool, app_id: &str, host_id: &str, role: &st
 }
 
 pub async fn unlink_host(pool: &SqlitePool, app_id: &str, host_id: &str) -> Result<()> {
-    let result = sqlx::query(
-        "DELETE FROM application_host WHERE application_id = ?1 AND host_id = ?2",
-    )
-    .bind(app_id)
-    .bind(host_id)
-    .execute(pool)
-    .await?;
+    let result =
+        sqlx::query("DELETE FROM application_host WHERE application_id = ?1 AND host_id = ?2")
+            .bind(app_id)
+            .bind(host_id)
+            .execute(pool)
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(Error::NotFound("Relationship not found".to_string()));
@@ -269,15 +280,24 @@ pub async fn unlink_host(pool: &SqlitePool, app_id: &str, host_id: &str) -> Resu
     Ok(())
 }
 
-pub async fn link_domain(pool: &SqlitePool, app_id: &str, domain_id: &str, record_type: &str, target: Option<&str>, is_primary: bool, notes: Option<&str>) -> Result<()> {
+pub async fn link_domain(
+    pool: &SqlitePool,
+    app_id: &str,
+    domain_id: &str,
+    record_type: &str,
+    target: Option<&str>,
+    target_host_id: Option<&str>,
+    is_primary: bool,
+    notes: Option<&str>,
+) -> Result<()> {
     get(pool, app_id).await?;
     crate::service::domain::get(pool, domain_id).await?;
 
     sqlx::query(
         r#"
-        INSERT INTO application_domain (application_id, domain_id, record_type, target, is_primary, notes)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, is_primary = ?5, notes = ?6
+        INSERT INTO application_domain (application_id, domain_id, record_type, target, is_primary, notes, target_host_id)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, is_primary = ?5, notes = ?6, target_host_id = ?7
         "#,
     )
     .bind(app_id)
@@ -286,6 +306,7 @@ pub async fn link_domain(pool: &SqlitePool, app_id: &str, domain_id: &str, recor
     .bind(target)
     .bind(is_primary)
     .bind(notes)
+    .bind(target_host_id)
     .execute(pool)
     .await?;
 
@@ -293,13 +314,12 @@ pub async fn link_domain(pool: &SqlitePool, app_id: &str, domain_id: &str, recor
 }
 
 pub async fn unlink_domain(pool: &SqlitePool, app_id: &str, domain_id: &str) -> Result<()> {
-    let result = sqlx::query(
-        "DELETE FROM application_domain WHERE application_id = ?1 AND domain_id = ?2",
-    )
-    .bind(app_id)
-    .bind(domain_id)
-    .execute(pool)
-    .await?;
+    let result =
+        sqlx::query("DELETE FROM application_domain WHERE application_id = ?1 AND domain_id = ?2")
+            .bind(app_id)
+            .bind(domain_id)
+            .execute(pool)
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(Error::NotFound("Relationship not found".to_string()));
@@ -308,7 +328,15 @@ pub async fn unlink_domain(pool: &SqlitePool, app_id: &str, domain_id: &str) -> 
     Ok(())
 }
 
-pub async fn link_person(pool: &SqlitePool, app_id: &str, person_id: &str, contribution_type: &str, start_date: Option<&str>, end_date: Option<&str>, notes: Option<&str>) -> Result<()> {
+pub async fn link_person(
+    pool: &SqlitePool,
+    app_id: &str,
+    person_id: &str,
+    contribution_type: &str,
+    start_date: Option<&str>,
+    end_date: Option<&str>,
+    notes: Option<&str>,
+) -> Result<()> {
     get(pool, app_id).await?;
     crate::service::person::get(pool, person_id).await?;
 
@@ -332,13 +360,12 @@ pub async fn link_person(pool: &SqlitePool, app_id: &str, person_id: &str, contr
 }
 
 pub async fn unlink_person(pool: &SqlitePool, app_id: &str, person_id: &str) -> Result<()> {
-    let result = sqlx::query(
-        "DELETE FROM application_person WHERE application_id = ?1 AND person_id = ?2",
-    )
-    .bind(app_id)
-    .bind(person_id)
-    .execute(pool)
-    .await?;
+    let result =
+        sqlx::query("DELETE FROM application_person WHERE application_id = ?1 AND person_id = ?2")
+            .bind(app_id)
+            .bind(person_id)
+            .execute(pool)
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(Error::NotFound("Relationship not found".to_string()));
@@ -347,7 +374,14 @@ pub async fn unlink_person(pool: &SqlitePool, app_id: &str, person_id: &str) -> 
     Ok(())
 }
 
-pub async fn link_client(pool: &SqlitePool, app_id: &str, client_id: &str, relationship_type: &str, contract_ref: Option<&str>, notes: Option<&str>) -> Result<()> {
+pub async fn link_client(
+    pool: &SqlitePool,
+    app_id: &str,
+    client_id: &str,
+    relationship_type: &str,
+    contract_ref: Option<&str>,
+    notes: Option<&str>,
+) -> Result<()> {
     get(pool, app_id).await?;
     crate::service::client::get(pool, client_id).await?;
 
@@ -370,13 +404,12 @@ pub async fn link_client(pool: &SqlitePool, app_id: &str, client_id: &str, relat
 }
 
 pub async fn unlink_client(pool: &SqlitePool, app_id: &str, client_id: &str) -> Result<()> {
-    let result = sqlx::query(
-        "DELETE FROM application_client WHERE application_id = ?1 AND client_id = ?2",
-    )
-    .bind(app_id)
-    .bind(client_id)
-    .execute(pool)
-    .await?;
+    let result =
+        sqlx::query("DELETE FROM application_client WHERE application_id = ?1 AND client_id = ?2")
+            .bind(app_id)
+            .bind(client_id)
+            .execute(pool)
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(Error::NotFound("Relationship not found".to_string()));
@@ -385,7 +418,15 @@ pub async fn unlink_client(pool: &SqlitePool, app_id: &str, client_id: &str) -> 
     Ok(())
 }
 
-pub async fn link_network_share(pool: &SqlitePool, app_id: &str, share_id: &str, usage: Option<&str>, mount_point: Option<&str>, permissions: Option<&str>, notes: Option<&str>) -> Result<()> {
+pub async fn link_network_share(
+    pool: &SqlitePool,
+    app_id: &str,
+    share_id: &str,
+    usage: Option<&str>,
+    mount_point: Option<&str>,
+    permissions: Option<&str>,
+    notes: Option<&str>,
+) -> Result<()> {
     get(pool, app_id).await?;
     crate::service::network_share::get(pool, share_id).await?;
 

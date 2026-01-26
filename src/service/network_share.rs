@@ -1,12 +1,15 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    new_id, ApplicationNetworkShareRelation, CreateNetworkShare, NetworkShare,
-    NetworkShareWithRelations, PaginatedResponse, PaginationParams, UpdateNetworkShare,
+    ApplicationNetworkShareRelation, CreateNetworkShare, NetworkShare, NetworkShareWithRelations,
+    PaginatedResponse, PaginationParams, UpdateNetworkShare, new_id,
 };
 use crate::{Error, Result};
 
-pub async fn list(pool: &SqlitePool, params: &PaginationParams) -> Result<PaginatedResponse<NetworkShare>> {
+pub async fn list(
+    pool: &SqlitePool,
+    params: &PaginationParams,
+) -> Result<PaginatedResponse<NetworkShare>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
 
@@ -89,7 +92,10 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<NetworkSh
     .fetch_all(pool)
     .await?;
 
-    Ok(NetworkShareWithRelations { network_share, applications })
+    Ok(NetworkShareWithRelations {
+        network_share,
+        applications,
+    })
 }
 
 pub async fn create(pool: &SqlitePool, input: CreateNetworkShare) -> Result<NetworkShare> {
@@ -115,7 +121,11 @@ pub async fn create(pool: &SqlitePool, input: CreateNetworkShare) -> Result<Netw
     get(pool, &id).await
 }
 
-pub async fn update(pool: &SqlitePool, id: &str, input: UpdateNetworkShare) -> Result<NetworkShare> {
+pub async fn update(
+    pool: &SqlitePool,
+    id: &str,
+    input: UpdateNetworkShare,
+) -> Result<NetworkShare> {
     let existing = get(pool, id).await?;
 
     let name = input.name.unwrap_or(existing.name);
@@ -154,7 +164,10 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
         .await?;
 
     if result.rows_affected() == 0 {
-        return Err(Error::NotFound(format!("Network share with id '{}' not found", id)));
+        return Err(Error::NotFound(format!(
+            "Network share with id '{}' not found",
+            id
+        )));
     }
 
     Ok(())

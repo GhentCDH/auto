@@ -1,8 +1,8 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    new_id, ApplicationHostRelation, CreateHost, Host, HostWithRelations, PaginatedResponse,
-    PaginationParams, UpdateHost,
+    ApplicationHostRelation, CreateHost, Host, HostWithRelations, PaginatedResponse,
+    PaginationParams, UpdateHost, new_id,
 };
 use crate::{Error, Result};
 
