@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { LinkHost } from '@/types';
+import type { LinkHost, HostRelation } from '@/types';
 import { hostRoles } from '@/values';
 
-defineProps<{
+const props = defineProps<{
   hostName: string;
+  initial?: HostRelation;
 }>();
 
 const emit = defineEmits<{
@@ -12,9 +13,11 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const selectedRole = ref('production');
-const customRole = ref('');
-const notes = ref('');
+// Check if initial role is in hostRoles, if not it's a custom role
+const initialIsCustom = props.initial?.role && !Object.keys(hostRoles).includes(props.initial.role);
+const selectedRole = ref(initialIsCustom ? 'other' : (props.initial?.role || 'production'));
+const customRole = ref(initialIsCustom ? props.initial?.role || '' : '');
+const notes = ref(props.initial?.relation_notes || '');
 
 const form = computed<LinkHost>(() => ({
   role: selectedRole.value === 'other' ? customRole.value : selectedRole.value,
@@ -64,7 +67,9 @@ function handleSubmit() {
       <button type="button" class="btn btn-ghost" @click="emit('cancel')">
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary">Link Host</button>
+      <button type="submit" class="btn btn-primary">
+        {{ initial ? 'Update' : 'Link Host' }}
+      </button>
     </div>
   </form>
 </template>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { LinkPerson } from '@/types';
+import type { LinkPerson, PersonRelation } from '@/types';
 import { contributionTypes } from '@/values';
 
-defineProps<{
+const props = defineProps<{
   personName: string;
+  initial?: PersonRelation;
 }>();
 
 const emit = defineEmits<{
@@ -13,10 +14,10 @@ const emit = defineEmits<{
 }>();
 
 const form = ref<LinkPerson>({
-  contribution_type: 'developer',
-  start_date: '',
-  end_date: '',
-  notes: '',
+  contribution_type: props.initial?.contribution_type || 'developer',
+  start_date: props.initial?.start_date || '',
+  end_date: props.initial?.end_date || '',
+  notes: props.initial?.relation_notes || '',
 });
 
 function handleSubmit() {
@@ -69,7 +70,9 @@ function handleSubmit() {
       <button type="button" class="btn btn-ghost" @click="emit('cancel')">
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary">Link Person</button>
+      <button type="submit" class="btn btn-primary">
+        {{ initial ? 'Update' : 'Link Person' }}
+      </button>
     </div>
   </form>
 </template>

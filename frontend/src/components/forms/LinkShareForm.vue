@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { LinkNetworkShare } from '@/types';
+import type { LinkNetworkShare, NetworkShareRelation } from '@/types';
 import { shareUsages } from '@/values';
 
-defineProps<{
+const props = defineProps<{
   shareName: string;
+  initial?: NetworkShareRelation;
 }>();
 
 const emit = defineEmits<{
@@ -13,10 +14,10 @@ const emit = defineEmits<{
 }>();
 
 const form = ref<LinkNetworkShare>({
-  usage: '',
-  mount_point: '',
-  permissions: 'read-write',
-  notes: '',
+  usage: props.initial?.usage || '',
+  mount_point: props.initial?.mount_point || '',
+  permissions: props.initial?.permissions || 'read-write',
+  notes: props.initial?.relation_notes || '',
 });
 
 function handleSubmit() {
@@ -78,7 +79,9 @@ function handleSubmit() {
       <button type="button" class="btn btn-ghost" @click="emit('cancel')">
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary">Link Share</button>
+      <button type="submit" class="btn btn-primary">
+        {{ initial ? 'Update' : 'Link Share' }}
+      </button>
     </div>
   </form>
 </template>

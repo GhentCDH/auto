@@ -21,6 +21,11 @@ import type {
   CreatePerson,
   CreateClient,
   CreateNetworkShare,
+  HostRelation,
+  DomainRelation,
+  PersonRelation,
+  ClientRelation,
+  NetworkShareRelation,
 } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -59,6 +64,18 @@ const showLinkDomainModal = ref(false);
 const showLinkPersonModal = ref(false);
 const showLinkClientModal = ref(false);
 const showLinkShareModal = ref(false);
+
+// Edit modal states
+const showEditHostModal = ref(false);
+const showEditDomainModal = ref(false);
+const showEditPersonModal = ref(false);
+const showEditClientModal = ref(false);
+const showEditShareModal = ref(false);
+const editingHost = ref<HostRelation | null>(null);
+const editingDomain = ref<DomainRelation | null>(null);
+const editingPerson = ref<PersonRelation | null>(null);
+const editingClient = ref<ClientRelation | null>(null);
+const editingShare = ref<NetworkShareRelation | null>(null);
 
 // Unlink confirm states
 const unlinkType = ref<string>('');
@@ -265,6 +282,92 @@ async function handleLinkShare(data: LinkNetworkShare) {
   }
 }
 
+// Edit handlers
+function openEditHost(host: HostRelation) {
+  editingHost.value = host;
+  showEditHostModal.value = true;
+}
+
+function openEditDomain(domain: DomainRelation) {
+  editingDomain.value = domain;
+  showEditDomainModal.value = true;
+}
+
+function openEditPerson(person: PersonRelation) {
+  editingPerson.value = person;
+  showEditPersonModal.value = true;
+}
+
+function openEditClient(client: ClientRelation) {
+  editingClient.value = client;
+  showEditClientModal.value = true;
+}
+
+function openEditShare(share: NetworkShareRelation) {
+  editingShare.value = share;
+  showEditShareModal.value = true;
+}
+
+async function handleEditHost(data: LinkHost) {
+  if (!editingHost.value) return;
+  try {
+    await applicationsApi.linkHost(id, editingHost.value.id, data);
+    showEditHostModal.value = false;
+    editingHost.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to update host link';
+  }
+}
+
+async function handleEditDomain(data: LinkDomain) {
+  if (!editingDomain.value) return;
+  try {
+    await applicationsApi.linkDomain(id, editingDomain.value.id, data);
+    showEditDomainModal.value = false;
+    editingDomain.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to update domain link';
+  }
+}
+
+async function handleEditPerson(data: LinkPerson) {
+  if (!editingPerson.value) return;
+  try {
+    await applicationsApi.linkPerson(id, editingPerson.value.id, data);
+    showEditPersonModal.value = false;
+    editingPerson.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to update person link';
+  }
+}
+
+async function handleEditClient(data: LinkClient) {
+  if (!editingClient.value) return;
+  try {
+    await applicationsApi.linkClient(id, editingClient.value.id, data);
+    showEditClientModal.value = false;
+    editingClient.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to update client link';
+  }
+}
+
+async function handleEditShare(data: LinkNetworkShare) {
+  if (!editingShare.value) return;
+  try {
+    await applicationsApi.linkShare(id, editingShare.value.id, data);
+    showEditShareModal.value = false;
+    editingShare.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to update share link';
+  }
+}
+
 // Unlink handlers
 function confirmUnlink(type: string, entityId: string, name: string) {
   unlinkType.value = type;
@@ -409,7 +512,13 @@ onMounted(loadData);
                         <span class="badge badge-outline">{{ h.role }}</span>
                       </td>
                       <td><StatusBadge :status="h.status" /></td>
-                      <td>
+                      <td class="flex gap-1">
+                        <button
+                          class="btn btn-ghost btn-xs"
+                          @click="openEditHost(h)"
+                        >
+                          Edit
+                        </button>
                         <button
                           class="btn btn-ghost btn-xs text-error"
                           @click="confirmUnlink('host', h.id, h.name)"
@@ -475,7 +584,13 @@ onMounted(loadData);
                       <td>{{ d.is_primary ? 'Yes' : 'No' }}</td>
                       <td>{{ d.ssl_expires_at || '-' }}</td>
                       <td><StatusBadge :status="d.status" /></td>
-                      <td>
+                      <td class="flex gap-1">
+                        <button
+                          class="btn btn-ghost btn-xs"
+                          @click="openEditDomain(d)"
+                        >
+                          Edit
+                        </button>
                         <button
                           class="btn btn-ghost btn-xs text-error"
                           @click="confirmUnlink('domain', d.id, d.name)"
@@ -524,12 +639,20 @@ onMounted(loadData);
                       {{ p.contribution_type }}
                     </span>
                   </div>
-                  <button
-                    class="btn btn-ghost btn-xs text-error"
-                    @click="confirmUnlink('person', p.id, p.name)"
-                  >
-                    X
-                  </button>
+                  <div class="flex gap-1">
+                    <button
+                      class="btn btn-ghost btn-xs"
+                      @click="openEditPerson(p)"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-xs text-error"
+                      @click="confirmUnlink('person', p.id, p.name)"
+                    >
+                      X
+                    </button>
+                  </div>
                 </li>
               </ul>
             </div>
@@ -567,12 +690,20 @@ onMounted(loadData);
                       {{ c.relationship_type }}
                     </span>
                   </div>
-                  <button
-                    class="btn btn-ghost btn-xs text-error"
-                    @click="confirmUnlink('client', c.id, c.name)"
-                  >
-                    X
-                  </button>
+                  <div class="flex gap-1">
+                    <button
+                      class="btn btn-ghost btn-xs"
+                      @click="openEditClient(c)"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-xs text-error"
+                      @click="confirmUnlink('client', c.id, c.name)"
+                    >
+                      X
+                    </button>
+                  </div>
                 </li>
               </ul>
             </div>
@@ -607,12 +738,20 @@ onMounted(loadData);
                     >
                       {{ s.name }}
                     </router-link>
-                    <button
-                      class="btn btn-ghost btn-xs text-error"
-                      @click="confirmUnlink('share', s.id, s.name)"
-                    >
-                      X
-                    </button>
+                    <div class="flex gap-1">
+                      <button
+                        class="btn btn-ghost btn-xs"
+                        @click="openEditShare(s)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="btn btn-ghost btn-xs text-error"
+                        @click="confirmUnlink('share', s.id, s.name)"
+                      >
+                        X
+                      </button>
+                    </div>
                   </div>
                   <div class="text-xs text-base-content/70">{{ s.path }}</div>
                 </li>
@@ -842,5 +981,80 @@ onMounted(loadData);
       @confirm="handleUnlink"
       @cancel="showUnlinkDialog = false"
     />
+
+    <!-- Edit Host Modal -->
+    <Modal
+      title="Edit Host Link"
+      :open="showEditHostModal"
+      @close="showEditHostModal = false"
+    >
+      <LinkHostForm
+        v-if="editingHost"
+        :host-name="editingHost.name"
+        :initial="editingHost"
+        @submit="handleEditHost"
+        @cancel="showEditHostModal = false"
+      />
+    </Modal>
+
+    <!-- Edit Domain Modal -->
+    <Modal
+      title="Edit Domain Link"
+      :open="showEditDomainModal"
+      @close="showEditDomainModal = false"
+    >
+      <LinkDomainForm
+        v-if="editingDomain"
+        :domain-name="editingDomain.name"
+        :initial="editingDomain"
+        @submit="handleEditDomain"
+        @cancel="showEditDomainModal = false"
+      />
+    </Modal>
+
+    <!-- Edit Person Modal -->
+    <Modal
+      title="Edit Person Link"
+      :open="showEditPersonModal"
+      @close="showEditPersonModal = false"
+    >
+      <LinkPersonForm
+        v-if="editingPerson"
+        :person-name="editingPerson.name"
+        :initial="editingPerson"
+        @submit="handleEditPerson"
+        @cancel="showEditPersonModal = false"
+      />
+    </Modal>
+
+    <!-- Edit Client Modal -->
+    <Modal
+      title="Edit Client Link"
+      :open="showEditClientModal"
+      @close="showEditClientModal = false"
+    >
+      <LinkClientForm
+        v-if="editingClient"
+        :client-name="editingClient.name"
+        :initial="editingClient"
+        @submit="handleEditClient"
+        @cancel="showEditClientModal = false"
+      />
+    </Modal>
+
+    <!-- Edit Share Modal -->
+    <Modal
+      title="Edit Share Link"
+      :open="showEditShareModal"
+      @close="showEditShareModal = false"
+    >
+      <LinkShareForm
+        v-if="editingShare"
+        :share-name="editingShare.name"
+        :initial="editingShare"
+        @submit="handleEditShare"
+        @cancel="showEditShareModal = false"
+      />
+    </Modal>
   </div>
 </template>

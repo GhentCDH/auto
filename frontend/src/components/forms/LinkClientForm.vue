@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { LinkClient } from '@/types';
+import type { LinkClient, ClientRelation } from '@/types';
 import { relationshipTypes } from '@/values';
 
-defineProps<{
+const props = defineProps<{
   clientName: string;
+  initial?: ClientRelation;
 }>();
 
 const emit = defineEmits<{
@@ -13,9 +14,9 @@ const emit = defineEmits<{
 }>();
 
 const form = ref<LinkClient>({
-  relationship_type: 'customer',
-  contract_ref: '',
-  notes: '',
+  relationship_type: props.initial?.relationship_type || 'customer',
+  contract_ref: props.initial?.contract_ref || '',
+  notes: props.initial?.relation_notes || '',
 });
 
 function handleSubmit() {
@@ -67,7 +68,9 @@ function handleSubmit() {
       <button type="button" class="btn btn-ghost" @click="emit('cancel')">
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary">Link Client</button>
+      <button type="submit" class="btn btn-primary">
+        {{ initial ? 'Update' : 'Link Client' }}
+      </button>
     </div>
   </form>
 </template>

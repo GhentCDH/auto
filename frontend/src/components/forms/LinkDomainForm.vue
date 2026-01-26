@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { LinkDomain } from '@/types';
+import type { LinkDomain, DomainRelation } from '@/types';
 import { domainTypes } from '@/values';
 import EntitySelector from '../common/EntitySelector.vue';
 import { hostsApi } from '@/api';
 import { Check, X } from 'lucide-vue-next';
 
-defineProps<{
+const props = defineProps<{
   domainName: string;
+  initial?: DomainRelation;
 }>();
 
 const emit = defineEmits<{
@@ -17,13 +18,16 @@ const emit = defineEmits<{
 
 type TargetType = 'host' | 'free';
 
-const target_type = ref<TargetType>('host');
-const record_type = ref('A');
-const target = ref('');
-const target_host_id = ref('');
-const target_host_name = ref<null | string>(null);
-const is_primary = ref(false);
-const notes = ref('');
+// Determine initial target type based on existing data
+const initialTargetType: TargetType = props.initial?.target_host_id ? 'host' : (props.initial?.target ? 'free' : 'host');
+
+const target_type = ref<TargetType>(initialTargetType);
+const record_type = ref(props.initial?.record_type || 'A');
+const target = ref(props.initial?.target || '');
+const target_host_id = ref(props.initial?.target_host_id || '');
+const target_host_name = ref<null | string>(props.initial?.target_host_name || null);
+const is_primary = ref(props.initial?.is_primary || false);
+const notes = ref(props.initial?.relation_notes || '');
 
 const form = computed<LinkDomain>(() => ({
   record_type: record_type.value,
@@ -121,7 +125,9 @@ function handleSubmit() {
       <button type="button" class="btn btn-ghost" @click="emit('cancel')">
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary">Link Domain</button>
+      <button type="submit" class="btn btn-primary">
+        {{ initial ? 'Update' : 'Link Domain' }}
+      </button>
     </div>
   </form>
 </template>
