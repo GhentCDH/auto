@@ -97,9 +97,11 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
     let domains = sqlx::query_as::<_, DomainRelation>(
         r#"
         SELECT d.id, d.name, d.registrar, d.expires_at, d.ssl_expires_at, d.status,
-               ad.record_type, ad.target, ad.target_host_id, ad.is_primary, ad.notes as relation_notes
+               ad.record_type, ad.target, ad.target_host_id, h.name as target_host_name,
+               ad.is_primary, ad.notes as relation_notes
         FROM domain d
         JOIN application_domain ad ON d.id = ad.domain_id
+        LEFT JOIN host h ON ad.target_host_id = h.id
         WHERE ad.application_id = ?1
         ORDER BY ad.is_primary DESC, d.name
         "#,
@@ -287,23 +289,49 @@ pub async fn link_domain(
     domain_id: &str,
     record_type: &str,
     target: Option<&str>,
+    target_host_id: Option<&str>,
     is_primary: bool,
     notes: Option<&str>,
 ) -> Result<()> {
     get(pool, app_id).await?;
     crate::service::domain::get(pool, domain_id).await?;
 
+    if target.is_some() && target_host_id.is_some() {
+        return Err(Error::Conflict(
+            "Can't set both `target` and `target_host_id` in application_domain".to_string(),
+        ));
+    }
+
+    // If target_host_id is set, verify the host exists and also add to application_host
+    if let Some(host_id) = target_host_id {
+        crate::service::host::get(pool, host_id).await?;
+
+        // Also add this host to application_host junction table (if not already linked)
+        sqlx::query(
+            r#"
+            INSERT INTO application_host (application_id, host_id, role, notes)
+            VALUES (?1, ?2, 'domain-target', NULL)
+            ON CONFLICT (application_id, host_id) DO NOTHING
+            "#,
+        )
+        .bind(app_id)
+        .bind(host_id)
+        .execute(pool)
+        .await?;
+    }
+
     sqlx::query(
         r#"
-        INSERT INTO application_domain (application_id, domain_id, record_type, target, is_primary, notes)
+        INSERT INTO application_domain (application_id, domain_id, record_type, target, target_host_id, is_primary, notes)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, is_primary = ?5, notes = ?6
+        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, target_host_id = ?5, is_primary = ?6, notes = ?7
         "#,
     )
     .bind(app_id)
     .bind(domain_id)
     .bind(record_type)
     .bind(target)
+    .bind(target_host_id)
     .bind(is_primary)
     .bind(notes)
     .execute(pool)

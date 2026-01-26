@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     routing::{get, post},
 };
+use tracing::instrument;
 
 use crate::models::{
     CreateApplication, LinkClient, LinkDomain, LinkHost, LinkNetworkShare, LinkPerson,
@@ -102,6 +103,7 @@ async fn unlink_host(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[instrument(skip(state))]
 async fn link_domain(
     State(state): State<AppState>,
     Path((app_id, domain_id)): Path<(String, String)>,
@@ -113,6 +115,7 @@ async fn link_domain(
         &domain_id,
         &input.record_type,
         input.target.as_deref(),
+        input.target_host_id.as_deref(),
         input.is_primary,
         input.notes.as_deref(),
     )

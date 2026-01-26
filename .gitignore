@@ -3,3 +3,4 @@
 !/data/.gitkeep
 frontend-dist
 frontend/node_modules
+.env

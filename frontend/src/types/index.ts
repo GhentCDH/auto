@@ -163,6 +163,8 @@ export interface DomainRelation {
   status: string;
   record_type: string;
   target: string | null;
+  target_host_id: string | null;
+  target_host_name: string | null;
   is_primary: boolean;
   relation_notes: string | null;
 }
@@ -181,7 +183,8 @@ export interface ApplicationDomainRelation {
 
 export interface LinkDomain {
   record_type?: string;
-  target?: string;
+  target?: string | null;
+  target_host_id?: string | null;
   is_primary?: boolean;
   notes?: string;
 }

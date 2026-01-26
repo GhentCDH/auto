@@ -445,6 +445,7 @@ onMounted(loadData);
                     <tr>
                       <th>Domain</th>
                       <th>Record Type</th>
+                      <th>Host</th>
                       <th>Primary</th>
                       <th>SSL Expires</th>
                       <th>Status</th>
@@ -460,6 +461,17 @@ onMounted(loadData);
                         {{ d.name }}
                       </td>
                       <td>{{ d.record_type }}</td>
+                      <td>
+                        <span
+                          v-if="d.target_host_id"
+                          class="cursor-pointer hover:text-primary underline"
+                          @click="router.push(`/hosts/${d.target_host_id}`)"
+                        >
+                          {{ d.target_host_name }}
+                        </span>
+                        <span v-else-if="d.target">{{ d.target }}</span>
+                        <span v-else>-</span>
+                      </td>
                       <td>{{ d.is_primary ? 'Yes' : 'No' }}</td>
                       <td>{{ d.ssl_expires_at || '-' }}</td>
                       <td><StatusBadge :status="d.status" /></td>
@@ -707,7 +719,7 @@ onMounted(loadData);
       <EntitySelector
         v-if="linkStep === 'select'"
         title="Domains"
-        :allow-create="true"
+        allow-create
         :fetch-fn="domainsApi.list"
         :exclude-ids="app?.domains.map((d) => d.id)"
         @select="handleEntitySelect"
@@ -737,7 +749,7 @@ onMounted(loadData);
       <EntitySelector
         v-if="linkStep === 'select'"
         title="People"
-        :allow-create="true"
+        allow-create
         :fetch-fn="peopleApi.list"
         :exclude-ids="app?.people.map((p) => p.id)"
         @select="handleEntitySelect"
@@ -767,7 +779,7 @@ onMounted(loadData);
       <EntitySelector
         v-if="linkStep === 'select'"
         title="Clients"
-        :allow-create="true"
+        allow-create
         :fetch-fn="clientsApi.list"
         :exclude-ids="app?.clients.map((c) => c.id)"
         @select="handleEntitySelect"
@@ -799,7 +811,7 @@ onMounted(loadData);
       <EntitySelector
         v-if="linkStep === 'select'"
         title="Network Shares"
-        :allow-create="true"
+        allow-create
         :fetch-fn="sharesApi.list"
         :exclude-ids="app?.network_shares.map((s) => s.id)"
         @select="handleEntitySelect"
