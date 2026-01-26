@@ -21,7 +21,6 @@ const totalResults = computed(() => {
     results.value.hosts.length +
     results.value.domains.length +
     results.value.people.length +
-    results.value.clients.length +
     results.value.network_shares.length
   );
 });
@@ -53,7 +52,6 @@ function navigateTo(result: SearchResult) {
     host: 'hosts',
     domain: 'domains',
     person: 'people',
-    client: 'clients',
     network_share: 'shares',
   };
   const path = routes[result.entity_type] || result.entity_type;
@@ -166,25 +164,6 @@ onMounted(search);
           <ul class="space-y-2">
             <li
               v-for="r in results.people"
-              :key="r.id"
-              class="cursor-pointer hover:bg-base-300 p-2 rounded"
-              @click="navigateTo(r)"
-            >
-              <div class="font-medium">{{ r.name }}</div>
-              <div v-if="r.description" class="text-sm text-base-content/70">
-                {{ r.description }}
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div v-if="results.clients.length" class="card bg-base-200">
-        <div class="card-body">
-          <h2 class="card-title">Clients ({{ results.clients.length }})</h2>
-          <ul class="space-y-2">
-            <li
-              v-for="r in results.clients"
               :key="r.id"
               class="cursor-pointer hover:bg-base-300 p-2 rounded"
               @click="navigateTo(r)"

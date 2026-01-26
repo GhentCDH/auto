@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { X } from 'lucide-vue-next';
+
 defineProps<{
   title: string;
   open: boolean;
@@ -17,7 +19,7 @@ const emit = defineEmits<{
         class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
         @click="emit('close')"
       >
-        X
+        <X />
       </button>
       <div class="py-4">
         <slot />

@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    Application, ApplicationWithRelations, ClientRelation, CreateApplication, DomainRelation,
+    Application, ApplicationWithRelations, CreateApplication, DomainRelation,
     HostRelation, NetworkShareRelation, Note, PaginatedResponse, PaginationParams, PersonRelation,
     UpdateApplication, new_id,
 };
@@ -124,20 +124,6 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
     .fetch_all(pool)
     .await?;
 
-    let clients = sqlx::query_as::<_, ClientRelation>(
-        r#"
-        SELECT c.id, c.name, c.contact_name, c.contact_email, c.status,
-               ac.relationship_type, ac.contract_ref, ac.notes as relation_notes
-        FROM client c
-        JOIN application_client ac ON c.id = ac.client_id
-        WHERE ac.application_id = ?1
-        ORDER BY c.name
-        "#,
-    )
-    .bind(id)
-    .fetch_all(pool)
-    .await?;
-
     let network_shares = sqlx::query_as::<_, NetworkShareRelation>(
         r#"
         SELECT ns.id, ns.name, ns.path, ns.share_type, ns.server, ns.status,
@@ -169,7 +155,6 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
         hosts,
         domains,
         people,
-        clients,
         network_shares,
         notes,
     })
@@ -391,50 +376,6 @@ pub async fn unlink_person(pool: &SqlitePool, app_id: &str, person_id: &str) -> 
         sqlx::query("DELETE FROM application_person WHERE application_id = ?1 AND person_id = ?2")
             .bind(app_id)
             .bind(person_id)
-            .execute(pool)
-            .await?;
-
-    if result.rows_affected() == 0 {
-        return Err(Error::NotFound("Relationship not found".to_string()));
-    }
-
-    Ok(())
-}
-
-pub async fn link_client(
-    pool: &SqlitePool,
-    app_id: &str,
-    client_id: &str,
-    relationship_type: &str,
-    contract_ref: Option<&str>,
-    notes: Option<&str>,
-) -> Result<()> {
-    get(pool, app_id).await?;
-    crate::service::client::get(pool, client_id).await?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO application_client (application_id, client_id, relationship_type, contract_ref, notes)
-        VALUES (?1, ?2, ?3, ?4, ?5)
-        ON CONFLICT (application_id, client_id) DO UPDATE SET relationship_type = ?3, contract_ref = ?4, notes = ?5
-        "#,
-    )
-    .bind(app_id)
-    .bind(client_id)
-    .bind(relationship_type)
-    .bind(contract_ref)
-    .bind(notes)
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
-
-pub async fn unlink_client(pool: &SqlitePool, app_id: &str, client_id: &str) -> Result<()> {
-    let result =
-        sqlx::query("DELETE FROM application_client WHERE application_id = ?1 AND client_id = ?2")
-            .bind(app_id)
-            .bind(client_id)
             .execute(pool)
             .await?;
 

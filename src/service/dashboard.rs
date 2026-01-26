@@ -9,7 +9,6 @@ pub struct DashboardStats {
     pub hosts: EntityStats,
     pub domains: EntityStats,
     pub people: EntityStats,
-    pub clients: EntityStats,
     pub network_shares: EntityStats,
     pub notes: i64,
     pub expiring_domains: Vec<ExpiringDomain>,
@@ -71,15 +70,6 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         .fetch_one(pool)
         .await?;
 
-    // Get client stats
-    let client_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM client")
-        .fetch_one(pool)
-        .await?;
-    let client_active: (i64,) =
-        sqlx::query_as("SELECT COUNT(*) FROM client WHERE status = 'active'")
-            .fetch_one(pool)
-            .await?;
-
     // Get network share stats
     let share_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM network_share")
         .fetch_one(pool)
@@ -140,10 +130,6 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         people: EntityStats {
             total: person_total.0,
             active: person_active.0,
-        },
-        clients: EntityStats {
-            total: client_total.0,
-            active: client_active.0,
         },
         network_shares: EntityStats {
             total: share_total.0,

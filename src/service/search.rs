@@ -9,7 +9,6 @@ pub struct SearchResults {
     pub hosts: Vec<SearchResult>,
     pub domains: Vec<SearchResult>,
     pub people: Vec<SearchResult>,
-    pub clients: Vec<SearchResult>,
     pub network_shares: Vec<SearchResult>,
 }
 
@@ -76,19 +75,6 @@ pub async fn global_search(pool: &SqlitePool, query: &str) -> Result<SearchResul
     .fetch_all(pool)
     .await?;
 
-    let clients = sqlx::query_as::<_, SearchResult>(
-        r#"
-        SELECT id, name, contact_name as description, 'client' as entity_type
-        FROM client
-        WHERE name LIKE ?1 OR contact_name LIKE ?1 OR contact_email LIKE ?1
-        ORDER BY name ASC
-        LIMIT 20
-        "#,
-    )
-    .bind(&search_pattern)
-    .fetch_all(pool)
-    .await?;
-
     let network_shares = sqlx::query_as::<_, SearchResult>(
         r#"
         SELECT id, name, path as description, 'network_share' as entity_type
@@ -107,7 +93,6 @@ pub async fn global_search(pool: &SqlitePool, query: &str) -> Result<SearchResul
         hosts,
         domains,
         people,
-        clients,
         network_shares,
     })
 }

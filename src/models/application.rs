@@ -45,7 +45,6 @@ pub struct ApplicationWithRelations {
     pub hosts: Vec<super::HostRelation>,
     pub domains: Vec<super::DomainRelation>,
     pub people: Vec<super::PersonRelation>,
-    pub clients: Vec<super::ClientRelation>,
     pub network_shares: Vec<super::NetworkShareRelation>,
     pub notes: Vec<super::Note>,
 }

@@ -1,5 +1,4 @@
 pub mod application;
-pub mod client;
 pub mod dashboard;
 pub mod domain;
 pub mod host;

@@ -43,7 +43,6 @@ export interface ApplicationWithRelations extends Application {
   hosts: HostRelation[];
   domains: DomainRelation[];
   people: PersonRelation[];
-  clients: ClientRelation[];
   network_shares: NetworkShareRelation[];
   notes: Note[];
 }
@@ -254,74 +253,6 @@ export interface LinkPerson {
   notes?: string;
 }
 
-// Client types
-export interface Client {
-  id: string;
-  name: string;
-  contact_name: string | null;
-  contact_email: string | null;
-  department: string | null;
-  phone: string | null;
-  address: string | null;
-  status: string;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  created_by: string | null;
-}
-
-export interface CreateClient {
-  name: string;
-  contact_name?: string;
-  contact_email?: string;
-  department?: string;
-  phone?: string;
-  address?: string;
-  status?: string;
-  notes?: string;
-}
-
-export interface UpdateClient {
-  name?: string;
-  contact_name?: string;
-  contact_email?: string;
-  department?: string;
-  phone?: string;
-  address?: string;
-  status?: string;
-  notes?: string;
-}
-
-export interface ClientRelation {
-  id: string;
-  name: string;
-  contact_name: string | null;
-  contact_email: string | null;
-  status: string;
-  relationship_type: string;
-  contract_ref: string | null;
-  relation_notes: string | null;
-}
-
-export interface ClientWithRelations extends Client {
-  applications: ApplicationClientRelation[];
-}
-
-export interface ApplicationClientRelation {
-  id: string;
-  name: string;
-  status: string;
-  relationship_type: string;
-}
-
-export interface LinkClient {
-  relationship_type?: string;
-  contract_ref?: string;
-  start_date?: string;
-  end_date?: string;
-  notes?: string;
-}
-
 // Network Share types
 export interface NetworkShare {
   id: string;
@@ -428,7 +359,6 @@ export interface DashboardStats {
   hosts: EntityStats;
   domains: EntityStats;
   people: EntityStats;
-  clients: EntityStats;
   network_shares: EntityStats;
   notes: number;
   expiring_domains: ExpiringDomain[];
@@ -458,7 +388,6 @@ export interface SearchResults {
   hosts: SearchResult[];
   domains: SearchResult[];
   people: SearchResult[];
-  clients: SearchResult[];
   network_shares: SearchResult[];
 }
 

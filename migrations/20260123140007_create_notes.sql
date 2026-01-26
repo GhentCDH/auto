@@ -1,7 +1,7 @@
 -- Create note table for documentation, changelogs, issues
 CREATE TABLE note (
     id TEXT PRIMARY KEY,
-    entity_type TEXT NOT NULL, -- application, host, domain, person, client, network_share
+    entity_type TEXT NOT NULL, -- application, host, domain, person, network_share
     entity_id TEXT NOT NULL,
     title TEXT NOT NULL,
     content TEXT,

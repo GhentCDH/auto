@@ -41,15 +41,6 @@ const routes = [
     path: '/people/:id',
     component: () => import('./views/people/PersonDetail.vue'),
   },
-  // Clients
-  {
-    path: '/clients',
-    component: () => import('./views/clients/ClientList.vue'),
-  },
-  {
-    path: '/clients/:id',
-    component: () => import('./views/clients/ClientDetail.vue'),
-  },
   // Network Shares
   {
     path: '/shares',

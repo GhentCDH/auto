@@ -11,7 +11,6 @@ const navItems = [
   { name: 'Hosts', path: '/hosts' },
   { name: 'Domains', path: '/domains' },
   { name: 'People', path: '/people' },
-  { name: 'Clients', path: '/clients' },
   { name: 'Shares', path: '/shares' },
 ];
 

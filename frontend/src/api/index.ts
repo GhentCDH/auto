@@ -1,10 +1,7 @@
 import type {
   Application,
   ApplicationWithRelations,
-  Client,
-  ClientWithRelations,
   CreateApplication,
-  CreateClient,
   CreateDomain,
   CreateHost,
   CreateNetworkShare,
@@ -15,7 +12,6 @@ import type {
   DomainWithRelations,
   Host,
   HostWithRelations,
-  LinkClient,
   LinkDomain,
   LinkHost,
   LinkNetworkShare,
@@ -29,7 +25,6 @@ import type {
   PersonWithRelations,
   SearchResults,
   UpdateApplication,
-  UpdateClient,
   UpdateDomain,
   UpdateHost,
   UpdateNetworkShare,
@@ -131,17 +126,6 @@ export const applicationsApi = {
       method: 'DELETE',
     }),
 
-  linkClient: (appId: string, clientId: string, data: LinkClient = {}) =>
-    request<void>(`/applications/${appId}/clients/${clientId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  unlinkClient: (appId: string, clientId: string) =>
-    request<void>(`/applications/${appId}/clients/${clientId}`, {
-      method: 'DELETE',
-    }),
-
   linkShare: (appId: string, shareId: string, data: LinkNetworkShare = {}) =>
     request<void>(`/applications/${appId}/shares/${shareId}`, {
       method: 'POST',
@@ -218,28 +202,6 @@ export const peopleApi = {
     }),
 
   delete: (id: string) => request<void>(`/people/${id}`, { method: 'DELETE' }),
-};
-
-// Clients API
-export const clientsApi = {
-  list: (params: PaginationParams = {}) =>
-    request<PaginatedResponse<Client>>(`/clients${buildQueryString(params)}`),
-
-  get: (id: string) => request<ClientWithRelations>(`/clients/${id}`),
-
-  create: (data: CreateClient) =>
-    request<Client>('/clients', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  update: (id: string, data: UpdateClient) =>
-    request<Client>(`/clients/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-
-  delete: (id: string) => request<void>(`/clients/${id}`, { method: 'DELETE' }),
 };
 
 // Network Shares API

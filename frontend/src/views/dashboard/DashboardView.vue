@@ -33,7 +33,7 @@ function formatDate(date: string | null): string {
     <div v-else-if="error" class="alert alert-error">{{ error }}</div>
 
     <div v-else-if="stats">
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <router-link
           to="/applications"
           class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
@@ -70,15 +70,6 @@ function formatDate(date: string | null): string {
           <div class="stat-title">People</div>
           <div class="stat-value text-info">{{ stats.people.total }}</div>
           <div class="stat-desc">{{ stats.people.active }} active</div>
-        </router-link>
-
-        <router-link
-          to="/clients"
-          class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
-        >
-          <div class="stat-title">Clients</div>
-          <div class="stat-value text-success">{{ stats.clients.total }}</div>
-          <div class="stat-desc">{{ stats.clients.active }} active</div>
         </router-link>
 
         <router-link

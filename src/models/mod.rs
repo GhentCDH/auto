@@ -1,5 +1,4 @@
 mod application;
-mod client;
 mod domain;
 mod host;
 mod network_share;
@@ -7,7 +6,6 @@ mod note;
 mod person;
 
 pub use application::*;
-pub use client::*;
 pub use domain::*;
 pub use host::*;
 pub use network_share::*;

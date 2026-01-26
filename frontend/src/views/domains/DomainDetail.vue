@@ -74,7 +74,7 @@ onMounted(loadData);
             </ul>
           </div>
           <h1 class="text-2xl font-bold flex items-center gap-3">
-            {{ domain.name }}
+            <a href="domain.name">{{ domain.name }}</a>
             <StatusBadge :status="domain.status" />
           </h1>
         </div>

@@ -6,7 +6,6 @@ import {
   hostsApi,
   domainsApi,
   peopleApi,
-  clientsApi,
   sharesApi,
   notesApi,
 } from '@/api';
@@ -15,17 +14,14 @@ import type {
   LinkHost,
   LinkDomain,
   LinkPerson,
-  LinkClient,
   LinkNetworkShare,
   CreateHost,
   CreateDomain,
   CreatePerson,
-  CreateClient,
   CreateNetworkShare,
   HostRelation,
   DomainRelation,
   PersonRelation,
-  ClientRelation,
   NetworkShareRelation,
   Note,
   CreateNote,
@@ -40,16 +36,14 @@ import ApplicationForm from '@/components/forms/ApplicationForm.vue';
 import HostForm from '@/components/forms/HostForm.vue';
 import DomainForm from '@/components/forms/DomainForm.vue';
 import PersonForm from '@/components/forms/PersonForm.vue';
-import ClientForm from '@/components/forms/ClientForm.vue';
 import ShareForm from '@/components/forms/ShareForm.vue';
 import LinkHostForm from '@/components/forms/LinkHostForm.vue';
 import LinkDomainForm from '@/components/forms/LinkDomainForm.vue';
 import LinkPersonForm from '@/components/forms/LinkPersonForm.vue';
-import LinkClientForm from '@/components/forms/LinkClientForm.vue';
 import LinkShareForm from '@/components/forms/LinkShareForm.vue';
 import NoteForm from '@/components/forms/NoteForm.vue';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
-import { Pin, ExternalLink } from 'lucide-vue-next';
+import { Pin, ExternalLink, X } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -69,19 +63,16 @@ const initialName = ref('');
 const showLinkHostModal = ref(false);
 const showLinkDomainModal = ref(false);
 const showLinkPersonModal = ref(false);
-const showLinkClientModal = ref(false);
 const showLinkShareModal = ref(false);
 
 // Edit modal states
 const showEditHostModal = ref(false);
 const showEditDomainModal = ref(false);
 const showEditPersonModal = ref(false);
-const showEditClientModal = ref(false);
 const showEditShareModal = ref(false);
 const editingHost = ref<HostRelation | null>(null);
 const editingDomain = ref<DomainRelation | null>(null);
 const editingPerson = ref<PersonRelation | null>(null);
-const editingClient = ref<ClientRelation | null>(null);
 const editingShare = ref<NetworkShareRelation | null>(null);
 
 // Note modal states
@@ -152,9 +143,6 @@ function openLinkModal(type: string) {
     case 'person':
       showLinkPersonModal.value = true;
       break;
-    case 'client':
-      showLinkClientModal.value = true;
-      break;
     case 'share':
       showLinkShareModal.value = true;
       break;
@@ -171,9 +159,6 @@ function closeLinkModal(type: string) {
       break;
     case 'person':
       showLinkPersonModal.value = false;
-      break;
-    case 'client':
-      showLinkClientModal.value = false;
       break;
     case 'share':
       showLinkShareModal.value = false;
@@ -222,16 +207,6 @@ async function handleCreatePerson(data: CreatePerson) {
   }
 }
 
-async function handleCreateClient(data: CreateClient) {
-  try {
-    const created = await clientsApi.create(data);
-    selectedEntity.value = { id: created.id, name: created.name };
-    linkStep.value = 'form';
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create client';
-  }
-}
-
 async function handleCreateShare(data: CreateNetworkShare) {
   try {
     const created = await sharesApi.create(data);
@@ -276,17 +251,6 @@ async function handleLinkPerson(data: LinkPerson) {
   }
 }
 
-async function handleLinkClient(data: LinkClient) {
-  if (!selectedEntity.value) return;
-  try {
-    await applicationsApi.linkClient(id, selectedEntity.value.id, data);
-    showLinkClientModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link client';
-  }
-}
-
 async function handleLinkShare(data: LinkNetworkShare) {
   if (!selectedEntity.value) return;
   try {
@@ -314,11 +278,6 @@ function openEditPerson(person: PersonRelation) {
   showEditPersonModal.value = true;
 }
 
-function openEditClient(client: ClientRelation) {
-  editingClient.value = client;
-  showEditClientModal.value = true;
-}
-
 function openEditShare(share: NetworkShareRelation) {
   editingShare.value = share;
   showEditShareModal.value = true;
@@ -344,7 +303,8 @@ async function handleEditDomain(data: LinkDomain) {
     editingDomain.value = null;
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update domain link';
+    error.value =
+      e instanceof Error ? e.message : 'Failed to update domain link';
   }
 }
 
@@ -356,19 +316,8 @@ async function handleEditPerson(data: LinkPerson) {
     editingPerson.value = null;
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update person link';
-  }
-}
-
-async function handleEditClient(data: LinkClient) {
-  if (!editingClient.value) return;
-  try {
-    await applicationsApi.linkClient(id, editingClient.value.id, data);
-    showEditClientModal.value = false;
-    editingClient.value = null;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update client link';
+    error.value =
+      e instanceof Error ? e.message : 'Failed to update person link';
   }
 }
 
@@ -380,7 +329,8 @@ async function handleEditShare(data: LinkNetworkShare) {
     editingShare.value = null;
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update share link';
+    error.value =
+      e instanceof Error ? e.message : 'Failed to update share link';
   }
 }
 
@@ -453,9 +403,6 @@ async function handleUnlink() {
         break;
       case 'person':
         await applicationsApi.unlinkPerson(id, unlinkId.value);
-        break;
-      case 'client':
-        await applicationsApi.unlinkClient(id, unlinkId.value);
         break;
       case 'share':
         await applicationsApi.unlinkShare(id, unlinkId.value);
@@ -620,7 +567,7 @@ onMounted(loadData);
                     <tr>
                       <th>Domain</th>
                       <th>Record Type</th>
-                      <th>Host</th>
+                      <th>Target</th>
                       <th>Primary</th>
                       <th>SSL Expires</th>
                       <th>Status</th>
@@ -716,58 +663,7 @@ onMounted(loadData);
                       class="btn btn-ghost btn-xs text-error"
                       @click="confirmUnlink('person', p.id, p.name)"
                     >
-                      X
-                    </button>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Clients Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Clients ({{ app.clients.length }})</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('client')"
-                >
-                  + Add
-                </button>
-              </div>
-              <div v-if="app.clients.length === 0" class="text-base-content/70">
-                No clients linked
-              </div>
-              <ul v-else class="space-y-2">
-                <li
-                  v-for="c in app.clients"
-                  :key="c.id"
-                  class="flex items-center justify-between"
-                >
-                  <div>
-                    <router-link
-                      :to="`/clients/${c.id}`"
-                      class="link link-hover"
-                    >
-                      {{ c.name }}
-                    </router-link>
-                    <span class="badge badge-outline badge-sm ml-2">
-                      {{ c.relationship_type }}
-                    </span>
-                  </div>
-                  <div class="flex gap-1">
-                    <button
-                      class="btn btn-ghost btn-xs"
-                      @click="openEditClient(c)"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      class="btn btn-ghost btn-xs text-error"
-                      @click="confirmUnlink('client', c.id, c.name)"
-                    >
-                      X
+                      <X class="w-4 h-4" />
                     </button>
                   </div>
                 </li>
@@ -815,7 +711,7 @@ onMounted(loadData);
                         class="btn btn-ghost btn-xs text-error"
                         @click="confirmUnlink('share', s.id, s.name)"
                       >
-                        X
+                        <X class="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -852,11 +748,16 @@ onMounted(loadData);
                       @click="openViewNote(n)"
                     >
                       <div class="flex items-center gap-2">
-                        <Pin v-if="n.is_pinned" class="h-3 w-3 text-primary flex-shrink-0" />
+                        <Pin
+                          v-if="n.is_pinned"
+                          class="h-3 w-3 text-primary shrink-0"
+                        />
                         <span class="font-medium hover:text-primary truncate">
                           {{ n.title }}
                         </span>
-                        <span class="badge badge-xs badge-ghost">{{ n.note_type }}</span>
+                        <span class="badge badge-xs badge-ghost">{{
+                          n.note_type
+                        }}</span>
                       </div>
                       <div
                         v-if="n.content"
@@ -872,7 +773,7 @@ onMounted(loadData);
                         Link attached
                       </div>
                     </div>
-                    <div class="flex gap-1 flex-shrink-0">
+                    <div class="flex gap-1 shrink-0">
                       <button
                         class="btn btn-ghost btn-xs"
                         @click.stop="openEditNote(n)"
@@ -883,7 +784,7 @@ onMounted(loadData);
                         class="btn btn-ghost btn-xs text-error"
                         @click.stop="confirmDeleteNote(n)"
                       >
-                        X
+                        <X class="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -1010,36 +911,6 @@ onMounted(loadData);
       />
     </Modal>
 
-    <!-- Link Client Modal -->
-    <Modal
-      :title="linkStep === 'create' ? 'Create Client' : 'Link Client'"
-      :open="showLinkClientModal"
-      @close="closeLinkModal('client')"
-    >
-      <EntitySelector
-        v-if="linkStep === 'select'"
-        title="Clients"
-        allow-create
-        :fetch-fn="clientsApi.list"
-        :exclude-ids="app?.clients.map((c) => c.id)"
-        @select="handleEntitySelect"
-        @create="handleCreateRequest"
-        @cancel="closeLinkModal('client')"
-      />
-      <ClientForm
-        v-else-if="linkStep === 'create'"
-        :initial-name="initialName"
-        @submit="(data) => handleCreateClient(data as CreateClient)"
-        @cancel="linkStep = 'select'"
-      />
-      <LinkClientForm
-        v-else-if="selectedEntity"
-        :client-name="selectedEntity.name"
-        @submit="handleLinkClient"
-        @cancel="closeLinkModal('client')"
-      />
-    </Modal>
-
     <!-- Link Share Modal -->
     <Modal
       :title="
@@ -1128,21 +999,6 @@ onMounted(loadData);
       />
     </Modal>
 
-    <!-- Edit Client Modal -->
-    <Modal
-      title="Edit Client Link"
-      :open="showEditClientModal"
-      @close="showEditClientModal = false"
-    >
-      <LinkClientForm
-        v-if="editingClient"
-        :client-name="editingClient.name"
-        :initial="editingClient"
-        @submit="handleEditClient"
-        @cancel="showEditClientModal = false"
-      />
-    </Modal>
-
     <!-- Edit Share Modal -->
     <Modal
       title="Edit Share Link"
@@ -1167,7 +1023,7 @@ onMounted(loadData);
       <NoteForm
         entity-type="application"
         :entity-id="id"
-        @submit="handleCreateNote"
+        @submit="(data) => handleCreateNote(data as CreateNote)"
         @cancel="showCreateNoteModal = false"
       />
     </Modal>
@@ -1197,7 +1053,11 @@ onMounted(loadData);
       <div v-if="viewingNote" class="space-y-4">
         <div class="flex items-center gap-2 text-sm text-base-content/70">
           <span class="badge badge-sm">{{ viewingNote.note_type }}</span>
-          <span v-if="viewingNote.is_pinned" class="badge badge-sm badge-primary">Pinned</span>
+          <span
+            v-if="viewingNote.is_pinned"
+            class="badge badge-sm badge-primary"
+            >Pinned</span
+          >
         </div>
         <div v-if="viewingNote.content" class="bg-base-100 rounded-lg p-4">
           <MarkdownRenderer :content="viewingNote.content" />
@@ -1224,7 +1084,10 @@ onMounted(loadData);
           </button>
           <button
             class="btn btn-primary"
-            @click="showViewNoteModal = false; openEditNote(viewingNote)"
+            @click="
+              showViewNoteModal = false;
+              openEditNote(viewingNote);
+            "
           >
             Edit
           </button>

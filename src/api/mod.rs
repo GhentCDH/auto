@@ -7,7 +7,6 @@ use axum::{Form, Json, Router};
 use crate::AppState;
 
 mod applications;
-mod clients;
 mod dashboard;
 mod domains;
 mod hosts;
@@ -23,7 +22,6 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .nest("/hosts", hosts::routes())
         .nest("/domains", domains::routes())
         .nest("/people", people::routes())
-        .nest("/clients", clients::routes())
         .nest("/shares", shares::routes())
         .nest("/notes", notes::routes())
         .nest("/dashboard", dashboard::routes())

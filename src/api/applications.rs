@@ -6,7 +6,7 @@ use axum::{
 use tracing::instrument;
 
 use crate::models::{
-    CreateApplication, LinkClient, LinkDomain, LinkHost, LinkNetworkShare, LinkPerson,
+    CreateApplication, LinkDomain, LinkHost, LinkNetworkShare, LinkPerson,
     PaginationParams, UpdateApplication,
 };
 use crate::service::application;
@@ -25,10 +25,6 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/{id}/people/{person_id}",
             post(link_person).delete(unlink_person),
-        )
-        .route(
-            "/{id}/clients/{client_id}",
-            post(link_client).delete(unlink_client),
         )
         .route(
             "/{id}/shares/{share_id}",
@@ -154,31 +150,6 @@ async fn unlink_person(
     Path((app_id, person_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
     application::unlink_person(&state.pool, &app_id, &person_id).await?;
-    Ok(axum::http::StatusCode::NO_CONTENT)
-}
-
-async fn link_client(
-    State(state): State<AppState>,
-    Path((app_id, client_id)): Path<(String, String)>,
-    Json(input): Json<LinkClient>,
-) -> Result<impl axum::response::IntoResponse> {
-    application::link_client(
-        &state.pool,
-        &app_id,
-        &client_id,
-        &input.relationship_type,
-        input.contract_ref.as_deref(),
-        input.notes.as_deref(),
-    )
-    .await?;
-    Ok(axum::http::StatusCode::NO_CONTENT)
-}
-
-async fn unlink_client(
-    State(state): State<AppState>,
-    Path((app_id, client_id)): Path<(String, String)>,
-) -> Result<impl axum::response::IntoResponse> {
-    application::unlink_client(&state.pool, &app_id, &client_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
