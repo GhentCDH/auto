@@ -18,7 +18,6 @@ export const hostRoles = {
   development: 'Development',
   testing: 'Testing',
   qas: 'Quality Assurance',
-  other: 'Other...',
 };
 
 export const domainTypes = {
@@ -29,25 +28,16 @@ export const domainTypes = {
   TXT: 'TXT',
 };
 
-export const relationshipTypes = {
-  customer: 'Customer',
-  sponsor: 'Sponsor',
-  internal: 'Internal',
-  partner: 'Partner',
-};
-
 export const contributionTypes = {
   developer: 'Developer',
   maintainer: 'Maintainer',
-  owner: 'Owner',
-  support: 'Support',
+  communcation: 'Communication',
   stakeholder: 'Stakeholder',
+  manager: 'Manager',
 };
 
 export const noteTypes = {
   general: 'General',
   documentation: 'Documentation',
   changelog: 'Changelog',
-  issue: 'Issue',
-  link: 'Link',
 };

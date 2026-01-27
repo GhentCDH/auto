@@ -84,11 +84,11 @@ const editingNote = ref<Note | null>(null);
 const viewingNote = ref<Note | null>(null);
 const deletingNote = ref<Note | null>(null);
 
-// Link2Off confirm states
+// Unlink confirm states
 const unlinkType = ref<string>('');
 const unlinkId = ref<string>('');
 const unlinkName = ref<string>('');
-const showLink2OffDialog = ref(false);
+const showUnlinkDialog = ref(false);
 
 const id = route.params.id as string;
 
@@ -385,14 +385,14 @@ async function handleDeleteNote() {
 }
 
 // Link2Off handlers
-function confirmLink2Off(type: string, entityId: string, name: string) {
+function confirmUnlink(type: string, entityId: string, name: string) {
   unlinkType.value = type;
   unlinkId.value = entityId;
   unlinkName.value = name;
-  showLink2OffDialog.value = true;
+  showUnlinkDialog.value = true;
 }
 
-async function handleLink2Off() {
+async function handleUnlink() {
   try {
     switch (unlinkType.value) {
       case 'host':
@@ -408,7 +408,7 @@ async function handleLink2Off() {
         await applicationsApi.unlinkShare(id, unlinkId.value);
         break;
     }
-    showLink2OffDialog.value = false;
+    showUnlinkDialog.value = false;
     loadData();
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to unlink';
@@ -536,7 +536,7 @@ onMounted(loadData);
                         </button>
                         <button
                           class="btn btn-ghost btn-xs text-error"
-                          @click="confirmLink2Off('host', h.id, h.name)"
+                          @click="confirmUnlink('host', h.id, h.name)"
                         >
                           <Link2Off class="w-4 h-4" />
                         </button>
@@ -608,7 +608,7 @@ onMounted(loadData);
                         </button>
                         <button
                           class="btn btn-ghost btn-xs text-error"
-                          @click="confirmLink2Off('domain', d.id, d.name)"
+                          @click="confirmUnlink('domain', d.id, d.name)"
                         >
                           <Link2Off class="w-4 h-4" />
                         </button>
@@ -663,7 +663,7 @@ onMounted(loadData);
                     </button>
                     <button
                       class="btn btn-ghost btn-xs text-error"
-                      @click="confirmLink2Off('person', p.id, p.name)"
+                      @click="confirmUnlink('person', p.id, p.name)"
                     >
                       <Link2Off class="w-4 h-4" />
                     </button>
@@ -709,7 +709,7 @@ onMounted(loadData);
                       </button>
                       <button
                         class="btn btn-ghost btn-xs text-error"
-                        @click="confirmLink2Off('share', s.id, s.name)"
+                        @click="confirmUnlink('share', s.id, s.name)"
                       >
                         <Link2Off class="w-4 h-4" />
                       </button>
@@ -943,15 +943,15 @@ onMounted(loadData);
       />
     </Modal>
 
-    <!-- Link2Off Confirmation -->
+    <!-- Unlink Confirmation -->
     <ConfirmDialog
-      :open="showLink2OffDialog"
-      title="Link2Off Entity"
+      :open="showUnlinkDialog"
+      title="Unlink Entity"
       :message="`Are you sure you want to unlink '${unlinkName}' from this application?`"
-      confirm-label="Link2Off"
+      confirm-label="Unlink"
       danger
-      @confirm="handleLink2Off"
-      @cancel="showLink2OffDialog = false"
+      @confirm="handleUnlink"
+      @cancel="showUnlinkDialog = false"
     />
 
     <!-- Edit Host Modal -->

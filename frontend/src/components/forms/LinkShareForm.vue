@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import type { LinkNetworkShare, NetworkShareRelation } from '@/types';
 import { shareUsages } from '@/values';
+import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
   shareName: string;
@@ -13,12 +14,12 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const form = ref<LinkNetworkShare>({
-  usage: props.initial?.usage || '',
+const form = ref({
+  usage: props.initial?.usage || 'data',
   mount_point: props.initial?.mount_point || '',
   permissions: props.initial?.permissions || 'read-write',
   notes: props.initial?.relation_notes || '',
-});
+} satisfies LinkNetworkShare);
 
 function handleSubmit() {
   emit('submit', form.value);
@@ -33,15 +34,12 @@ function handleSubmit() {
     </p>
 
     <div class="grid grid-cols-2 gap-4">
-      <fieldset class="fieldset">
-        <legend class="fieldset-legend">Usage</legend>
-        <select v-model="form.usage" class="select w-full">
-          <option v-for="(visual, value) in shareUsages" :value="value">
-            {{ visual }}
-          </option>
-        </select>
-        <div class="label">optional</div>
-      </fieldset>
+      <SelectWithCustom
+        v-model="form.usage"
+        label="Usage"
+        :options="shareUsages"
+        allow-custom
+      />
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Permissions</legend>

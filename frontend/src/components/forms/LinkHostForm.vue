@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import type { LinkHost, HostRelation } from '@/types';
 import { hostRoles } from '@/values';
+import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
   hostName: string;
@@ -14,15 +15,10 @@ const emit = defineEmits<{
 }>();
 
 // Check if initial role is in hostRoles, if not it's a custom role
-const initialIsCustom = props.initial?.role && !Object.keys(hostRoles).includes(props.initial.role);
-const selectedRole = ref(initialIsCustom ? 'other' : (props.initial?.role || 'production'));
-const customRole = ref(initialIsCustom ? props.initial?.role || '' : '');
-const notes = ref(props.initial?.relation_notes || '');
-
-const form = computed<LinkHost>(() => ({
-  role: selectedRole.value === 'other' ? customRole.value : selectedRole.value,
-  notes: notes.value,
-}));
+const form = ref({
+  role: props.initial?.role || 'production',
+  notes: props.initial?.relation_notes || '',
+} satisfies LinkHost);
 
 function handleSubmit() {
   emit('submit', form.value);
@@ -35,22 +31,13 @@ function handleSubmit() {
       Link <span class="font-semibold">{{ hostName }}</span> to this application
     </p>
 
-    <fieldset class="fieldset">
-      <legend class="fieldset-legend">Role</legend>
-      <select v-model="selectedRole" class="select w-full">
-        <option v-for="(visual, value) in hostRoles" :value="value">
-          {{ visual }}
-        </option>
-      </select>
-      <input
-        v-if="selectedRole === 'other'"
-        v-model="customRole"
-        type="text"
-        class="input w-full mt-2"
-        placeholder="Enter custom role"
-        required
-      />
-    </fieldset>
+    <SelectWithCustom
+      v-model="form.role"
+      :options="hostRoles"
+      label="Role"
+      allow-custom
+      custom-placeholder="Enter custom role"
+    />
 
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Notes</legend>

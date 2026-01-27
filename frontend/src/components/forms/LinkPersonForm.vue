@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import type { LinkPerson, PersonRelation } from '@/types';
 import { contributionTypes } from '@/values';
+import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
   personName: string;
@@ -13,12 +14,12 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const form = ref<LinkPerson>({
+const form = ref({
   contribution_type: props.initial?.contribution_type || 'developer',
   start_date: props.initial?.start_date || '',
   end_date: props.initial?.end_date || '',
   notes: props.initial?.relation_notes || '',
-});
+} satisfies LinkPerson);
 
 function handleSubmit() {
   emit('submit', form.value);
@@ -32,14 +33,13 @@ function handleSubmit() {
       application
     </p>
 
-    <fieldset class="fieldset">
-      <legend class="fieldset-legend">Contribution Type</legend>
-      <select v-model="form.contribution_type" class="select w-full">
-        <option v-for="(visual, value) in contributionTypes" :value="value">
-          {{ visual }}
-        </option>
-      </select>
-    </fieldset>
+    <SelectWithCustom
+      v-model="form.contribution_type"
+      :options="contributionTypes"
+      label="Contribution Type"
+      allow-custom
+      custom-placeholder="Enter custom contribution"
+    />
 
     <div class="grid grid-cols-2 gap-4">
       <fieldset class="fieldset">
