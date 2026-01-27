@@ -535,18 +535,15 @@ onMounted(loadData);
                 No technologies linked
               </div>
               <div v-else class="flex flex-wrap gap-2">
-                <span
+                <StackBadge
                   v-for="s in app.stacks"
                   @click="router.push(`/stack/${s.id}`)"
-                  class="cursor-pointer"
-                >
-                  <StackBadge
-                    :key="s.id"
-                    :name="s.name"
-                    removable
-                    @remove="confirmUnlink('stack', s.id, s.name)"
-                  />
-                </span>
+                  :key="s.id"
+                  :name="s.name"
+                  removable
+                  clickable
+                  @remove="confirmUnlink('stack', s.id, s.name)"
+                />
               </div>
             </div>
           </div>

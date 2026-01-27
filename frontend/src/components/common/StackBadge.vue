@@ -5,14 +5,22 @@ import { X } from 'lucide-vue-next';
 
 const props = defineProps<{
   name: string;
+  clickable?: boolean;
   removable?: boolean;
 }>();
 
 const emit = defineEmits<{
   remove: [];
+  click: [];
 }>();
 
 const colorClass = computed(() => getStackColor(props.name));
+
+function click() {
+  if (props.clickable) {
+    emit('click');
+  }
+}
 </script>
 
 <template>
@@ -20,7 +28,7 @@ const colorClass = computed(() => getStackColor(props.name));
     class="badge badge-sm gap-1.5"
     :class="removable ? `${colorClass} pr-1` : `${colorClass}`"
   >
-    <p>
+    <p @click="click" :class="clickable ? 'cursor-pointer' : ''">
       {{ name }}
     </p>
     <button
