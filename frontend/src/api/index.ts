@@ -7,6 +7,7 @@ import type {
   CreateNetworkShare,
   CreateNote,
   CreatePerson,
+  CreateStack,
   DashboardStats,
   Domain,
   DomainWithRelations,
@@ -24,12 +25,15 @@ import type {
   Person,
   PersonWithRelations,
   SearchResults,
+  Stack,
+  StackWithRelations,
   UpdateApplication,
   UpdateDomain,
   UpdateHost,
   UpdateNetworkShare,
   UpdateNote,
   UpdatePerson,
+  UpdateStack,
 } from '@/types';
 
 const BASE_URL = '/api';
@@ -134,6 +138,16 @@ export const applicationsApi = {
 
   unlinkShare: (appId: string, shareId: string) =>
     request<void>(`/applications/${appId}/shares/${shareId}`, {
+      method: 'DELETE',
+    }),
+
+  linkStack: (appId: string, stackId: string) =>
+    request<void>(`/applications/${appId}/stacks/${stackId}`, {
+      method: 'POST',
+    }),
+
+  unlinkStack: (appId: string, stackId: string) =>
+    request<void>(`/applications/${appId}/stacks/${stackId}`, {
       method: 'DELETE',
     }),
 };
@@ -255,6 +269,28 @@ export const notesApi = {
 // Dashboard API
 export const dashboardApi = {
   getStats: () => request<DashboardStats>('/dashboard/stats'),
+};
+
+// Stacks API
+export const stacksApi = {
+  list: (params: PaginationParams = {}) =>
+    request<PaginatedResponse<Stack>>(`/stacks${buildQueryString(params)}`),
+
+  get: (id: string) => request<StackWithRelations>(`/stacks/${id}`),
+
+  create: (data: CreateStack) =>
+    request<Stack>('/stacks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateStack) =>
+    request<Stack>(`/stacks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) => request<void>(`/stacks/${id}`, { method: 'DELETE' }),
 };
 
 // Search API

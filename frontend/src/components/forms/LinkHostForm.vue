@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import type { LinkHost, HostRelation } from '@/types';
 import { hostRoles } from '@/values';
 import SelectWithCustom from '../common/SelectWithCustom.vue';
