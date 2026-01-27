@@ -12,6 +12,7 @@ const navItems = [
   { name: 'Domains', path: '/domains' },
   { name: 'People', path: '/people' },
   { name: 'Shares', path: '/shares' },
+  { name: 'Stack', path: '/stack' },
 ];
 
 function handleSearch() {

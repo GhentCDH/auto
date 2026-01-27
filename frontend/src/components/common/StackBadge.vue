@@ -16,14 +16,16 @@ const colorClass = computed(() => getStackColor(props.name));
 </script>
 
 <template>
-  <span class="badge badge-sm gap-1" :class="colorClass">
-    {{ name }}
+  <span class="badge badge-sm gap-1.5 pr-1" :class="colorClass">
+    <p>
+      {{ name }}
+    </p>
     <button
       v-if="removable"
-      class="hover:opacity-70"
+      class="hover:opacity-70 cursor-pointer"
       @click.stop="emit('remove')"
     >
-      <X class="w-3 h-3" />
+      <X class="w-3 h-3 mt-px" stroke-width="3px" />
     </button>
   </span>
 </template>
