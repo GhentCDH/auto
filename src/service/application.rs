@@ -1,9 +1,9 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    Application, ApplicationWithRelations, CreateApplication, DomainRelation,
-    HostRelation, NetworkShareRelation, Note, PaginatedResponse, PaginationParams, PersonRelation,
-    UpdateApplication, new_id,
+    Application, ApplicationWithRelations, CreateApplication, DomainRelation, HostRelation,
+    NetworkShareRelation, Note, PaginatedResponse, PaginationParams, PersonRelation,
+    StackRelation, UpdateApplication, new_id,
 };
 use crate::{Error, Result};
 
@@ -150,6 +150,19 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
     .fetch_all(pool)
     .await?;
 
+    let stacks = sqlx::query_as::<_, StackRelation>(
+        r#"
+        SELECT s.id, s.name
+        FROM stack s
+        JOIN application_stack ast ON s.id = ast.stack_id
+        WHERE ast.application_id = ?1
+        ORDER BY s.name
+        "#,
+    )
+    .bind(id)
+    .fetch_all(pool)
+    .await?;
+
     Ok(ApplicationWithRelations {
         application,
         hosts,
@@ -157,6 +170,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
         people,
         network_shares,
         notes,
+        stacks,
     })
 }
 
@@ -425,6 +439,40 @@ pub async fn unlink_network_share(pool: &SqlitePool, app_id: &str, share_id: &st
     .bind(share_id)
     .execute(pool)
     .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(Error::NotFound("Relationship not found".to_string()));
+    }
+
+    Ok(())
+}
+
+pub async fn link_stack(pool: &SqlitePool, app_id: &str, stack_id: &str) -> Result<()> {
+    get(pool, app_id).await?;
+    crate::service::stack::get(pool, stack_id).await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO application_stack (application_id, stack_id)
+        VALUES (?1, ?2)
+        ON CONFLICT (application_id, stack_id) DO NOTHING
+        "#,
+    )
+    .bind(app_id)
+    .bind(stack_id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn unlink_stack(pool: &SqlitePool, app_id: &str, stack_id: &str) -> Result<()> {
+    let result =
+        sqlx::query("DELETE FROM application_stack WHERE application_id = ?1 AND stack_id = ?2")
+            .bind(app_id)
+            .bind(stack_id)
+            .execute(pool)
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(Error::NotFound("Relationship not found".to_string()));

@@ -4,6 +4,7 @@ mod host;
 mod network_share;
 mod note;
 mod person;
+mod stack;
 
 pub use application::*;
 pub use domain::*;
@@ -11,6 +12,7 @@ pub use host::*;
 pub use network_share::*;
 pub use note::*;
 pub use person::*;
+pub use stack::*;
 
 use serde::{Deserialize, Serialize};
 
