@@ -4,8 +4,24 @@
 @import 'tailwindcss';
 @plugin 'daisyui' {
   themes:
-    bumblebee --default,
-    business --prefersdark;
+    corporate --default,
+    dim --prefersdark;
+}
+
+@plugin "daisyui/theme" {
+  name: 'corporate';
+  default: true;
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+}
+
+@plugin "daisyui/theme" {
+  name: 'dim';
+  prefersdark: true;
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
 }
 
 @theme {
