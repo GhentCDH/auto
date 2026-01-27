@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { hostsApi } from '@/api';
-import type { Host, CreateHost } from '@/types';
+import type { Host } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import HostForm from '@/components/forms/HostForm.vue';

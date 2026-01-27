@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { applicationsApi } from '@/api';
-import type { Application, CreateApplication } from '@/types';
+import type { Application } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import ApplicationForm from '@/components/forms/ApplicationForm.vue';
@@ -45,4 +45,4 @@ import ApplicationForm from '@/components/forms/ApplicationForm.vue';
       <ApplicationForm @submit="onSubmit" @cancel="onCancel" />
     </template>
   </EntityList>
-</template>
+</template

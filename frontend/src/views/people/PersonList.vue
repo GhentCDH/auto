@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { peopleApi } from '@/api';
-import type { Person, CreatePerson } from '@/types';
+import type { Person } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import PersonForm from '@/components/forms/PersonForm.vue';
 </script>

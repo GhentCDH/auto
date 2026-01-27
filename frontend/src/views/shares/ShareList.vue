@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { sharesApi } from '@/api';
-import type { NetworkShare, CreateNetworkShare } from '@/types';
+import type { NetworkShare } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import ShareForm from '@/components/forms/ShareForm.vue';

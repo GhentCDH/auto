@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { domainsApi } from '@/api';
-import type { Domain, CreateDomain } from '@/types';
+import type { Domain } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import DomainForm from '@/components/forms/DomainForm.vue';
