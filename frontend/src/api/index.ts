@@ -61,7 +61,7 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   return response.json();
 }
 
-function buildQueryString(params: Record<string, unknown>): string {
+function buildQueryString(params: any): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') {

@@ -16,7 +16,10 @@ const colorClass = computed(() => getStackColor(props.name));
 </script>
 
 <template>
-  <span class="badge badge-sm gap-1.5 pr-1" :class="colorClass">
+  <span
+    class="badge badge-sm gap-1.5"
+    :class="removable ? `${colorClass} pr-1` : `${colorClass}`"
+  >
     <p>
       {{ name }}
     </p>

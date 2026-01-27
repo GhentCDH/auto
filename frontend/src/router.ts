@@ -55,6 +55,10 @@ const routes = [
     path: '/stack',
     component: () => import('./views/stack/StackList.vue'),
   },
+  {
+    path: '/stack/:id',
+    component: () => import('./views/stack/StackDetail.vue'),
+  },
   // Search
   {
     path: '/search',

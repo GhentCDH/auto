@@ -67,7 +67,11 @@ function handleSubmit() {
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Type</legend>
         <select v-model="note_type" class="select w-full">
-          <option v-for="(visual, value) in noteTypes" :key="value" :value="value">
+          <option
+            v-for="(visual, value) in noteTypes"
+            :key="value"
+            :value="value"
+          >
             {{ visual }}
           </option>
         </select>
@@ -109,7 +113,10 @@ function handleSubmit() {
           {{ showPreview ? 'Edit' : 'Preview' }}
         </button>
       </legend>
-      <div v-if="showPreview" class="min-h-[150px] p-3 bg-base-100 rounded-lg border border-base-300">
+      <div
+        v-if="showPreview"
+        class="min-h-[150px] p-3 bg-base-100 rounded-lg border border-base-300"
+      >
         <MarkdownRenderer v-if="content" :content="content" />
         <span v-else class="text-base-content/50 italic">No content</span>
       </div>

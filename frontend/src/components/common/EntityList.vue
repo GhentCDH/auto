@@ -14,7 +14,10 @@ const props = defineProps<{
   emptyMessage: string;
   modalTitle: string;
   basePath: string;
-  fetchFn: (params: { page?: number; search?: string }) => Promise<PaginatedResponse<T>>;
+  fetchFn: (params: {
+    page?: number;
+    search?: string;
+  }) => Promise<PaginatedResponse<T>>;
   createFn?: (data: C) => Promise<T>;
 }>();
 
