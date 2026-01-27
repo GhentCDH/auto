@@ -4,6 +4,7 @@ import type { Application } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import ApplicationForm from '@/components/forms/ApplicationForm.vue';
+import ModelViewer from '@/components/common/ModelViewer.vue';
 </script>
 
 <template>

@@ -1,9 +1,26 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import ModelViewer from '@/components/common/ModelViewer.vue';
 
 const router = useRouter();
 const searchQuery = ref('');
+
+const windowWidth = ref(window.innerWidth);
+const windowHeight = ref(window.innerHeight);
+
+function updateWindowSize() {
+  windowWidth.value = window.innerWidth;
+  windowHeight.value = window.innerHeight;
+}
+
+onMounted(() => window.addEventListener('resize', updateWindowSize));
+onUnmounted(() => window.removeEventListener('resize', updateWindowSize));
+
+const proximityRadius = computed(() => {
+  const diagonal = Math.sqrt(windowWidth.value ** 2 + windowHeight.value ** 2);
+  return diagonal * 0.8;
+});
 
 const navItems = [
   { name: 'Dashboard', path: '/' },
@@ -51,7 +68,22 @@ function handleSearch() {
           </li>
         </ul>
       </div>
-      <router-link to="/" class="btn btn-ghost text-xl">AUTO!</router-link>
+      <router-link
+        to="/"
+        class="btn btn-ghost text-2xl inline-flex items-center gap-1 wallefont font-black"
+      >
+        <Suspense>
+          <ModelViewer
+            model-path="/models/auto.glb"
+            :size="60"
+            :proximity-radius="proximityRadius"
+          />
+          <template #fallback>
+            <span class="loading loading-spinner loading-xs"></span>
+          </template>
+        </Suspense>
+        AUTO
+      </router-link>
     </div>
     <div class="navbar-center hidden lg:flex">
       <ul class="menu menu-horizontal px-1">
