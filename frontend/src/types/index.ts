@@ -45,6 +45,7 @@ export interface ApplicationWithRelations extends Application {
   people: PersonRelation[];
   network_shares: NetworkShareRelation[];
   notes: Note[];
+  stacks: StackRelation[];
 }
 
 // Host types
@@ -396,4 +397,38 @@ export interface SearchResult {
   name: string;
   description: string | null;
   entity_type: string;
+}
+
+// Stack types
+export interface Stack {
+  id: string;
+  name: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateStack {
+  name: string;
+  notes?: string;
+}
+
+export interface UpdateStack {
+  name?: string;
+  notes?: string;
+}
+
+export interface StackRelation {
+  id: string;
+  name: string;
+}
+
+export interface StackWithRelations extends Stack {
+  applications: ApplicationStackRelation[];
+}
+
+export interface ApplicationStackRelation {
+  id: string;
+  name: string;
+  status: string;
 }

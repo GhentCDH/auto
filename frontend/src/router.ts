@@ -50,6 +50,15 @@ const routes = [
     path: '/shares/:id',
     component: () => import('./views/shares/ShareDetail.vue'),
   },
+  // Stack
+  {
+    path: '/stack',
+    component: () => import('./views/stack/StackList.vue'),
+  },
+  {
+    path: '/stack/:id',
+    component: () => import('./views/stack/StackDetail.vue'),
+  },
   // Search
   {
     path: '/search',

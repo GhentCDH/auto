@@ -14,6 +14,7 @@ mod notes;
 mod people;
 mod search;
 mod shares;
+mod stacks;
 
 pub fn api_routes(state: AppState) -> Router<AppState> {
     Router::new()
@@ -24,6 +25,7 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .nest("/people", people::routes())
         .nest("/shares", shares::routes())
         .nest("/notes", notes::routes())
+        .nest("/stacks", stacks::routes())
         .nest("/dashboard", dashboard::routes())
         .nest("/search", search::routes())
         .with_state(state)

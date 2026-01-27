@@ -47,4 +47,5 @@ pub struct ApplicationWithRelations {
     pub people: Vec<super::PersonRelation>,
     pub network_shares: Vec<super::NetworkShareRelation>,
     pub notes: Vec<super::Note>,
+    pub stacks: Vec<super::StackRelation>,
 }

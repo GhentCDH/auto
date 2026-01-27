@@ -6,8 +6,8 @@ use axum::{
 use tracing::instrument;
 
 use crate::models::{
-    CreateApplication, LinkDomain, LinkHost, LinkNetworkShare, LinkPerson,
-    PaginationParams, UpdateApplication,
+    CreateApplication, LinkDomain, LinkHost, LinkNetworkShare, LinkPerson, PaginationParams,
+    UpdateApplication,
 };
 use crate::service::application;
 use crate::{AppState, Result};
@@ -29,6 +29,10 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/{id}/shares/{share_id}",
             post(link_share).delete(unlink_share),
+        )
+        .route(
+            "/{id}/stacks/{stack_id}",
+            post(link_stack).delete(unlink_stack),
         )
 }
 
@@ -176,5 +180,21 @@ async fn unlink_share(
     Path((app_id, share_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
     application::unlink_network_share(&state.pool, &app_id, &share_id).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+async fn link_stack(
+    State(state): State<AppState>,
+    Path((app_id, stack_id)): Path<(String, String)>,
+) -> Result<impl axum::response::IntoResponse> {
+    application::link_stack(&state.pool, &app_id, &stack_id).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+async fn unlink_stack(
+    State(state): State<AppState>,
+    Path((app_id, stack_id)): Path<(String, String)>,
+) -> Result<impl axum::response::IntoResponse> {
+    application::unlink_stack(&state.pool, &app_id, &stack_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }

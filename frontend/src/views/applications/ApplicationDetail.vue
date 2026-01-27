@@ -8,6 +8,7 @@ import {
   peopleApi,
   sharesApi,
   notesApi,
+  stacksApi,
 } from '@/api';
 import type {
   ApplicationWithRelations,
@@ -19,6 +20,7 @@ import type {
   CreateDomain,
   CreatePerson,
   CreateNetworkShare,
+  CreateStack,
   HostRelation,
   DomainRelation,
   PersonRelation,
@@ -41,8 +43,10 @@ import LinkHostForm from '@/components/forms/LinkHostForm.vue';
 import LinkDomainForm from '@/components/forms/LinkDomainForm.vue';
 import LinkPersonForm from '@/components/forms/LinkPersonForm.vue';
 import LinkShareForm from '@/components/forms/LinkShareForm.vue';
+import StackForm from '@/components/forms/StackForm.vue';
 import NoteForm from '@/components/forms/NoteForm.vue';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
+import StackBadge from '@/components/common/StackBadge.vue';
 import { Pin, ExternalLink, X, Plus, Edit, Link2Off } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -64,6 +68,7 @@ const showLinkHostModal = ref(false);
 const showLinkDomainModal = ref(false);
 const showLinkPersonModal = ref(false);
 const showLinkShareModal = ref(false);
+const showLinkStackModal = ref(false);
 
 // Edit modal states
 const showEditHostModal = ref(false);
@@ -146,6 +151,9 @@ function openLinkModal(type: string) {
     case 'share':
       showLinkShareModal.value = true;
       break;
+    case 'stack':
+      showLinkStackModal.value = true;
+      break;
   }
 }
 
@@ -162,6 +170,9 @@ function closeLinkModal(type: string) {
       break;
     case 'share':
       showLinkShareModal.value = false;
+      break;
+    case 'stack':
+      showLinkStackModal.value = false;
       break;
   }
 }
@@ -214,6 +225,27 @@ async function handleCreateShare(data: CreateNetworkShare) {
     linkStep.value = 'form';
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to create share';
+  }
+}
+
+async function handleCreateStack(data: CreateStack) {
+  try {
+    const created = await stacksApi.create(data);
+    await applicationsApi.linkStack(id, created.id);
+    showLinkStackModal.value = false;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to create stack';
+  }
+}
+
+async function handleStackSelect(entity: { id: string; name: string }) {
+  try {
+    await applicationsApi.linkStack(id, entity.id);
+    showLinkStackModal.value = false;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to link stack';
   }
 }
 
@@ -407,6 +439,9 @@ async function handleUnlink() {
       case 'share':
         await applicationsApi.unlinkShare(id, unlinkId.value);
         break;
+      case 'stack':
+        await applicationsApi.unlinkStack(id, unlinkId.value);
+        break;
     }
     showUnlinkDialog.value = false;
     loadData();
@@ -480,6 +515,35 @@ onMounted(loadData);
                   <div class="text-sm text-base-content/70">Updated</div>
                   <div>{{ new Date(app.updated_at).toLocaleString() }}</div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stack Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <div class="flex justify-between items-center">
+                <h2 class="card-title">Tech Stack</h2>
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="openLinkModal('stack')"
+                >
+                  <Plus class="w-4 h-4" /> Add
+                </button>
+              </div>
+              <div v-if="app.stacks.length === 0" class="text-base-content/70">
+                No technologies linked
+              </div>
+              <div v-else class="flex flex-wrap gap-2">
+                <StackBadge
+                  v-for="s in app.stacks"
+                  @click="router.push(`/stack/${s.id}`)"
+                  :key="s.id"
+                  :name="s.name"
+                  removable
+                  clickable
+                  @remove="confirmUnlink('stack', s.id, s.name)"
+                />
               </div>
             </div>
           </div>
@@ -940,6 +1004,30 @@ onMounted(loadData);
         :share-name="selectedEntity.name"
         @submit="handleLinkShare"
         @cancel="closeLinkModal('share')"
+      />
+    </Modal>
+
+    <!-- Link Stack Modal -->
+    <Modal
+      :title="linkStep === 'create' ? 'Create Stack' : 'Link Stack'"
+      :open="showLinkStackModal"
+      @close="closeLinkModal('stack')"
+    >
+      <EntitySelector
+        v-if="linkStep === 'select'"
+        title="Technology"
+        allow-create
+        :fetch-fn="stacksApi.list"
+        :exclude-ids="app?.stacks.map((s) => s.id)"
+        @select="handleStackSelect"
+        @create="handleCreateRequest"
+        @cancel="closeLinkModal('stack')"
+      />
+      <StackForm
+        v-else-if="linkStep === 'create'"
+        :initial-name="initialName"
+        @submit="(data) => handleCreateStack(data as CreateStack)"
+        @cancel="linkStep = 'select'"
       />
     </Modal>
 

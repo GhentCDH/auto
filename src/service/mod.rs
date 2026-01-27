@@ -6,3 +6,4 @@ pub mod network_share;
 pub mod note;
 pub mod person;
 pub mod search;
+pub mod stack;
