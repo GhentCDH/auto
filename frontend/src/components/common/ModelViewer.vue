@@ -56,8 +56,8 @@ const sizeStyle = computed(() => ({
       class="tres-canvas"
     >
       <TresPerspectiveCamera :position="[0, 0, cameraDistance]" />
-      <TresAmbientLight :intensity="0.6" />
-      <TresDirectionalLight :position="[5, 5, 5]" :intensity="1" />
+      <TresAmbientLight :intensity="0.3" />
+      <TresDirectionalLight :position="[10, 5, 3]" :intensity="2" />
       <TresGroup :rotation-x="rotationX" :rotation-y="rotationY">
         <primitive v-if="scene" :object="scene" />
       </TresGroup>
