@@ -43,7 +43,7 @@ import LinkPersonForm from '@/components/forms/LinkPersonForm.vue';
 import LinkShareForm from '@/components/forms/LinkShareForm.vue';
 import NoteForm from '@/components/forms/NoteForm.vue';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
-import { Pin, ExternalLink, X } from 'lucide-vue-next';
+import { Pin, ExternalLink, X, Plus, Edit, Link2Off } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -84,11 +84,11 @@ const editingNote = ref<Note | null>(null);
 const viewingNote = ref<Note | null>(null);
 const deletingNote = ref<Note | null>(null);
 
-// Unlink confirm states
+// Link2Off confirm states
 const unlinkType = ref<string>('');
 const unlinkId = ref<string>('');
 const unlinkName = ref<string>('');
-const showUnlinkDialog = ref(false);
+const showLink2OffDialog = ref(false);
 
 const id = route.params.id as string;
 
@@ -384,15 +384,15 @@ async function handleDeleteNote() {
   }
 }
 
-// Unlink handlers
-function confirmUnlink(type: string, entityId: string, name: string) {
+// Link2Off handlers
+function confirmLink2Off(type: string, entityId: string, name: string) {
   unlinkType.value = type;
   unlinkId.value = entityId;
   unlinkName.value = name;
-  showUnlinkDialog.value = true;
+  showLink2OffDialog.value = true;
 }
 
-async function handleUnlink() {
+async function handleLink2Off() {
   try {
     switch (unlinkType.value) {
       case 'host':
@@ -408,7 +408,7 @@ async function handleUnlink() {
         await applicationsApi.unlinkShare(id, unlinkId.value);
         break;
     }
-    showUnlinkDialog.value = false;
+    showLink2OffDialog.value = false;
     loadData();
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to unlink';
@@ -488,12 +488,12 @@ onMounted(loadData);
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
-                <h2 class="card-title">Hosts ({{ app.hosts.length }})</h2>
+                <h2 class="card-title">Hosts</h2>
                 <button
                   class="btn btn-sm btn-ghost"
                   @click="openLinkModal('host')"
                 >
-                  + Add
+                  <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
               <div v-if="app.hosts.length === 0" class="text-base-content/70">
@@ -522,21 +522,23 @@ onMounted(loadData);
                       <td>{{ h.host_type }}</td>
                       <td>{{ h.hostname || '-' }}</td>
                       <td>
-                        <span class="badge badge-outline">{{ h.role }}</span>
+                        <span class="badge badge-outline badge-sm">{{
+                          h.role
+                        }}</span>
                       </td>
                       <td><StatusBadge :status="h.status" /></td>
-                      <td class="flex gap-1">
+                      <td class="flex">
                         <button
                           class="btn btn-ghost btn-xs"
                           @click="openEditHost(h)"
                         >
-                          Edit
+                          <Edit class="w-4 h-4" />
                         </button>
                         <button
                           class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('host', h.id, h.name)"
+                          @click="confirmLink2Off('host', h.id, h.name)"
                         >
-                          Unlink
+                          <Link2Off class="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
@@ -550,12 +552,12 @@ onMounted(loadData);
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
-                <h2 class="card-title">Domains ({{ app.domains.length }})</h2>
+                <h2 class="card-title">Domains</h2>
                 <button
                   class="btn btn-sm btn-ghost"
                   @click="openLinkModal('domain')"
                 >
-                  + Add
+                  <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
               <div v-if="app.domains.length === 0" class="text-base-content/70">
@@ -597,18 +599,18 @@ onMounted(loadData);
                       <td>{{ d.is_primary ? 'Yes' : 'No' }}</td>
                       <td>{{ d.ssl_expires_at || '-' }}</td>
                       <td><StatusBadge :status="d.status" /></td>
-                      <td class="flex gap-1">
+                      <td class="flex">
                         <button
                           class="btn btn-ghost btn-xs"
                           @click="openEditDomain(d)"
                         >
-                          Edit
+                          <Edit class="w-4 h-4" />
                         </button>
                         <button
                           class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('domain', d.id, d.name)"
+                          @click="confirmLink2Off('domain', d.id, d.name)"
                         >
-                          Unlink
+                          <Link2Off class="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
@@ -624,12 +626,12 @@ onMounted(loadData);
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
-                <h2 class="card-title">People ({{ app.people.length }})</h2>
+                <h2 class="card-title">People</h2>
                 <button
                   class="btn btn-sm btn-ghost"
                   @click="openLinkModal('person')"
                 >
-                  + Add
+                  <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
               <div v-if="app.people.length === 0" class="text-base-content/70">
@@ -652,18 +654,18 @@ onMounted(loadData);
                       {{ p.contribution_type }}
                     </span>
                   </div>
-                  <div class="flex gap-1">
+                  <div class="flex">
                     <button
                       class="btn btn-ghost btn-xs"
                       @click="openEditPerson(p)"
                     >
-                      Edit
+                      <Edit class="w-4 h-4" />
                     </button>
                     <button
                       class="btn btn-ghost btn-xs text-error"
-                      @click="confirmUnlink('person', p.id, p.name)"
+                      @click="confirmLink2Off('person', p.id, p.name)"
                     >
-                      <X class="w-4 h-4" />
+                      <Link2Off class="w-4 h-4" />
                     </button>
                   </div>
                 </li>
@@ -675,14 +677,12 @@ onMounted(loadData);
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
-                <h2 class="card-title">
-                  Shares ({{ app.network_shares.length }})
-                </h2>
+                <h2 class="card-title">Shares</h2>
                 <button
                   class="btn btn-sm btn-ghost"
                   @click="openLinkModal('share')"
                 >
-                  + Add
+                  <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
               <div
@@ -700,18 +700,18 @@ onMounted(loadData);
                     >
                       {{ s.name }}
                     </router-link>
-                    <div class="flex gap-1">
+                    <div class="flex">
                       <button
                         class="btn btn-ghost btn-xs"
                         @click="openEditShare(s)"
                       >
-                        Edit
+                        <Edit class="w-4 h-4" />
                       </button>
                       <button
                         class="btn btn-ghost btn-xs text-error"
-                        @click="confirmUnlink('share', s.id, s.name)"
+                        @click="confirmLink2Off('share', s.id, s.name)"
                       >
-                        <X class="w-4 h-4" />
+                        <Link2Off class="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -725,12 +725,12 @@ onMounted(loadData);
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
-                <h2 class="card-title">Notes ({{ app.notes.length }})</h2>
+                <h2 class="card-title">Notes</h2>
                 <button
                   class="btn btn-sm btn-ghost"
                   @click="showCreateNoteModal = true"
                 >
-                  + Add
+                  <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
               <div v-if="app.notes.length === 0" class="text-base-content/70">
@@ -767,24 +767,24 @@ onMounted(loadData);
                       </div>
                       <div
                         v-if="n.url"
-                        class="text-sm text-primary inline-flex items-center gap-1 mt-1"
+                        class="text-sm text-primary inline-flex items-center mt-1"
                       >
                         <ExternalLink class="h-3 w-3" />
                         Link attached
                       </div>
                     </div>
-                    <div class="flex gap-1 shrink-0">
+                    <div class="flex shrink-0">
                       <button
                         class="btn btn-ghost btn-xs"
                         @click.stop="openEditNote(n)"
                       >
-                        Edit
+                        <Edit class="w-4 h-4" />
                       </button>
                       <button
                         class="btn btn-ghost btn-xs text-error"
                         @click.stop="confirmDeleteNote(n)"
                       >
-                        <X class="w-4 h-4" />
+                        <Link2Off class="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -943,15 +943,15 @@ onMounted(loadData);
       />
     </Modal>
 
-    <!-- Unlink Confirmation -->
+    <!-- Link2Off Confirmation -->
     <ConfirmDialog
-      :open="showUnlinkDialog"
-      title="Unlink Entity"
+      :open="showLink2OffDialog"
+      title="Link2Off Entity"
       :message="`Are you sure you want to unlink '${unlinkName}' from this application?`"
-      confirm-label="Unlink"
+      confirm-label="Link2Off"
       danger
-      @confirm="handleUnlink"
-      @cancel="showUnlinkDialog = false"
+      @confirm="handleLink2Off"
+      @cancel="showLink2OffDialog = false"
     />
 
     <!-- Edit Host Modal -->
@@ -1067,7 +1067,7 @@ onMounted(loadData);
           v-if="viewingNote.url"
           :href="viewingNote.url"
           target="_blank"
-          class="link link-primary inline-flex items-center gap-1"
+          class="link link-primary inline-flex items-center"
         >
           <ExternalLink class="h-4 w-4" />
           {{ viewingNote.url }}
@@ -1089,7 +1089,7 @@ onMounted(loadData);
               openEditNote(viewingNote);
             "
           >
-            Edit
+            <Edit class="w-4 h-4" />
           </button>
         </div>
       </div>

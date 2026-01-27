@@ -9,6 +9,14 @@ _require-sqlx:
         exit 1
     fi
 
+_require-watch:
+    #!/usr/bin/env bash
+    if ! command -v cargo-watch &> /dev/null && ! cargo watch --version &> /dev/null; then
+        echo "Error: 'cargo watch' is not installed"
+        echo -e "Install it with: \x1b[1;33mcargo install cargo-watch\x1b[0m"
+        exit 1
+    fi
+
 # Check if database exists, provide instructions if not
 _require-db:
     #!/usr/bin/env bash
@@ -32,3 +40,12 @@ reset-db: _require-sqlx
 # Generate .sqlx query cache for offline compilation
 prepare: _require-sqlx _require-db
     cargo sqlx prepare
+
+watch: _require-watch
+    @cargo watch -x run
+
+docker-build:
+    docker build -t auto:latest .
+
+docker-run env-file="dev.env" port="8080":
+    docker run --env-file {{env-file}} -v ./data:/app/data -p {{port}}:{{port}} auto:latest

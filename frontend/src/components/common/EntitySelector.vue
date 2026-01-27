@@ -87,7 +87,8 @@ onMounted(loadEntities);
         class="btn btn-primary btn-sm"
         @click="handleCreate"
       >
-        + Create New {{ title.slice(0, -1) }}{{ search ? `: "${search}"` : '' }}
+        + Create New {{ title.at(-1) === 's' ? title.slice(0, -1) : title
+        }}{{ search ? `: "${search}"` : '' }}
       </button>
     </div>
 

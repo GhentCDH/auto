@@ -50,7 +50,7 @@ function handleSearch() {
           </li>
         </ul>
       </div>
-      <router-link to="/" class="btn btn-ghost text-xl">Infra Docs</router-link>
+      <router-link to="/" class="btn btn-ghost text-xl">AUTO!</router-link>
     </div>
     <div class="navbar-center hidden lg:flex">
       <ul class="menu menu-horizontal px-1">

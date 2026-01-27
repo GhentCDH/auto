@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "dev:build": "vite build --watch",
+    "watch": "VITE_WATCH=1 vite build --watch",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,vue,css,scss}\""
   },

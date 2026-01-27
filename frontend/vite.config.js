@@ -19,5 +19,13 @@ export default defineConfig({
   build: {
     outDir: '../frontend-dist',
     emptyOutDir: true,
+    watch: process.env.VITE_WATCH
+      ? {
+          chokidar: {
+            usePolling: true,
+            interval: 100,
+          },
+        }
+      : null,
   },
 });

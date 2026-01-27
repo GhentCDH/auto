@@ -22,5 +22,5 @@ const badgeClass = computed(() => {
 </script>
 
 <template>
-  <span class="badge" :class="badgeClass">{{ status }}</span>
+  <span class="badge badge-sm" :class="badgeClass">{{ status }}</span>
 </template>
