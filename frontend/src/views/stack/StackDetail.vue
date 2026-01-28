@@ -112,8 +112,6 @@ onMounted(loadData);
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Usage</th>
-                    <th>Mount Point</th>
                     <th>Status</th>
                   </tr>
                 </thead>
