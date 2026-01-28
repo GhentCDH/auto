@@ -5,6 +5,7 @@ import { infraTypes } from '@/values';
 
 const props = defineProps<{
   infra?: Infra;
+  initialName?: string;
 }>();
 
 const emit = defineEmits<{
@@ -13,7 +14,7 @@ const emit = defineEmits<{
 }>();
 
 const form = ref<CreateInfra>({
-  name: '',
+  name: props.initialName || '',
   description: '',
   type: 'server',
 });
@@ -53,7 +54,11 @@ function handleSubmit() {
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Type *</legend>
       <select v-model="form.type" class="select w-full" required>
-        <option v-for="(label, value) in infraTypes" :key="value" :value="value">
+        <option
+          v-for="(label, value) in infraTypes"
+          :key="value"
+          :value="value"
+        >
           {{ label }}
         </option>
       </select>
