@@ -19,6 +19,14 @@ export default defineConfig({
   build: {
     outDir: '../frontend-dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three', '@tresjs/core', '@tresjs/cientos'],
+          markdown: ['marked', 'dompurify'],
+        },
+      },
+    },
     watch: process.env.VITE_WATCH
       ? {
           chokidar: {
