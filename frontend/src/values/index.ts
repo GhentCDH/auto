@@ -1,8 +1,15 @@
-export const hostTypes = {
-  physical: 'Physical',
+export const environments = {
+  dev: 'Development',
+  staging: 'Staging',
+  prd: 'Production',
+};
+
+export const infraTypes = {
+  nomad_cluster: 'Nomad Cluster',
+  k8s_cluster: 'Kubernetes Cluster',
+  server: 'Server',
   vm: 'Virtual Machine',
-  nomad: 'Nomad Job',
-  container: 'Container',
+  cloud: 'Cloud Service',
 };
 
 export const shareUsages = {
@@ -11,13 +18,6 @@ export const shareUsages = {
   logs: 'Logs',
   backup: 'Backup',
   media: 'Media',
-};
-
-export const hostRoles = {
-  production: 'Production',
-  development: 'Development',
-  testing: 'Testing',
-  qas: 'Quality Assurance',
 };
 
 export const domainTypes = {

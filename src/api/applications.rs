@@ -6,8 +6,8 @@ use axum::{
 use tracing::instrument;
 
 use crate::models::{
-    CreateApplication, LinkDomain, LinkHost, LinkNetworkShare, LinkPerson, PaginationParams,
-    UpdateApplication,
+    CreateApplication, LinkDomain, LinkInfra, LinkNetworkShare, LinkPerson, LinkService,
+    PaginationParams, UpdateApplication,
 };
 use crate::service::application;
 use crate::{AppState, Result};
@@ -17,7 +17,14 @@ pub fn routes() -> Router<AppState> {
         .route("/", get(list).post(create))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
         // Relationship management
-        .route("/{id}/hosts/{host_id}", post(link_host).delete(unlink_host))
+        .route(
+            "/{id}/infra/{infra_id}",
+            post(link_infra).delete(unlink_infra),
+        )
+        .route(
+            "/{id}/services/{service_id}",
+            post(link_service).delete(unlink_service),
+        )
         .route(
             "/{id}/domains/{domain_id}",
             post(link_domain).delete(unlink_domain),
@@ -79,27 +86,37 @@ async fn delete_one(
 
 // Relationship handlers
 
-async fn link_host(
+async fn link_infra(
     State(state): State<AppState>,
-    Path((app_id, host_id)): Path<(String, String)>,
-    Json(input): Json<LinkHost>,
+    Path((app_id, infra_id)): Path<(String, String)>,
+    Json(input): Json<LinkInfra>,
 ) -> Result<impl axum::response::IntoResponse> {
-    application::link_host(
-        &state.pool,
-        &app_id,
-        &host_id,
-        &input.role,
-        input.notes.as_deref(),
-    )
-    .await?;
+    application::link_infra(&state.pool, &app_id, &infra_id, input.notes.as_deref()).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
-async fn unlink_host(
+async fn unlink_infra(
     State(state): State<AppState>,
-    Path((app_id, host_id)): Path<(String, String)>,
+    Path((app_id, infra_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
-    application::unlink_host(&state.pool, &app_id, &host_id).await?;
+    application::unlink_infra(&state.pool, &app_id, &infra_id).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+async fn link_service(
+    State(state): State<AppState>,
+    Path((app_id, service_id)): Path<(String, String)>,
+    Json(input): Json<LinkService>,
+) -> Result<impl axum::response::IntoResponse> {
+    application::link_service(&state.pool, &app_id, &service_id, input.notes.as_deref()).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+async fn unlink_service(
+    State(state): State<AppState>,
+    Path((app_id, service_id)): Path<(String, String)>,
+) -> Result<impl axum::response::IntoResponse> {
+    application::unlink_service(&state.pool, &app_id, &service_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
@@ -115,7 +132,7 @@ async fn link_domain(
         &domain_id,
         &input.record_type,
         input.target.as_deref(),
-        input.target_host_id.as_deref(),
+        input.target_infra_id.as_deref(),
         input.is_primary,
         input.notes.as_deref(),
     )

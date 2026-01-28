@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { applicationsApi } from '@/api';
-import type { Application } from '@/types';
+import { servicesApi } from '@/api';
+import type { Service } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
-import ApplicationForm from '@/components/forms/ApplicationForm.vue';
+import ServiceForm from '@/components/forms/ServiceForm.vue';
 </script>
 
 <template>
   <EntityList
-    title="Applications"
-    add-label="Add Application"
-    search-placeholder="Search applications..."
-    empty-message="No applications found"
-    modal-title="Create Application"
-    base-path="/applications"
-    :fetch-fn="applicationsApi.list"
-    :create-fn="applicationsApi.create"
+    title="Services"
+    add-label="Add Service"
+    search-placeholder="Search services..."
+    empty-message="No services found"
+    modal-title="Create Service"
+    base-path="/services"
+    :fetch-fn="servicesApi.list"
+    :create-fn="servicesApi.create"
   >
     <template #columns>
       <th>Name</th>
@@ -26,7 +26,7 @@ import ApplicationForm from '@/components/forms/ApplicationForm.vue';
       <th>Repository</th>
     </template>
 
-    <template #row="{ item }: { item: Application }">
+    <template #row="{ item }: { item: Service }">
       <td class="font-medium">{{ item.name }}</td>
       <td class="max-w-md truncate">{{ item.description || '-' }}</td>
       <td><EnvironmentBadge :environment="item.environment" /></td>
@@ -45,7 +45,7 @@ import ApplicationForm from '@/components/forms/ApplicationForm.vue';
     </template>
 
     <template #form="{ onSubmit, onCancel }">
-      <ApplicationForm @submit="onSubmit" @cancel="onCancel" />
+      <ServiceForm @submit="onSubmit" @cancel="onCancel" />
     </template>
   </EntityList>
 </template>

@@ -1,9 +1,9 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    Application, ApplicationWithRelations, CreateApplication, DomainRelation, HostRelation,
+    Application, ApplicationWithRelations, CreateApplication, DomainRelation, InfraRelation,
     NetworkShareRelation, Note, PaginatedResponse, PaginationParams, PersonRelation,
-    StackRelation, UpdateApplication, new_id,
+    ServiceRelation, StackRelation, UpdateApplication, new_id,
 };
 use crate::{Error, Result};
 
@@ -18,7 +18,7 @@ pub async fn list(
         let search_pattern = format!("%{}%", search);
         let apps = sqlx::query_as::<_, Application>(
             r#"
-            SELECT id, name, description, repository_url, status, created_at, updated_at, created_by
+            SELECT id, name, description, repository_url, environment, url, status, created_at, updated_at, created_by
             FROM application
             WHERE name LIKE ?1 OR description LIKE ?1
             ORDER BY name ASC
@@ -42,7 +42,7 @@ pub async fn list(
     } else {
         let apps = sqlx::query_as::<_, Application>(
             r#"
-            SELECT id, name, description, repository_url, status, created_at, updated_at, created_by
+            SELECT id, name, description, repository_url, environment, url, status, created_at, updated_at, created_by
             FROM application
             ORDER BY name ASC
             LIMIT ?1 OFFSET ?2
@@ -66,7 +66,7 @@ pub async fn list(
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Application> {
     sqlx::query_as::<_, Application>(
         r#"
-        SELECT id, name, description, repository_url, status, created_at, updated_at, created_by
+        SELECT id, name, description, repository_url, environment, url, status, created_at, updated_at, created_by
         FROM application
         WHERE id = ?1
         "#,
@@ -80,14 +80,26 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Application> {
 pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<ApplicationWithRelations> {
     let application = get(pool, id).await?;
 
-    let hosts = sqlx::query_as::<_, HostRelation>(
+    let infra = sqlx::query_as::<_, InfraRelation>(
         r#"
-        SELECT h.id, h.name, h.host_type, h.hostname, h.ip_address, h.status,
-               ah.role, ah.notes as relation_notes
-        FROM host h
-        JOIN application_host ah ON h.id = ah.host_id
-        WHERE ah.application_id = ?1
-        ORDER BY h.name
+        SELECT i.id, i.name, i.type, ai.notes as relation_notes
+        FROM infra i
+        JOIN application_infra ai ON i.id = ai.infra_id
+        WHERE ai.application_id = ?1
+        ORDER BY i.name
+        "#,
+    )
+    .bind(id)
+    .fetch_all(pool)
+    .await?;
+
+    let services = sqlx::query_as::<_, ServiceRelation>(
+        r#"
+        SELECT s.id, s.name, s.environment, s.status, asvc.notes as relation_notes
+        FROM service s
+        JOIN application_service asvc ON s.id = asvc.service_id
+        WHERE asvc.application_id = ?1
+        ORDER BY s.name
         "#,
     )
     .bind(id)
@@ -97,11 +109,11 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
     let domains = sqlx::query_as::<_, DomainRelation>(
         r#"
         SELECT d.id, d.name, d.registrar, d.expires_at, d.ssl_expires_at, d.status,
-               ad.record_type, ad.target, ad.target_host_id, h.name as target_host_name,
+               ad.record_type, ad.target, ad.target_infra_id, i.name as target_infra_name,
                ad.is_primary, ad.notes as relation_notes
         FROM domain d
         JOIN application_domain ad ON d.id = ad.domain_id
-        LEFT JOIN host h ON ad.target_host_id = h.id
+        LEFT JOIN infra i ON ad.target_infra_id = i.id
         WHERE ad.application_id = ?1
         ORDER BY ad.is_primary DESC, d.name
         "#,
@@ -165,7 +177,8 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
 
     Ok(ApplicationWithRelations {
         application,
-        hosts,
+        infra,
+        services,
         domains,
         people,
         network_shares,
@@ -179,14 +192,16 @@ pub async fn create(pool: &SqlitePool, input: CreateApplication) -> Result<Appli
 
     sqlx::query(
         r#"
-        INSERT INTO application (id, name, description, repository_url, status)
-        VALUES (?1, ?2, ?3, ?4, ?5)
+        INSERT INTO application (id, name, description, repository_url, environment, url, status)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
         "#,
     )
     .bind(&id)
     .bind(&input.name)
     .bind(&input.description)
     .bind(&input.repository_url)
+    .bind(&input.environment)
+    .bind(&input.url)
     .bind(&input.status)
     .execute(pool)
     .await?;
@@ -200,18 +215,22 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateApplication) -> Re
     let name = input.name.unwrap_or(existing.name);
     let description = input.description.or(existing.description);
     let repository_url = input.repository_url.or(existing.repository_url);
+    let environment = input.environment.unwrap_or(existing.environment);
+    let url = input.url.or(existing.url);
     let status = input.status.unwrap_or(existing.status);
 
     sqlx::query(
         r#"
         UPDATE application
-        SET name = ?1, description = ?2, repository_url = ?3, status = ?4, updated_at = datetime('now')
-        WHERE id = ?5
+        SET name = ?1, description = ?2, repository_url = ?3, environment = ?4, url = ?5, status = ?6, updated_at = datetime('now')
+        WHERE id = ?7
         "#,
     )
     .bind(&name)
     .bind(&description)
     .bind(&repository_url)
+    .bind(&environment)
+    .bind(&url)
     .bind(&status)
     .bind(id)
     .execute(pool)
@@ -238,27 +257,25 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<()> {
 
 // Relationship management
 
-pub async fn link_host(
+pub async fn link_infra(
     pool: &SqlitePool,
     app_id: &str,
-    host_id: &str,
-    role: &str,
+    infra_id: &str,
     notes: Option<&str>,
 ) -> Result<()> {
     // Verify both entities exist
     get(pool, app_id).await?;
-    crate::service::host::get(pool, host_id).await?;
+    crate::service::infra::get(pool, infra_id).await?;
 
     sqlx::query(
         r#"
-        INSERT INTO application_host (application_id, host_id, role, notes)
-        VALUES (?1, ?2, ?3, ?4)
-        ON CONFLICT (application_id, host_id) DO UPDATE SET role = ?3, notes = ?4
+        INSERT INTO application_infra (application_id, infra_id, notes)
+        VALUES (?1, ?2, ?3)
+        ON CONFLICT (application_id, infra_id) DO UPDATE SET notes = ?3, updated_at = datetime('now')
         "#,
     )
     .bind(app_id)
-    .bind(host_id)
-    .bind(role)
+    .bind(infra_id)
     .bind(notes)
     .execute(pool)
     .await?;
@@ -266,11 +283,11 @@ pub async fn link_host(
     Ok(())
 }
 
-pub async fn unlink_host(pool: &SqlitePool, app_id: &str, host_id: &str) -> Result<()> {
+pub async fn unlink_infra(pool: &SqlitePool, app_id: &str, infra_id: &str) -> Result<()> {
     let result =
-        sqlx::query("DELETE FROM application_host WHERE application_id = ?1 AND host_id = ?2")
+        sqlx::query("DELETE FROM application_infra WHERE application_id = ?1 AND infra_id = ?2")
             .bind(app_id)
-            .bind(host_id)
+            .bind(infra_id)
             .execute(pool)
             .await?;
 
@@ -281,56 +298,77 @@ pub async fn unlink_host(pool: &SqlitePool, app_id: &str, host_id: &str) -> Resu
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+pub async fn link_service(
+    pool: &SqlitePool,
+    app_id: &str,
+    service_id: &str,
+    notes: Option<&str>,
+) -> Result<()> {
+    // Verify both entities exist
+    get(pool, app_id).await?;
+    crate::service::service::get(pool, service_id).await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO application_service (application_id, service_id, notes)
+        VALUES (?1, ?2, ?3)
+        ON CONFLICT (application_id, service_id) DO UPDATE SET notes = ?3, updated_at = datetime('now')
+        "#,
+    )
+    .bind(app_id)
+    .bind(service_id)
+    .bind(notes)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn unlink_service(pool: &SqlitePool, app_id: &str, service_id: &str) -> Result<()> {
+    let result =
+        sqlx::query("DELETE FROM application_service WHERE application_id = ?1 AND service_id = ?2")
+            .bind(app_id)
+            .bind(service_id)
+            .execute(pool)
+            .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(Error::NotFound("Relationship not found".to_string()));
+    }
+
+    Ok(())
+}
+
 pub async fn link_domain(
     pool: &SqlitePool,
     app_id: &str,
     domain_id: &str,
     record_type: &str,
     target: Option<&str>,
-    target_host_id: Option<&str>,
+    target_infra_id: Option<&str>,
     is_primary: bool,
     notes: Option<&str>,
 ) -> Result<()> {
     get(pool, app_id).await?;
     crate::service::domain::get(pool, domain_id).await?;
 
-    if target.is_some() && target_host_id.is_some() {
-        return Err(Error::Conflict(
-            "Can't set both `target` and `target_host_id` in application_domain".to_string(),
-        ));
-    }
-
-    // If target_host_id is set, verify the host exists and also add to application_host
-    if let Some(host_id) = target_host_id {
-        crate::service::host::get(pool, host_id).await?;
-
-        // Also add this host to application_host junction table (if not already linked)
-        sqlx::query(
-            r#"
-            INSERT INTO application_host (application_id, host_id, role, notes)
-            VALUES (?1, ?2, 'domain-target', NULL)
-            ON CONFLICT (application_id, host_id) DO NOTHING
-            "#,
-        )
-        .bind(app_id)
-        .bind(host_id)
-        .execute(pool)
-        .await?;
+    // Verify infra exists if provided
+    if let Some(infra_id) = target_infra_id {
+        crate::service::infra::get(pool, infra_id).await?;
     }
 
     sqlx::query(
         r#"
-        INSERT INTO application_domain (application_id, domain_id, record_type, target, target_host_id, is_primary, notes)
+        INSERT INTO application_domain (application_id, domain_id, record_type, target, target_infra_id, is_primary, notes)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, target_host_id = ?5, is_primary = ?6, notes = ?7
+        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, target_infra_id = ?5, is_primary = ?6, notes = ?7
         "#,
     )
     .bind(app_id)
     .bind(domain_id)
     .bind(record_type)
     .bind(target)
-    .bind(target_host_id)
+    .bind(target_infra_id)
     .bind(is_primary)
     .bind(notes)
     .execute(pool)

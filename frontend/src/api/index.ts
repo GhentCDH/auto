@@ -3,20 +3,22 @@ import type {
   ApplicationWithRelations,
   CreateApplication,
   CreateDomain,
-  CreateHost,
+  CreateInfra,
   CreateNetworkShare,
   CreateNote,
   CreatePerson,
+  CreateService,
   CreateStack,
   DashboardStats,
   Domain,
   DomainWithRelations,
-  Host,
-  HostWithRelations,
+  Infra,
+  InfraWithRelations,
   LinkDomain,
-  LinkHost,
+  LinkInfra,
   LinkNetworkShare,
   LinkPerson,
+  LinkService,
   NetworkShare,
   NetworkShareWithRelations,
   Note,
@@ -25,14 +27,17 @@ import type {
   Person,
   PersonWithRelations,
   SearchResults,
+  Service,
+  ServiceWithRelations,
   Stack,
   StackWithRelations,
   UpdateApplication,
   UpdateDomain,
-  UpdateHost,
+  UpdateInfra,
   UpdateNetworkShare,
   UpdateNote,
   UpdatePerson,
+  UpdateService,
   UpdateStack,
 } from '@/types';
 
@@ -97,14 +102,25 @@ export const applicationsApi = {
     request<void>(`/applications/${id}`, { method: 'DELETE' }),
 
   // Relationship management
-  linkHost: (appId: string, hostId: string, data: LinkHost = {}) =>
-    request<void>(`/applications/${appId}/hosts/${hostId}`, {
+  linkInfra: (appId: string, infraId: string, data: LinkInfra = {}) =>
+    request<void>(`/applications/${appId}/infra/${infraId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  unlinkHost: (appId: string, hostId: string) =>
-    request<void>(`/applications/${appId}/hosts/${hostId}`, {
+  unlinkInfra: (appId: string, infraId: string) =>
+    request<void>(`/applications/${appId}/infra/${infraId}`, {
+      method: 'DELETE',
+    }),
+
+  linkService: (appId: string, serviceId: string, data: LinkService = {}) =>
+    request<void>(`/applications/${appId}/services/${serviceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  unlinkService: (appId: string, serviceId: string) =>
+    request<void>(`/applications/${appId}/services/${serviceId}`, {
       method: 'DELETE',
     }),
 
@@ -152,26 +168,61 @@ export const applicationsApi = {
     }),
 };
 
-// Hosts API
-export const hostsApi = {
+// Services API
+export const servicesApi = {
   list: (params: PaginationParams = {}) =>
-    request<PaginatedResponse<Host>>(`/hosts${buildQueryString(params)}`),
+    request<PaginatedResponse<Service>>(`/services${buildQueryString(params)}`),
 
-  get: (id: string) => request<HostWithRelations>(`/hosts/${id}`),
+  get: (id: string) => request<ServiceWithRelations>(`/services/${id}`),
 
-  create: (data: CreateHost) =>
-    request<Host>('/hosts', {
+  create: (data: CreateService) =>
+    request<Service>('/services', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  update: (id: string, data: UpdateHost) =>
-    request<Host>(`/hosts/${id}`, {
+  update: (id: string, data: UpdateService) =>
+    request<Service>(`/services/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  delete: (id: string) => request<void>(`/hosts/${id}`, { method: 'DELETE' }),
+  delete: (id: string) =>
+    request<void>(`/services/${id}`, { method: 'DELETE' }),
+
+  // Relationship management
+  linkInfra: (serviceId: string, infraId: string, data: LinkInfra = {}) =>
+    request<void>(`/services/${serviceId}/infra/${infraId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  unlinkInfra: (serviceId: string, infraId: string) =>
+    request<void>(`/services/${serviceId}/infra/${infraId}`, {
+      method: 'DELETE',
+    }),
+};
+
+// Infra API
+export const infraApi = {
+  list: (params: PaginationParams = {}) =>
+    request<PaginatedResponse<Infra>>(`/infra${buildQueryString(params)}`),
+
+  get: (id: string) => request<InfraWithRelations>(`/infra/${id}`),
+
+  create: (data: CreateInfra) =>
+    request<Infra>('/infra', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateInfra) =>
+    request<Infra>(`/infra/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) => request<void>(`/infra/${id}`, { method: 'DELETE' }),
 };
 
 // Domains API

@@ -1,17 +1,19 @@
 mod application;
 mod domain;
-mod host;
+mod infra;
 mod network_share;
 mod note;
 mod person;
+mod service;
 mod stack;
 
 pub use application::*;
 pub use domain::*;
-pub use host::*;
+pub use infra::*;
 pub use network_share::*;
 pub use note::*;
 pub use person::*;
+pub use service::*;
 pub use stack::*;
 
 use serde::{Deserialize, Serialize};

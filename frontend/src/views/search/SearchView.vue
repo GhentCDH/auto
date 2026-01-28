@@ -15,7 +15,8 @@ const error = ref('');
 const query = ref((route.query.q as string) || '');
 const routes: Record<string, string> = {
   application: 'applications',
-  host: 'hosts',
+  service: 'services',
+  infra: 'infra',
   domain: 'domains',
   person: 'people',
   network_share: 'shares',
@@ -26,7 +27,8 @@ const totalResults = computed(() => {
   if (!results.value) return 0;
   return (
     results.value.applications.length +
-    results.value.hosts.length +
+    results.value.services.length +
+    results.value.infra.length +
     results.value.domains.length +
     results.value.people.length +
     results.value.network_shares.length +
@@ -81,7 +83,7 @@ onMounted(search);
         <input
           v-model="query"
           type="text"
-          placeholder="Search applications, hosts, domains, people..."
+          placeholder="Search applications, services, infra, domains, people..."
           class="input input-bordered join-item flex-1"
           autofocus
         />
@@ -122,12 +124,31 @@ onMounted(search);
         </div>
       </div>
 
-      <div v-if="results.hosts.length" class="card bg-base-200">
+      <div v-if="results.services.length" class="card bg-base-200">
         <div class="card-body">
-          <h2 class="card-title">Hosts ({{ results.hosts.length }})</h2>
+          <h2 class="card-title">Services ({{ results.services.length }})</h2>
           <ul class="space-y-2">
             <li
-              v-for="r in results.hosts"
+              v-for="r in results.services"
+              :key="r.id"
+              class="cursor-pointer hover:bg-base-300 p-2 rounded"
+              @click="navigateTo(r)"
+            >
+              <div class="font-medium">{{ r.name }}</div>
+              <div v-if="r.description" class="text-sm text-base-content/70">
+                {{ r.description }}
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div v-if="results.infra.length" class="card bg-base-200">
+        <div class="card-body">
+          <h2 class="card-title">Infrastructure ({{ results.infra.length }})</h2>
+          <ul class="space-y-2">
+            <li
+              v-for="r in results.infra"
               :key="r.id"
               class="cursor-pointer hover:bg-base-300 p-2 rounded"
               @click="navigateTo(r)"

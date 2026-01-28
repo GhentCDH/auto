@@ -19,6 +19,8 @@ export interface Application {
   name: string;
   description: string | null;
   repository_url: string | null;
+  environment: string;
+  url: string | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -29,6 +31,8 @@ export interface CreateApplication {
   name: string;
   description?: string;
   repository_url?: string;
+  environment?: string;
+  url?: string;
   status?: string;
 }
 
@@ -36,11 +40,14 @@ export interface UpdateApplication {
   name?: string;
   description?: string;
   repository_url?: string;
+  environment?: string;
+  url?: string;
   status?: string;
 }
 
 export interface ApplicationWithRelations extends Application {
-  hosts: HostRelation[];
+  infra: InfraRelation[];
+  services: ServiceRelation[];
   domains: DomainRelation[];
   people: PersonRelation[];
   network_shares: NetworkShareRelation[];
@@ -48,71 +55,109 @@ export interface ApplicationWithRelations extends Application {
   stacks: StackRelation[];
 }
 
-// Host types
-export interface Host {
+// Service types
+export interface Service {
   id: string;
   name: string;
-  host_type: string;
-  hostname: string | null;
-  ip_address: string | null;
-  location: string | null;
-  os: string | null;
-  specs: string | null;
+  description: string | null;
+  repository_url: string | null;
+  environment: string;
   status: string;
-  notes: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
 }
 
-export interface CreateHost {
+export interface CreateService {
   name: string;
-  host_type: string;
-  hostname?: string;
-  ip_address?: string;
-  location?: string;
-  os?: string;
-  specs?: string;
+  description?: string;
+  repository_url?: string;
+  environment?: string;
   status?: string;
-  notes?: string;
 }
 
-export interface UpdateHost {
+export interface UpdateService {
   name?: string;
-  host_type?: string;
-  hostname?: string;
-  ip_address?: string;
-  location?: string;
-  os?: string;
-  specs?: string;
+  description?: string;
+  repository_url?: string;
+  environment?: string;
   status?: string;
-  notes?: string;
 }
 
-export interface HostRelation {
+export interface ServiceRelation {
   id: string;
   name: string;
-  host_type: string;
-  hostname: string | null;
-  ip_address: string | null;
+  environment: string;
   status: string;
-  role: string;
   relation_notes: string | null;
 }
 
-export interface HostWithRelations extends Host {
-  applications: ApplicationHostRelation[];
+export interface ServiceWithRelations extends Service {
+  applications: ApplicationServiceRelation[];
+  infra: InfraRelation[];
 }
 
-export interface ApplicationHostRelation {
+export interface ApplicationServiceRelation {
   id: string;
   name: string;
+  environment: string;
   status: string;
-  role: string;
 }
 
-export interface LinkHost {
-  role?: string;
+export interface LinkService {
+  notes?: string;
+}
+
+// Infra types
+export interface Infra {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface CreateInfra {
+  name: string;
+  description?: string;
+  type: string;
+}
+
+export interface UpdateInfra {
+  name?: string;
+  description?: string;
+  type?: string;
+}
+
+export interface InfraRelation {
+  id: string;
+  name: string;
+  type: string;
+  relation_notes: string | null;
+}
+
+export interface InfraWithRelations extends Infra {
+  applications: ApplicationInfraRelation[];
+  services: ServiceInfraRelation[];
+}
+
+export interface ApplicationInfraRelation {
+  id: string;
+  name: string;
+  environment: string;
+  status: string;
+}
+
+export interface ServiceInfraRelation {
+  id: string;
+  name: string;
+  environment: string;
+  status: string;
+}
+
+export interface LinkInfra {
   notes?: string;
 }
 
@@ -163,8 +208,8 @@ export interface DomainRelation {
   status: string;
   record_type: string;
   target: string | null;
-  target_host_id: string | null;
-  target_host_name: string | null;
+  target_infra_id: string | null;
+  target_infra_name: string | null;
   is_primary: boolean;
   relation_notes: string | null;
 }
@@ -184,7 +229,7 @@ export interface ApplicationDomainRelation {
 export interface LinkDomain {
   record_type?: string;
   target?: string | null;
-  target_host_id?: string | null;
+  target_infra_id?: string | null;
   is_primary?: boolean;
   notes?: string;
 }
@@ -357,7 +402,8 @@ export interface UpdateNote {
 // Dashboard types
 export interface DashboardStats {
   applications: EntityStats;
-  hosts: EntityStats;
+  services: EntityStats;
+  infra: EntityStats;
   domains: EntityStats;
   people: EntityStats;
   network_shares: EntityStats;
@@ -386,7 +432,8 @@ export interface ExpiringSsl {
 // Search types
 export interface SearchResults {
   applications: SearchResult[];
-  hosts: SearchResult[];
+  services: SearchResult[];
+  infra: SearchResult[];
   domains: SearchResult[];
   people: SearchResult[];
   network_shares: SearchResult[];
