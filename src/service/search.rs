@@ -10,6 +10,7 @@ pub struct SearchResults {
     pub domains: Vec<SearchResult>,
     pub people: Vec<SearchResult>,
     pub network_shares: Vec<SearchResult>,
+    pub stacks: Vec<SearchResult>,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -88,11 +89,25 @@ pub async fn global_search(pool: &SqlitePool, query: &str) -> Result<SearchResul
     .fetch_all(pool)
     .await?;
 
+    let stacks = sqlx::query_as::<_, SearchResult>(
+        r#"
+        SELECT id, name, notes as description, 'stack' as entity_type
+        FROM stack
+        WHERE name LIKE ?1 OR description LIKE ?1
+        ORDER BY name ASC
+        LIMIT 20
+        "#,
+    )
+    .bind(&search_pattern)
+    .fetch_all(pool)
+    .await?;
+
     Ok(SearchResults {
         applications,
         hosts,
         domains,
         people,
         network_shares,
+        stacks,
     })
 }
