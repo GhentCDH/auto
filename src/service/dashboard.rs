@@ -6,7 +6,8 @@ use crate::Result;
 #[derive(Debug, Serialize)]
 pub struct DashboardStats {
     pub applications: EntityStats,
-    pub hosts: EntityStats,
+    pub services: EntityStats,
+    pub infra: EntityStats,
     pub domains: EntityStats,
     pub people: EntityStats,
     pub network_shares: EntityStats,
@@ -45,11 +46,17 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
             .fetch_one(pool)
             .await?;
 
-    // Get host stats
-    let host_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM host")
+    // Get service stats
+    let service_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM service")
         .fetch_one(pool)
         .await?;
-    let host_active: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM host WHERE status = 'active'")
+    let service_active: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM service WHERE status = 'active'")
+            .fetch_one(pool)
+            .await?;
+
+    // Get infra stats
+    let infra_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM infra")
         .fetch_one(pool)
         .await?;
 
@@ -119,9 +126,13 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
             total: app_total.0,
             active: app_active.0,
         },
-        hosts: EntityStats {
-            total: host_total.0,
-            active: host_active.0,
+        services: EntityStats {
+            total: service_total.0,
+            active: service_active.0,
+        },
+        infra: EntityStats {
+            total: infra_total.0,
+            active: infra_total.0, // Infra doesn't have status
         },
         domains: EntityStats {
             total: domain_total.0,

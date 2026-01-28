@@ -6,7 +6,8 @@ use crate::Result;
 #[derive(Debug, Serialize)]
 pub struct SearchResults {
     pub applications: Vec<SearchResult>,
-    pub hosts: Vec<SearchResult>,
+    pub services: Vec<SearchResult>,
+    pub infra: Vec<SearchResult>,
     pub domains: Vec<SearchResult>,
     pub people: Vec<SearchResult>,
     pub network_shares: Vec<SearchResult>,
@@ -37,11 +38,24 @@ pub async fn global_search(pool: &SqlitePool, query: &str) -> Result<SearchResul
     .fetch_all(pool)
     .await?;
 
-    let hosts = sqlx::query_as::<_, SearchResult>(
+    let services = sqlx::query_as::<_, SearchResult>(
         r#"
-        SELECT id, name, hostname as description, 'host' as entity_type
-        FROM host
-        WHERE name LIKE ?1 OR hostname LIKE ?1 OR ip_address LIKE ?1
+        SELECT id, name, description, 'service' as entity_type
+        FROM service
+        WHERE name LIKE ?1 OR description LIKE ?1
+        ORDER BY name ASC
+        LIMIT 20
+        "#,
+    )
+    .bind(&search_pattern)
+    .fetch_all(pool)
+    .await?;
+
+    let infra = sqlx::query_as::<_, SearchResult>(
+        r#"
+        SELECT id, name, description, 'infra' as entity_type
+        FROM infra
+        WHERE name LIKE ?1 OR description LIKE ?1
         ORDER BY name ASC
         LIMIT 20
         "#,
@@ -104,7 +118,8 @@ pub async fn global_search(pool: &SqlitePool, query: &str) -> Result<SearchResul
 
     Ok(SearchResults {
         applications,
-        hosts,
+        services,
+        infra,
         domains,
         people,
         network_shares,
