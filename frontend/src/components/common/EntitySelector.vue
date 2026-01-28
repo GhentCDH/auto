@@ -22,6 +22,7 @@ const showSpinner = ref(false);
 const error = ref('');
 const search = ref('');
 const entities = ref<Array<{ id: string; name: string }>>([]);
+const searchInput = ref<HTMLInputElement | null>(null);
 
 const filteredEntities = computed(() => {
   const excluded = new Set(props.excludeIds || []);
@@ -70,12 +71,16 @@ watch(search, () => {
   debounceTimeout = setTimeout(loadEntities, 150);
 });
 
-onMounted(loadEntities);
+onMounted(() => {
+  loadEntities();
+  searchInput.value?.focus();
+});
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <input
+      ref="searchInput"
       v-model="search"
       type="text"
       :placeholder="`Search ${title.toLowerCase()}...`"

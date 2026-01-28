@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { watch, onUnmounted } from 'vue';
 import { X } from 'lucide-vue-next';
 
-defineProps<{
+const props = defineProps<{
   title: string;
   open: boolean;
 }>();
@@ -9,11 +10,32 @@ defineProps<{
 const emit = defineEmits<{
   close: [];
 }>();
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    emit('close');
+  }
+}
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeydown);
+    } else {
+      document.removeEventListener('keydown', handleKeydown);
+    }
+  }
+);
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown);
+});
 </script>
 
 <template>
-  <dialog class="modal" :class="{ 'modal-open': open }" :open="open">
-    <div class="modal-box">
+  <dialog class="modal" :class="{ 'modal-open': open }">
+    <div v-if="open" class="modal-box">
       <h3 class="text-lg font-bold">{{ title }}</h3>
       <button
         class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
