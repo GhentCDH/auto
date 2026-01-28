@@ -13,6 +13,14 @@ const results = ref<SearchResults | null>(null);
 const loading = ref(false);
 const error = ref('');
 const query = ref((route.query.q as string) || '');
+const routes: Record<string, string> = {
+  application: 'applications',
+  host: 'hosts',
+  domain: 'domains',
+  person: 'people',
+  network_share: 'shares',
+  stack: 'stack',
+};
 
 const totalResults = computed(() => {
   if (!results.value) return 0;
@@ -21,7 +29,8 @@ const totalResults = computed(() => {
     results.value.hosts.length +
     results.value.domains.length +
     results.value.people.length +
-    results.value.network_shares.length
+    results.value.network_shares.length +
+    results.value.stacks.length
   );
 });
 
@@ -47,13 +56,6 @@ function handleSearch() {
 }
 
 function navigateTo(result: SearchResult) {
-  const routes: Record<string, string> = {
-    application: 'applications',
-    host: 'hosts',
-    domain: 'domains',
-    person: 'people',
-    network_share: 'shares',
-  };
   const path = routes[result.entity_type] || result.entity_type;
   router.push(`/${path}/${result.id}`);
 }
@@ -185,6 +187,28 @@ onMounted(search);
           <ul class="space-y-2">
             <li
               v-for="r in results.network_shares"
+              :key="r.id"
+              class="cursor-pointer hover:bg-base-300 p-2 rounded"
+              @click="navigateTo(r)"
+            >
+              <div class="font-medium">{{ r.name }}</div>
+              <div
+                v-if="r.description"
+                class="text-sm text-base-content/70 font-mono"
+              >
+                {{ r.description }}
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div v-if="results.stacks.length" class="card bg-base-200">
+        <div class="card-body">
+          <h2 class="card-title">Technologies ({{ results.stacks.length }})</h2>
+          <ul class="space-y-2">
+            <li
+              v-for="r in results.stacks"
               :key="r.id"
               class="cursor-pointer hover:bg-base-300 p-2 rounded"
               @click="navigateTo(r)"

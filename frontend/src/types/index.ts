@@ -390,6 +390,7 @@ export interface SearchResults {
   domains: SearchResult[];
   people: SearchResult[];
   network_shares: SearchResult[];
+  stacks: SearchResult[];
 }
 
 export interface SearchResult {
