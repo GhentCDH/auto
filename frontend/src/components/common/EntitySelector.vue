@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import LoadingSpinner from './LoadingSpinner.vue';
 
 const props = defineProps<{
@@ -18,6 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const loading = ref(true);
+const showSpinner = ref(false);
 const error = ref('');
 const search = ref('');
 const entities = ref<Array<{ id: string; name: string }>>([]);
@@ -27,17 +28,25 @@ const filteredEntities = computed(() => {
   return entities.value.filter((e) => !excluded.has(e.id));
 });
 
-const showCreateOption = computed(() => {
-  return (
-    props.allowCreate !== false &&
-    !loading.value &&
-    filteredEntities.value.length === 0
-  );
-});
+const singularTitle = computed(() =>
+  props.title.at(-1) === 's' ? props.title.slice(0, -1) : props.title
+);
+
+const canCreate = computed(() => props.allowCreate !== false);
+
+let spinnerTimeout: ReturnType<typeof setTimeout> | null = null;
 
 async function loadEntities() {
   loading.value = true;
   error.value = '';
+
+  if (spinnerTimeout) clearTimeout(spinnerTimeout);
+  showSpinner.value = false;
+
+  spinnerTimeout = setTimeout(() => {
+    if (loading.value) showSpinner.value = true;
+  }, 150);
+
   try {
     const result = await props.fetchFn({ search: search.value || undefined });
     entities.value = result.data;
@@ -45,75 +54,87 @@ async function loadEntities() {
     error.value = e instanceof Error ? e.message : 'Failed to load';
   } finally {
     loading.value = false;
+    showSpinner.value = false;
+    if (spinnerTimeout) clearTimeout(spinnerTimeout);
   }
-}
-
-function handleSearch() {
-  loadEntities();
 }
 
 function handleCreate() {
   emit('create', search.value);
 }
 
+let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+watch(search, () => {
+  if (debounceTimeout) clearTimeout(debounceTimeout);
+  debounceTimeout = setTimeout(loadEntities, 300);
+});
+
 onMounted(loadEntities);
 </script>
 
 <template>
-  <div class="space-y-4">
-    <form @submit.prevent="handleSearch" class="join w-full">
-      <input
-        v-model="search"
-        type="text"
-        :placeholder="`Search ${title.toLowerCase()}...`"
-        class="input input-bordered join-item flex-1"
-      />
-      <button type="submit" class="btn join-item">Search</button>
-    </form>
+  <div class="flex flex-col gap-4">
+    <input
+      v-model="search"
+      type="text"
+      :placeholder="`Search ${title.toLowerCase()}...`"
+      class="input input-bordered w-full"
+    />
 
-    <LoadingSpinner v-if="loading" />
+    <!-- Fixed height content area to prevent layout shifts -->
+    <div class="min-h-50 flex flex-col">
+      <!-- Loading state -->
+      <div v-if="loading" class="flex-1 flex items-center justify-center">
+        <LoadingSpinner v-if="showSpinner" />
+      </div>
 
-    <div v-else-if="error" class="alert alert-error text-sm">{{ error }}</div>
+      <!-- Error state -->
+      <div v-else-if="error" class="alert alert-error text-sm">
+        {{ error }}
+      </div>
 
-    <div v-else-if="filteredEntities.length === 0" class="text-center py-6">
-      <p class="text-base-content/70 mb-4">
-        No {{ title.toLowerCase() }} found{{
-          search ? ` matching "${search}"` : ''
-        }}
-      </p>
+      <!-- Content state -->
+      <template v-else>
+        <!-- Results list -->
+        <ul
+          v-if="filteredEntities.length > 0"
+          class="menu bg-base-100 rounded-box flex-1 overflow-y-auto"
+        >
+          <li v-for="entity in filteredEntities" :key="entity.id">
+            <a @click="emit('select', entity)" class="justify-between">
+              {{ entity.name }}
+              <span class="badge badge-ghost badge-sm">Select</span>
+            </a>
+          </li>
+        </ul>
+
+        <!-- Empty state -->
+        <div
+          v-else
+          class="flex-1 flex flex-col items-center justify-center py-6"
+        >
+          <p class="text-base-content/70 mb-4">
+            No {{ title.toLowerCase() }} found{{
+              search ? ` matching "${search}"` : ''
+            }}
+          </p>
+        </div>
+      </template>
+    </div>
+
+    <!-- Footer actions - always visible -->
+    <div class="grid grid-cols-2 gap-2 pt-2">
+      <button type="button" class="btn btn-ghost" @click="emit('cancel')">
+        Cancel
+      </button>
       <button
-        v-if="showCreateOption"
+        v-if="canCreate"
         type="button"
         class="btn btn-primary btn-sm"
         @click="handleCreate"
       >
-        + Create New {{ title.at(-1) === 's' ? title.slice(0, -1) : title
-        }}{{ search ? `: "${search}"` : '' }}
-      </button>
-    </div>
-
-    <template v-else>
-      <ul class="menu bg-base-100 rounded-box max-h-64 overflow-y-auto">
-        <li v-for="entity in filteredEntities" :key="entity.id">
-          <a @click="emit('select', entity)" class="justify-between">
-            {{ entity.name }}
-            <span class="badge badge-ghost badge-sm">Select</span>
-          </a>
-        </li>
-      </ul>
-      <button
-        v-if="allowCreate !== false"
-        type="button"
-        class="btn btn-ghost btn-sm w-full"
-        @click="handleCreate"
-      >
-        + Create New {{ title.slice(0, -1) }}
-      </button>
-    </template>
-
-    <div class="flex justify-end">
-      <button type="button" class="btn btn-ghost" @click="emit('cancel')">
-        Cancel
+        + Create {{ singularTitle }}{{ search ? `: "${search}"` : '' }}
       </button>
     </div>
   </div>
