@@ -67,7 +67,7 @@ let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 watch(search, () => {
   if (debounceTimeout) clearTimeout(debounceTimeout);
-  debounceTimeout = setTimeout(loadEntities, 300);
+  debounceTimeout = setTimeout(loadEntities, 150);
 });
 
 onMounted(loadEntities);
@@ -83,7 +83,7 @@ onMounted(loadEntities);
     />
 
     <!-- Fixed height content area to prevent layout shifts -->
-    <div class="min-h-50 flex flex-col">
+    <div class="h-50 flex flex-col">
       <!-- Loading state -->
       <div v-if="loading" class="flex-1 flex items-center justify-center">
         <LoadingSpinner v-if="showSpinner" />
@@ -99,7 +99,7 @@ onMounted(loadEntities);
         <!-- Results list -->
         <ul
           v-if="filteredEntities.length > 0"
-          class="menu bg-base-100 rounded-box flex-1 overflow-y-auto"
+          class="menu bg-base-100 rounded-box flex-1 min-h-0 overflow-y-auto w-auto"
         >
           <li v-for="entity in filteredEntities" :key="entity.id">
             <a @click="emit('select', entity)" class="justify-between">
