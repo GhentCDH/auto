@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import type { LinkDomain, DomainRelation } from '@/types';
 import { domainTypes } from '@/values';
 import EntityOrFreeInput from '../common/EntityOrFreeInput.vue';
-import { hostsApi } from '@/api';
+import { infraApi } from '@/api';
 import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
@@ -19,7 +19,7 @@ const emit = defineEmits<{
 const form = ref({
   record_type: props.initial?.record_type || 'A',
   target: props.initial?.target || null,
-  target_host_id: props.initial?.target_host_id || null,
+  target_infra_id: props.initial?.target_infra_id || null,
   is_primary: props.initial?.is_primary || false,
   notes: props.initial?.relation_notes || '',
 } satisfies LinkDomain);
@@ -45,15 +45,15 @@ function handleSubmit() {
 
     <EntityOrFreeInput
       label="Target"
-      entity-label="Host"
+      entity-label="Infrastructure"
       free-label="Free Entry"
-      free-placeholder="IP or hostname"
-      entity-title="Hosts"
-      :fetch-fn="hostsApi.list"
-      :initial-entity-id="initial?.target_host_id"
-      :initial-entity-name="initial?.target_host_name"
+      free-placeholder="IP address or hostname"
+      entity-title="Infrastructure"
+      :fetch-fn="infraApi.list"
+      :initial-entity-id="initial?.target_infra_id"
+      :initial-entity-name="initial?.target_infra_name"
       :initial-free-value="initial?.target"
-      @update:entity-id="form.target_host_id = $event"
+      @update:entity-id="form.target_infra_id = $event"
       @update:free-value="form.target = $event"
     />
 

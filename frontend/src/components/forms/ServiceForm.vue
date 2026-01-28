@@ -1,41 +1,35 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import type {
-  Application,
-  CreateApplication,
-  UpdateApplication,
-} from '@/types';
+import type { Service, CreateService, UpdateService } from '@/types';
 import { environments } from '@/values';
 
 const props = defineProps<{
-  application?: Application;
+  service?: Service;
 }>();
 
 const emit = defineEmits<{
-  submit: [data: CreateApplication | UpdateApplication];
+  submit: [data: CreateService | UpdateService];
   cancel: [];
 }>();
 
-const form = ref<CreateApplication>({
+const form = ref<CreateService>({
   name: '',
   description: '',
   repository_url: '',
   environment: 'prd',
-  url: '',
   status: 'active',
 });
 
 watch(
-  () => props.application,
-  (app) => {
-    if (app) {
+  () => props.service,
+  (svc) => {
+    if (svc) {
       form.value = {
-        name: app.name,
-        description: app.description || '',
-        repository_url: app.repository_url || '',
-        environment: app.environment,
-        url: app.url || '',
-        status: app.status,
+        name: svc.name,
+        description: svc.description || '',
+        repository_url: svc.repository_url || '',
+        environment: svc.environment,
+        status: svc.status,
       };
     }
   },
@@ -72,17 +66,6 @@ function handleSubmit() {
     </fieldset>
 
     <fieldset class="fieldset">
-      <legend class="fieldset-legend">URL</legend>
-      <input
-        v-model="form.url"
-        type="url"
-        class="input w-full"
-        placeholder="https://..."
-      />
-      <div class="label">optional - main URL to access the application</div>
-    </fieldset>
-
-    <fieldset class="fieldset">
       <legend class="fieldset-legend">Environment</legend>
       <select v-model="form.environment" class="select w-full">
         <option v-for="(label, value) in environments" :key="value" :value="value">
@@ -104,7 +87,7 @@ function handleSubmit() {
     <div class="flex justify-end gap-2">
       <button type="button" class="btn" @click="emit('cancel')">Cancel</button>
       <button type="submit" class="btn btn-primary">
-        {{ application ? 'Update' : 'Create' }}
+        {{ service ? 'Update' : 'Create' }}
       </button>
     </div>
   </form>

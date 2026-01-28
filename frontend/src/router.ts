@@ -14,14 +14,23 @@ const routes = [
     path: '/applications/:id',
     component: () => import('./views/applications/ApplicationDetail.vue'),
   },
-  // Hosts
+  // Services
   {
-    path: '/hosts',
-    component: () => import('./views/hosts/HostList.vue'),
+    path: '/services',
+    component: () => import('./views/services/ServiceList.vue'),
   },
   {
-    path: '/hosts/:id',
-    component: () => import('./views/hosts/HostDetail.vue'),
+    path: '/services/:id',
+    component: () => import('./views/services/ServiceDetail.vue'),
+  },
+  // Infra
+  {
+    path: '/infra',
+    component: () => import('./views/infra/InfraList.vue'),
+  },
+  {
+    path: '/infra/:id',
+    component: () => import('./views/infra/InfraDetail.vue'),
   },
   // Domains
   {

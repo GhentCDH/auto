@@ -25,7 +25,8 @@ const proximityRadius = computed(() => {
 const navItems = [
   { name: 'Dashboard', path: '/' },
   { name: 'Applications', path: '/applications' },
-  { name: 'Hosts', path: '/hosts' },
+  { name: 'Services', path: '/services' },
+  { name: 'Infra', path: '/infra' },
   { name: 'Domains', path: '/domains' },
   { name: 'People', path: '/people' },
   { name: 'Shares', path: '/shares' },

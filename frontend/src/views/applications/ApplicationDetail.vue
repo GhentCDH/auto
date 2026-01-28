@@ -3,7 +3,8 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   applicationsApi,
-  hostsApi,
+  infraApi,
+  servicesApi,
   domainsApi,
   peopleApi,
   sharesApi,
@@ -12,16 +13,19 @@ import {
 } from '@/api';
 import type {
   ApplicationWithRelations,
-  LinkHost,
+  LinkInfra,
+  LinkService,
   LinkDomain,
   LinkPerson,
   LinkNetworkShare,
-  CreateHost,
+  CreateInfra,
+  CreateService,
   CreateDomain,
   CreatePerson,
   CreateNetworkShare,
   CreateStack,
-  HostRelation,
+  InfraRelation,
+  ServiceRelation,
   DomainRelation,
   PersonRelation,
   NetworkShareRelation,
@@ -31,15 +35,18 @@ import type {
 } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
+import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import EntitySelector from '@/components/common/EntitySelector.vue';
 import ApplicationForm from '@/components/forms/ApplicationForm.vue';
-import HostForm from '@/components/forms/HostForm.vue';
+import InfraForm from '@/components/forms/InfraForm.vue';
+import ServiceForm from '@/components/forms/ServiceForm.vue';
 import DomainForm from '@/components/forms/DomainForm.vue';
 import PersonForm from '@/components/forms/PersonForm.vue';
 import ShareForm from '@/components/forms/ShareForm.vue';
-import LinkHostForm from '@/components/forms/LinkHostForm.vue';
+import LinkInfraForm from '@/components/forms/LinkInfraForm.vue';
+import LinkServiceForm from '@/components/forms/LinkServiceForm.vue';
 import LinkDomainForm from '@/components/forms/LinkDomainForm.vue';
 import LinkPersonForm from '@/components/forms/LinkPersonForm.vue';
 import LinkShareForm from '@/components/forms/LinkShareForm.vue';
@@ -47,6 +54,7 @@ import StackForm from '@/components/forms/StackForm.vue';
 import NoteForm from '@/components/forms/NoteForm.vue';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
+import { infraTypes } from '@/values';
 import { Pin, ExternalLink, X, Plus, Edit, Link2Off } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -64,18 +72,21 @@ const linkStep = ref<LinkStep>('select');
 const selectedEntity = ref<{ id: string; name: string } | null>(null);
 const initialName = ref('');
 
-const showLinkHostModal = ref(false);
+const showLinkInfraModal = ref(false);
+const showLinkServiceModal = ref(false);
 const showLinkDomainModal = ref(false);
 const showLinkPersonModal = ref(false);
 const showLinkShareModal = ref(false);
 const showLinkStackModal = ref(false);
 
 // Edit modal states
-const showEditHostModal = ref(false);
+const showEditInfraModal = ref(false);
+const showEditServiceModal = ref(false);
 const showEditDomainModal = ref(false);
 const showEditPersonModal = ref(false);
 const showEditShareModal = ref(false);
-const editingHost = ref<HostRelation | null>(null);
+const editingInfra = ref<InfraRelation | null>(null);
+const editingService = ref<ServiceRelation | null>(null);
 const editingDomain = ref<DomainRelation | null>(null);
 const editingPerson = ref<PersonRelation | null>(null);
 const editingShare = ref<NetworkShareRelation | null>(null);
@@ -139,8 +150,11 @@ function openLinkModal(type: string) {
   selectedEntity.value = null;
   initialName.value = '';
   switch (type) {
-    case 'host':
-      showLinkHostModal.value = true;
+    case 'infra':
+      showLinkInfraModal.value = true;
+      break;
+    case 'service':
+      showLinkServiceModal.value = true;
       break;
     case 'domain':
       showLinkDomainModal.value = true;
@@ -159,8 +173,11 @@ function openLinkModal(type: string) {
 
 function closeLinkModal(type: string) {
   switch (type) {
-    case 'host':
-      showLinkHostModal.value = false;
+    case 'infra':
+      showLinkInfraModal.value = false;
+      break;
+    case 'service':
+      showLinkServiceModal.value = false;
       break;
     case 'domain':
       showLinkDomainModal.value = false;
@@ -188,13 +205,23 @@ function handleCreateRequest(searchTerm: string) {
 }
 
 // Entity creation handlers
-async function handleCreateHost(data: CreateHost) {
+async function handleCreateInfra(data: CreateInfra) {
   try {
-    const created = await hostsApi.create(data);
+    const created = await infraApi.create(data);
     selectedEntity.value = { id: created.id, name: created.name };
     linkStep.value = 'form';
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create host';
+    error.value = e instanceof Error ? e.message : 'Failed to create infra';
+  }
+}
+
+async function handleCreateService(data: CreateService) {
+  try {
+    const created = await servicesApi.create(data);
+    selectedEntity.value = { id: created.id, name: created.name };
+    linkStep.value = 'form';
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to create service';
   }
 }
 
@@ -250,14 +277,25 @@ async function handleStackSelect(entity: { id: string; name: string }) {
 }
 
 // Link submission handlers
-async function handleLinkHost(data: LinkHost) {
+async function handleLinkInfra(data: LinkInfra) {
   if (!selectedEntity.value) return;
   try {
-    await applicationsApi.linkHost(id, selectedEntity.value.id, data);
-    showLinkHostModal.value = false;
+    await applicationsApi.linkInfra(id, selectedEntity.value.id, data);
+    showLinkInfraModal.value = false;
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link host';
+    error.value = e instanceof Error ? e.message : 'Failed to link infra';
+  }
+}
+
+async function handleLinkService(data: LinkService) {
+  if (!selectedEntity.value) return;
+  try {
+    await applicationsApi.linkService(id, selectedEntity.value.id, data);
+    showLinkServiceModal.value = false;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to link service';
   }
 }
 
@@ -295,9 +333,14 @@ async function handleLinkShare(data: LinkNetworkShare) {
 }
 
 // Edit handlers
-function openEditHost(host: HostRelation) {
-  editingHost.value = host;
-  showEditHostModal.value = true;
+function openEditInfra(infra: InfraRelation) {
+  editingInfra.value = infra;
+  showEditInfraModal.value = true;
+}
+
+function openEditService(service: ServiceRelation) {
+  editingService.value = service;
+  showEditServiceModal.value = true;
 }
 
 function openEditDomain(domain: DomainRelation) {
@@ -315,15 +358,27 @@ function openEditShare(share: NetworkShareRelation) {
   showEditShareModal.value = true;
 }
 
-async function handleEditHost(data: LinkHost) {
-  if (!editingHost.value) return;
+async function handleEditInfra(data: LinkInfra) {
+  if (!editingInfra.value) return;
   try {
-    await applicationsApi.linkHost(id, editingHost.value.id, data);
-    showEditHostModal.value = false;
-    editingHost.value = null;
+    await applicationsApi.linkInfra(id, editingInfra.value.id, data);
+    showEditInfraModal.value = false;
+    editingInfra.value = null;
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update host link';
+    error.value = e instanceof Error ? e.message : 'Failed to update infra link';
+  }
+}
+
+async function handleEditService(data: LinkService) {
+  if (!editingService.value) return;
+  try {
+    await applicationsApi.linkService(id, editingService.value.id, data);
+    showEditServiceModal.value = false;
+    editingService.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to update service link';
   }
 }
 
@@ -416,7 +471,7 @@ async function handleDeleteNote() {
   }
 }
 
-// Link2Off handlers
+// Unlink handlers
 function confirmUnlink(type: string, entityId: string, name: string) {
   unlinkType.value = type;
   unlinkId.value = entityId;
@@ -427,8 +482,11 @@ function confirmUnlink(type: string, entityId: string, name: string) {
 async function handleUnlink() {
   try {
     switch (unlinkType.value) {
-      case 'host':
-        await applicationsApi.unlinkHost(id, unlinkId.value);
+      case 'infra':
+        await applicationsApi.unlinkInfra(id, unlinkId.value);
+        break;
+      case 'service':
+        await applicationsApi.unlinkService(id, unlinkId.value);
         break;
       case 'domain':
         await applicationsApi.unlinkDomain(id, unlinkId.value);
@@ -474,6 +532,7 @@ onMounted(loadData);
           </div>
           <h1 class="text-2xl font-bold flex items-center gap-3">
             {{ app.name }}
+            <EnvironmentBadge :environment="app.environment" />
             <StatusBadge :status="app.status" />
           </h1>
         </div>
@@ -497,6 +556,17 @@ onMounted(loadData);
                   <div>{{ app.description || '-' }}</div>
                 </div>
                 <div>
+                  <div class="text-sm text-base-content/70">URL</div>
+                  <a
+                    v-if="app.url"
+                    :href="app.url"
+                    target="_blank"
+                    class="link link-primary"
+                    >{{ app.url }}</a
+                  >
+                  <span v-else>-</span>
+                </div>
+                <div>
                   <div class="text-sm text-base-content/70">Repository</div>
                   <a
                     v-if="app.repository_url"
@@ -510,10 +580,6 @@ onMounted(loadData);
                 <div>
                   <div class="text-sm text-base-content/70">Created</div>
                   <div>{{ new Date(app.created_at).toLocaleString() }}</div>
-                </div>
-                <div>
-                  <div class="text-sm text-base-content/70">Updated</div>
-                  <div>{{ new Date(app.updated_at).toLocaleString() }}</div>
                 </div>
               </div>
             </div>
@@ -548,20 +614,20 @@ onMounted(loadData);
             </div>
           </div>
 
-          <!-- Hosts Card -->
+          <!-- Infra Card -->
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
-                <h2 class="card-title">Hosts</h2>
+                <h2 class="card-title">Infrastructure</h2>
                 <button
                   class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('host')"
+                  @click="openLinkModal('infra')"
                 >
                   <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
-              <div v-if="app.hosts.length === 0" class="text-base-content/70">
-                No hosts linked
+              <div v-if="app.infra.length === 0" class="text-base-content/70">
+                No infrastructure linked
               </div>
               <div v-else class="overflow-x-auto">
                 <table class="table table-sm">
@@ -569,38 +635,88 @@ onMounted(loadData);
                     <tr>
                       <th>Name</th>
                       <th>Type</th>
-                      <th>Hostname</th>
-                      <th>Role</th>
-                      <th>Status</th>
+                      <th>Notes</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="h in app.hosts" :key="h.id">
+                    <tr v-for="i in app.infra" :key="i.id">
                       <td
                         class="cursor-pointer hover:text-primary"
-                        @click="router.push(`/hosts/${h.id}`)"
+                        @click="router.push(`/infra/${i.id}`)"
                       >
-                        {{ h.name }}
+                        {{ i.name }}
                       </td>
-                      <td>{{ h.host_type }}</td>
-                      <td>{{ h.hostname || '-' }}</td>
-                      <td>
-                        <span class="badge badge-outline badge-sm">{{
-                          h.role
-                        }}</span>
-                      </td>
-                      <td><StatusBadge :status="h.status" /></td>
+                      <td>{{ infraTypes[i.type as keyof typeof infraTypes] || i.type }}</td>
+                      <td>{{ i.relation_notes || '-' }}</td>
                       <td class="flex">
                         <button
                           class="btn btn-ghost btn-xs"
-                          @click="openEditHost(h)"
+                          @click="openEditInfra(i)"
                         >
                           <Edit class="w-4 h-4" />
                         </button>
                         <button
                           class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('host', h.id, h.name)"
+                          @click="confirmUnlink('infra', i.id, i.name)"
+                        >
+                          <Link2Off class="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Services Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <div class="flex justify-between items-center">
+                <h2 class="card-title">Services</h2>
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="openLinkModal('service')"
+                >
+                  <Plus class="w-4 h-4" /> Add
+                </button>
+              </div>
+              <div v-if="app.services.length === 0" class="text-base-content/70">
+                No services linked
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Environment</th>
+                      <th>Status</th>
+                      <th>Notes</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="s in app.services" :key="s.id">
+                      <td
+                        class="cursor-pointer hover:text-primary"
+                        @click="router.push(`/services/${s.id}`)"
+                      >
+                        {{ s.name }}
+                      </td>
+                      <td><EnvironmentBadge :environment="s.environment" /></td>
+                      <td><StatusBadge :status="s.status" /></td>
+                      <td>{{ s.relation_notes || '-' }}</td>
+                      <td class="flex">
+                        <button
+                          class="btn btn-ghost btn-xs"
+                          @click="openEditService(s)"
+                        >
+                          <Edit class="w-4 h-4" />
+                        </button>
+                        <button
+                          class="btn btn-ghost btn-xs text-error"
+                          @click="confirmUnlink('service', s.id, s.name)"
                         >
                           <Link2Off class="w-4 h-4" />
                         </button>
@@ -649,17 +765,7 @@ onMounted(loadData);
                         {{ d.name }}
                       </td>
                       <td>{{ d.record_type }}</td>
-                      <td>
-                        <span
-                          v-if="d.target_host_id"
-                          class="cursor-pointer hover:text-primary underline"
-                          @click="router.push(`/hosts/${d.target_host_id}`)"
-                        >
-                          {{ d.target_host_name }}
-                        </span>
-                        <span v-else-if="d.target">{{ d.target }}</span>
-                        <span v-else>-</span>
-                      </td>
+                      <td>{{ d.target || '-' }}</td>
                       <td>{{ d.is_primary ? 'Yes' : 'No' }}</td>
                       <td>{{ d.ssl_expires_at || '-' }}</td>
                       <td><StatusBadge :status="d.status" /></td>
@@ -885,33 +991,61 @@ onMounted(loadData);
       @cancel="showDeleteDialog = false"
     />
 
-    <!-- Link Host Modal -->
+    <!-- Link Infra Modal -->
     <Modal
-      :title="linkStep === 'create' ? 'Create Host' : 'Link Host'"
-      :open="showLinkHostModal"
-      @close="closeLinkModal('host')"
+      :title="linkStep === 'create' ? 'Create Infra' : 'Link Infra'"
+      :open="showLinkInfraModal"
+      @close="closeLinkModal('infra')"
     >
       <EntitySelector
         v-if="linkStep === 'select'"
-        title="Hosts"
-        :fetch-fn="hostsApi.list"
-        :exclude-ids="app?.hosts.map((h) => h.id)"
+        title="Infrastructure"
+        :fetch-fn="infraApi.list"
+        :exclude-ids="app?.infra.map((i) => i.id)"
         :allow-create="true"
         @select="handleEntitySelect"
         @create="handleCreateRequest"
-        @cancel="closeLinkModal('host')"
+        @cancel="closeLinkModal('infra')"
       />
-      <HostForm
+      <InfraForm
         v-else-if="linkStep === 'create'"
         :initial-name="initialName"
-        @submit="(data) => handleCreateHost(data as CreateHost)"
+        @submit="(data) => handleCreateInfra(data as CreateInfra)"
         @cancel="linkStep = 'select'"
       />
-      <LinkHostForm
+      <LinkInfraForm
         v-else-if="selectedEntity"
-        :host-name="selectedEntity.name"
-        @submit="handleLinkHost"
-        @cancel="closeLinkModal('host')"
+        @submit="handleLinkInfra"
+        @cancel="closeLinkModal('infra')"
+      />
+    </Modal>
+
+    <!-- Link Service Modal -->
+    <Modal
+      :title="linkStep === 'create' ? 'Create Service' : 'Link Service'"
+      :open="showLinkServiceModal"
+      @close="closeLinkModal('service')"
+    >
+      <EntitySelector
+        v-if="linkStep === 'select'"
+        title="Services"
+        :fetch-fn="servicesApi.list"
+        :exclude-ids="app?.services.map((s) => s.id)"
+        :allow-create="true"
+        @select="handleEntitySelect"
+        @create="handleCreateRequest"
+        @cancel="closeLinkModal('service')"
+      />
+      <ServiceForm
+        v-else-if="linkStep === 'create'"
+        :initial-name="initialName"
+        @submit="(data) => handleCreateService(data as CreateService)"
+        @cancel="linkStep = 'select'"
+      />
+      <LinkServiceForm
+        v-else-if="selectedEntity"
+        @submit="handleLinkService"
+        @cancel="closeLinkModal('service')"
       />
     </Modal>
 
@@ -1042,18 +1176,29 @@ onMounted(loadData);
       @cancel="showUnlinkDialog = false"
     />
 
-    <!-- Edit Host Modal -->
+    <!-- Edit Infra Modal -->
     <Modal
-      title="Edit Host Link"
-      :open="showEditHostModal"
-      @close="showEditHostModal = false"
+      title="Edit Infra Link"
+      :open="showEditInfraModal"
+      @close="showEditInfraModal = false"
     >
-      <LinkHostForm
-        v-if="editingHost"
-        :host-name="editingHost.name"
-        :initial="editingHost"
-        @submit="handleEditHost"
-        @cancel="showEditHostModal = false"
+      <LinkInfraForm
+        v-if="editingInfra"
+        @submit="handleEditInfra"
+        @cancel="showEditInfraModal = false"
+      />
+    </Modal>
+
+    <!-- Edit Service Modal -->
+    <Modal
+      title="Edit Service Link"
+      :open="showEditServiceModal"
+      @close="showEditServiceModal = false"
+    >
+      <LinkServiceForm
+        v-if="editingService"
+        @submit="handleEditService"
+        @cancel="showEditServiceModal = false"
       />
     </Modal>
 

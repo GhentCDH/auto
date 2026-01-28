@@ -33,7 +33,7 @@ function formatDate(date: string | null): string {
     <div v-else-if="error" class="alert alert-error">{{ error }}</div>
 
     <div v-else-if="stats">
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <router-link
           to="/applications"
           class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
@@ -46,12 +46,21 @@ function formatDate(date: string | null): string {
         </router-link>
 
         <router-link
-          to="/hosts"
+          to="/services"
           class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
         >
-          <div class="stat-title">Hosts</div>
-          <div class="stat-value text-secondary">{{ stats.hosts.total }}</div>
-          <div class="stat-desc">{{ stats.hosts.active }} active</div>
+          <div class="stat-title">Services</div>
+          <div class="stat-value text-secondary">{{ stats.services.total }}</div>
+          <div class="stat-desc">{{ stats.services.active }} active</div>
+        </router-link>
+
+        <router-link
+          to="/infra"
+          class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
+        >
+          <div class="stat-title">Infrastructure</div>
+          <div class="stat-value text-accent">{{ stats.infra.total }}</div>
+          <div class="stat-desc">{{ stats.infra.active }} active</div>
         </router-link>
 
         <router-link
@@ -59,7 +68,7 @@ function formatDate(date: string | null): string {
           class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
         >
           <div class="stat-title">Domains</div>
-          <div class="stat-value text-accent">{{ stats.domains.total }}</div>
+          <div class="stat-value text-info">{{ stats.domains.total }}</div>
           <div class="stat-desc">{{ stats.domains.active }} active</div>
         </router-link>
 
@@ -68,7 +77,7 @@ function formatDate(date: string | null): string {
           class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
         >
           <div class="stat-title">People</div>
-          <div class="stat-value text-info">{{ stats.people.total }}</div>
+          <div class="stat-value text-warning">{{ stats.people.total }}</div>
           <div class="stat-desc">{{ stats.people.active }} active</div>
         </router-link>
 
@@ -77,7 +86,7 @@ function formatDate(date: string | null): string {
           class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
         >
           <div class="stat-title">Shares</div>
-          <div class="stat-value text-warning">
+          <div class="stat-value text-error">
             {{ stats.network_shares.total }}
           </div>
           <div class="stat-desc">{{ stats.network_shares.active }} active</div>
