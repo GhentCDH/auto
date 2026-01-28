@@ -20,6 +20,7 @@ mod stacks;
 pub fn api_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/health", get(healthcheck))
+        .route("/version", get(version))
         .nest("/applications", applications::routes())
         .nest("/services", services::routes())
         .nest("/infra", infra::routes())
@@ -35,6 +36,12 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
 
 async fn healthcheck() -> &'static str {
     "ok"
+}
+
+async fn version() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION")
+    }))
 }
 
 pub struct FlexibleInput<T>(pub T);

@@ -349,3 +349,8 @@ export const searchApi = {
   search: (query: string) =>
     request<SearchResults>(`/search${buildQueryString({ q: query })}`),
 };
+
+// Version API
+export const versionApi = {
+  get: () => request<{ version: string }>('/version'),
+};
