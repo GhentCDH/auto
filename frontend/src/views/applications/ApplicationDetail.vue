@@ -656,7 +656,7 @@ onMounted(loadData);
                         }}
                       </td>
                       <td>{{ i.relation_notes || '-' }}</td>
-                      <td class="flex">
+                      <td class="flex justify-end">
                         <button
                           class="btn btn-ghost btn-xs"
                           @click="openEditInfra(i)"
@@ -721,7 +721,7 @@ onMounted(loadData);
                       </td>
                       <td><StatusBadge :status="s.status" /></td>
                       <td>{{ s.relation_notes || '-' }}</td>
-                      <td class="flex">
+                      <td class="flex justify-end">
                         <button
                           class="btn btn-ghost btn-xs"
                           @click="openEditService(s)"
@@ -791,7 +791,7 @@ onMounted(loadData);
                       </td>
                       <td>{{ d.is_primary ? 'Yes' : 'No' }}</td>
                       <td><StatusBadge :status="d.status" /></td>
-                      <td class="flex">
+                      <td class="flex justify-end">
                         <button
                           class="btn btn-ghost btn-xs"
                           @click="openEditDomain(d)"
@@ -846,7 +846,7 @@ onMounted(loadData);
                       {{ p.contribution_type }}
                     </span>
                   </div>
-                  <div class="flex">
+                  <div class="flex justify-end">
                     <button
                       class="btn btn-ghost btn-xs"
                       @click="openEditPerson(p)"
@@ -892,7 +892,7 @@ onMounted(loadData);
                     >
                       {{ s.name }}
                     </router-link>
-                    <div class="flex">
+                    <div class="flex justify-end">
                       <button
                         class="btn btn-ghost btn-xs"
                         @click="openEditShare(s)"
@@ -965,7 +965,7 @@ onMounted(loadData);
                         Link attached
                       </div>
                     </div>
-                    <div class="flex shrink-0">
+                    <div class="flex shrink-0 justify-end">
                       <button
                         class="btn btn-ghost btn-xs"
                         @click.stop="openEditNote(n)"
