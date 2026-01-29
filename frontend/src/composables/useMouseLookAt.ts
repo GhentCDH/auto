@@ -33,7 +33,7 @@ export function useMouseLookAt(
   let targetRotationY = 0;
   let animationFrameId: number | null = null;
   let lastUpdate = 0;
-  const throttleMs = 16; // ~60fps
+  const throttleMs = 100; // 10fps
 
   function getElementCenter(): { x: number; y: number } | null {
     if (!containerRef.value) return null;
