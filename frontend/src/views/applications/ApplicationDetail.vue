@@ -366,7 +366,8 @@ async function handleEditInfra(data: LinkInfra) {
     editingInfra.value = null;
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update infra link';
+    error.value =
+      e instanceof Error ? e.message : 'Failed to update infra link';
   }
 }
 
@@ -378,7 +379,8 @@ async function handleEditService(data: LinkService) {
     editingService.value = null;
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update service link';
+    error.value =
+      e instanceof Error ? e.message : 'Failed to update service link';
   }
 }
 
@@ -647,7 +649,12 @@ onMounted(loadData);
                       >
                         {{ i.name }}
                       </td>
-                      <td>{{ infraTypes[i.type as keyof typeof infraTypes] || i.type }}</td>
+                      <td>
+                        {{
+                          infraTypes[i.type as keyof typeof infraTypes] ||
+                          i.type
+                        }}
+                      </td>
                       <td>{{ i.relation_notes || '-' }}</td>
                       <td class="flex">
                         <button
@@ -682,15 +689,20 @@ onMounted(loadData);
                   <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
-              <div v-if="app.services.length === 0" class="text-base-content/70">
+              <div
+                v-if="app.services.length === 0"
+                class="text-base-content/70"
+              >
                 No services linked
               </div>
               <div v-else class="overflow-x-auto">
                 <table class="table table-sm">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Environment</th>
+                      <th class="flex gap-2">
+                        Name
+                        <span class="badge badge-sm badge-neutral">env</span>
+                      </th>
                       <th>Status</th>
                       <th>Notes</th>
                       <th></th>
@@ -702,9 +714,11 @@ onMounted(loadData);
                         class="cursor-pointer hover:text-primary"
                         @click="router.push(`/services/${s.id}`)"
                       >
-                        {{ s.name }}
+                        <span class="flex gap-2">
+                          {{ s.name }}
+                          <EnvironmentBadge :environment="s.environment" />
+                        </span>
                       </td>
-                      <td><EnvironmentBadge :environment="s.environment" /></td>
                       <td><StatusBadge :status="s.status" /></td>
                       <td>{{ s.relation_notes || '-' }}</td>
                       <td class="flex">

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import LoadingSpinner from './LoadingSpinner.vue';
+import EnvironmentBadge from './EnvironmentBadge.vue';
 
 const props = defineProps<{
   title: string;
-  fetchFn: (params: {
-    search?: string;
-  }) => Promise<{ data: Array<{ id: string; name: string }> }>;
+  fetchFn: (params: { search?: string }) => Promise<{
+    data: Array<{ id: string; name: string; environment?: string }>;
+  }>;
   excludeIds?: string[];
   allowCreate?: boolean;
 }>();
@@ -21,7 +22,9 @@ const loading = ref(true);
 const showSpinner = ref(false);
 const error = ref('');
 const search = ref('');
-const entities = ref<Array<{ id: string; name: string }>>([]);
+const entities = ref<Array<{ id: string; name: string; environment?: string }>>(
+  []
+);
 const searchInput = ref<HTMLInputElement | null>(null);
 
 const filteredEntities = computed(() => {
@@ -108,7 +111,13 @@ onMounted(() => {
         >
           <li v-for="entity in filteredEntities" :key="entity.id">
             <a @click="emit('select', entity)" class="justify-between">
-              {{ entity.name }}
+              <span class="flex gap-2">
+                {{ entity.name }}
+                <EnvironmentBadge
+                  v-if="entity.environment"
+                  :environment="entity.environment"
+                />
+              </span>
               <span class="badge badge-ghost badge-sm">Select</span>
             </a>
           </li>
