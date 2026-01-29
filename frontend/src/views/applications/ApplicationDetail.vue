@@ -55,7 +55,7 @@ import NoteForm from '@/components/forms/NoteForm.vue';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
 import { infraTypes } from '@/values';
-import { Pin, ExternalLink, X, Plus, Edit, Link2Off } from 'lucide-vue-next';
+import { Pin, ExternalLink, Plus, Edit, Link2Off } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -765,7 +765,6 @@ onMounted(loadData);
                       <th>Record Type</th>
                       <th>Target</th>
                       <th>Primary</th>
-                      <th>SSL Expires</th>
                       <th>Status</th>
                       <th></th>
                     </tr>
@@ -779,9 +778,18 @@ onMounted(loadData);
                         {{ d.name }}
                       </td>
                       <td>{{ d.record_type }}</td>
-                      <td>{{ d.target || '-' }}</td>
+                      <td>
+                        <span
+                          v-if="d.target_infra_id"
+                          class="cursor-pointer hover:text-primary underline"
+                          @click="router.push(`/infra/${d.target_infra_id}`)"
+                        >
+                          {{ d.target_infra_name }}
+                        </span>
+                        <span v-else-if="d.target">{{ d.target }}</span>
+                        <span v-else>-</span>
+                      </td>
                       <td>{{ d.is_primary ? 'Yes' : 'No' }}</td>
-                      <td>{{ d.ssl_expires_at || '-' }}</td>
                       <td><StatusBadge :status="d.status" /></td>
                       <td class="flex">
                         <button

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import type { Service, CreateService, UpdateService } from '@/types';
 import { environments } from '@/values';
 
@@ -40,13 +40,25 @@ watch(
 function handleSubmit() {
   emit('submit', form.value);
 }
+
+const nameInput = ref<HTMLInputElement>();
+
+onMounted(() => {
+  nameInput.value?.focus();
+});
 </script>
 
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Name *</legend>
-      <input v-model="form.name" type="text" class="input w-full" required />
+      <input
+        v-model="form.name"
+        ref="nameInput"
+        type="text"
+        class="input w-full"
+        required
+      />
     </fieldset>
 
     <fieldset class="fieldset">

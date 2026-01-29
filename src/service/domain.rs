@@ -17,7 +17,7 @@ pub async fn list(
         let search_pattern = format!("%{}%", search);
         let items = sqlx::query_as::<_, Domain>(
             r#"
-            SELECT id, name, registrar, dns_provider, expires_at, ssl_expires_at, ssl_issuer, status, notes, created_at, updated_at, created_by
+            SELECT id, name, registrar, dns_provider, expires_at, status, notes, created_at, updated_at, created_by
             FROM domain
             WHERE name LIKE ?1 OR registrar LIKE ?1
             ORDER BY name ASC
@@ -40,7 +40,7 @@ pub async fn list(
     } else {
         let items = sqlx::query_as::<_, Domain>(
             r#"
-            SELECT id, name, registrar, dns_provider, expires_at, ssl_expires_at, ssl_issuer, status, notes, created_at, updated_at, created_by
+            SELECT id, name, registrar, dns_provider, expires_at, status, notes, created_at, updated_at, created_by
             FROM domain
             ORDER BY name ASC
             LIMIT ?1 OFFSET ?2
@@ -64,7 +64,7 @@ pub async fn list(
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Domain> {
     sqlx::query_as::<_, Domain>(
         r#"
-        SELECT id, name, registrar, dns_provider, expires_at, ssl_expires_at, ssl_issuer, status, notes, created_at, updated_at, created_by
+        SELECT id, name, registrar, dns_provider, expires_at, status, notes, created_at, updated_at, created_by
         FROM domain
         WHERE id = ?1
         "#,
@@ -102,8 +102,8 @@ pub async fn create(pool: &SqlitePool, input: CreateDomain) -> Result<Domain> {
 
     sqlx::query(
         r#"
-        INSERT INTO domain (id, name, registrar, dns_provider, expires_at, ssl_expires_at, ssl_issuer, status, notes)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        INSERT INTO domain (id, name, registrar, dns_provider, expires_at, status, notes)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
         "#,
     )
     .bind(&id)
@@ -111,8 +111,6 @@ pub async fn create(pool: &SqlitePool, input: CreateDomain) -> Result<Domain> {
     .bind(&input.registrar)
     .bind(&input.dns_provider)
     .bind(&input.expires_at)
-    .bind(&input.ssl_expires_at)
-    .bind(&input.ssl_issuer)
     .bind(&input.status)
     .bind(&input.notes)
     .execute(pool)
@@ -128,15 +126,13 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateDomain) -> Result<
     let registrar = input.registrar.or(existing.registrar);
     let dns_provider = input.dns_provider.or(existing.dns_provider);
     let expires_at = input.expires_at.or(existing.expires_at);
-    let ssl_expires_at = input.ssl_expires_at.or(existing.ssl_expires_at);
-    let ssl_issuer = input.ssl_issuer.or(existing.ssl_issuer);
     let status = input.status.unwrap_or(existing.status);
     let notes = input.notes.or(existing.notes);
 
     sqlx::query(
         r#"
         UPDATE domain
-        SET name = ?1, registrar = ?2, dns_provider = ?3, expires_at = ?4, ssl_expires_at = ?5, ssl_issuer = ?6, status = ?7, notes = ?8, updated_at = datetime('now')
+        SET name = ?1, registrar = ?2, dns_provider = ?3, expires_at = ?4, status = ?5, notes = ?6, updated_at = datetime('now')
         WHERE id = ?9
         "#,
     )
@@ -144,8 +140,6 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateDomain) -> Result<
     .bind(&registrar)
     .bind(&dns_provider)
     .bind(&expires_at)
-    .bind(&ssl_expires_at)
-    .bind(&ssl_issuer)
     .bind(&status)
     .bind(&notes)
     .bind(id)

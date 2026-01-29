@@ -168,8 +168,6 @@ export interface Domain {
   registrar: string | null;
   dns_provider: string | null;
   expires_at: string | null;
-  ssl_expires_at: string | null;
-  ssl_issuer: string | null;
   status: string;
   notes: string | null;
   created_at: string;
@@ -182,8 +180,6 @@ export interface CreateDomain {
   registrar?: string;
   dns_provider?: string;
   expires_at?: string;
-  ssl_expires_at?: string;
-  ssl_issuer?: string;
   status?: string;
   notes?: string;
 }
@@ -193,8 +189,6 @@ export interface UpdateDomain {
   registrar?: string;
   dns_provider?: string;
   expires_at?: string;
-  ssl_expires_at?: string;
-  ssl_issuer?: string;
   status?: string;
   notes?: string;
 }
@@ -204,7 +198,6 @@ export interface DomainRelation {
   name: string;
   registrar: string | null;
   expires_at: string | null;
-  ssl_expires_at: string | null;
   status: string;
   record_type: string;
   target: string | null;
@@ -409,7 +402,6 @@ export interface DashboardStats {
   network_shares: EntityStats;
   notes: number;
   expiring_domains: ExpiringDomain[];
-  expiring_ssl: ExpiringSsl[];
 }
 
 export interface EntityStats {
@@ -421,12 +413,6 @@ export interface ExpiringDomain {
   id: string;
   name: string;
   expires_at: string | null;
-}
-
-export interface ExpiringSsl {
-  id: string;
-  name: string;
-  ssl_expires_at: string | null;
 }
 
 // Search types

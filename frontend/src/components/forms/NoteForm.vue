@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import type { Note, CreateNote, UpdateNote } from '@/types';
 import { noteTypes } from '@/values';
 import MarkdownRenderer from '../common/MarkdownRenderer.vue';
@@ -48,6 +48,12 @@ function handleSubmit() {
     emit('submit', data);
   }
 }
+
+const titleInput = ref<HTMLInputElement>();
+
+onMounted(() => {
+  titleInput.value?.focus();
+});
 </script>
 
 <template>
@@ -56,6 +62,7 @@ function handleSubmit() {
       <legend class="fieldset-legend">Title *</legend>
       <input
         v-model="title"
+        ref="titleInput"
         type="text"
         class="input w-full"
         placeholder="Note title"

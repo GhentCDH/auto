@@ -108,7 +108,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
 
     let domains = sqlx::query_as::<_, DomainRelation>(
         r#"
-        SELECT d.id, d.name, d.registrar, d.expires_at, d.ssl_expires_at, d.status,
+        SELECT d.id, d.name, d.registrar, d.expires_at, d.status,
                ad.record_type, ad.target, ad.target_infra_id, i.name as target_infra_name,
                ad.is_primary, ad.notes as relation_notes
         FROM domain d
@@ -325,12 +325,13 @@ pub async fn link_service(
 }
 
 pub async fn unlink_service(pool: &SqlitePool, app_id: &str, service_id: &str) -> Result<()> {
-    let result =
-        sqlx::query("DELETE FROM application_service WHERE application_id = ?1 AND service_id = ?2")
-            .bind(app_id)
-            .bind(service_id)
-            .execute(pool)
-            .await?;
+    let result = sqlx::query(
+        "DELETE FROM application_service WHERE application_id = ?1 AND service_id = ?2",
+    )
+    .bind(app_id)
+    .bind(service_id)
+    .execute(pool)
+    .await?;
 
     if result.rows_affected() == 0 {
         return Err(Error::NotFound("Relationship not found".to_string()));
