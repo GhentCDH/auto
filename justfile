@@ -1,3 +1,6 @@
+alias w := watch
+alias wf := watch-frontend
+
 export DATABASE_URL := "sqlite://data/data.db"
 
 # Check if sqlx-cli is installed, provide install instructions if not
@@ -49,3 +52,7 @@ docker-build:
 
 docker-run env-file="dev.env" port="8080":
     docker run --env-file {{env-file}} -v ./data:/app/data -p {{port}}:{{port}} auto:latest
+
+[working-directory: "frontend"]
+watch-frontend:
+    bun run watch
