@@ -63,14 +63,18 @@ function first_and_last(name: string): { first?: string; last?: string } {
 function to_ugent_mail(name: string): string {
   const { first, last } = first_and_last(name);
 
-  return `${first}.${last}@ugent.be`;
+  return `${first}.${last ?? 'surname'}@ugent.be`;
 }
 
 watch(
   () => form.value.name,
   (name) => {
     if (!emailEdited) {
-      form.value.email = to_ugent_mail(name);
+      if (name) {
+        form.value.email = to_ugent_mail(name);
+      } else {
+        form.value.email = '';
+      }
     }
   },
   { immediate: true }
