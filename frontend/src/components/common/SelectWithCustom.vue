@@ -37,7 +37,6 @@ const effectiveValue = computed(() =>
 );
 
 watch(effectiveValue, (val) => {
-  console.log('value:', val);
   emit('update:modelValue', val);
 });
 

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import type { Infra, CreateInfra, UpdateInfra } from '@/types';
 import { infraTypes } from '@/values';
+import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
   infra?: Infra;
@@ -36,13 +37,33 @@ watch(
 function handleSubmit() {
   emit('submit', form.value);
 }
+
+watch(
+  () => form.value.name,
+  (name) => {
+    if (name.startsWith('gcdh')) form.value.type = 'vm';
+  },
+  { immediate: true }
+);
+
+const nameInput = ref<HTMLInputElement>();
+
+onMounted(() => {
+  nameInput.value?.focus();
+});
 </script>
 
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Name *</legend>
-      <input v-model="form.name" type="text" class="input w-full" required />
+      <input
+        v-model="form.name"
+        type="text"
+        ref="nameInput"
+        class="input w-full"
+        required
+      />
     </fieldset>
 
     <fieldset class="fieldset">
@@ -51,18 +72,7 @@ function handleSubmit() {
       <div class="label">optional</div>
     </fieldset>
 
-    <fieldset class="fieldset">
-      <legend class="fieldset-legend">Type *</legend>
-      <select v-model="form.type" class="select w-full" required>
-        <option
-          v-for="(label, value) in infraTypes"
-          :key="value"
-          :value="value"
-        >
-          {{ label }}
-        </option>
-      </select>
-    </fieldset>
+    <SelectWithCustom v-model="form.type" :options="infraTypes" allow-custom />
 
     <div class="flex justify-end gap-2">
       <button type="button" class="btn" @click="emit('cancel')">Cancel</button>

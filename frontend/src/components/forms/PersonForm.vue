@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import type { Person, CreatePerson, UpdatePerson } from '@/types';
 
 const props = defineProps<{
@@ -16,11 +16,17 @@ const form = ref<CreatePerson>({
   name: props.initialName || '',
   email: '',
   role: '',
-  department: '',
+  department: 'GhentCDH',
   phone: '',
   is_active: true,
   notes: '',
 });
+
+let emailEdited: boolean = false;
+
+function markEmailEdited() {
+  emailEdited = true;
+}
 
 watch(
   () => props.person,
@@ -43,6 +49,38 @@ watch(
 function handleSubmit() {
   emit('submit', form.value);
 }
+
+function first_and_last(name: string): { first?: string; last?: string } {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0 || parts[0] === '') return {};
+  if (parts.length === 1) return { first: parts[0].toLowerCase() };
+  return {
+    first: parts[0].toLowerCase(),
+    last: parts.slice(1).join('').toLowerCase(),
+  };
+}
+
+function to_ugent_mail(name: string): string {
+  const { first, last } = first_and_last(name);
+
+  return `${first}.${last}@ugent.be`;
+}
+
+watch(
+  () => form.value.name,
+  (name) => {
+    if (!emailEdited) {
+      form.value.email = to_ugent_mail(name);
+    }
+  },
+  { immediate: true }
+);
+
+const nameInput = ref<HTMLInputElement>();
+
+onMounted(() => {
+  nameInput.value?.focus();
+});
 </script>
 
 <template>
@@ -50,12 +88,23 @@ function handleSubmit() {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Name *</legend>
-        <input v-model="form.name" type="text" class="input w-full" required />
+        <input
+          v-model="form.name"
+          ref="nameInput"
+          type="text"
+          class="input w-full"
+          required
+        />
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Email</legend>
-        <input v-model="form.email" type="email" class="input w-full" />
+        <input
+          v-model="form.email"
+          type="email"
+          class="input w-full"
+          @input="markEmailEdited"
+        />
         <div class="label">optional</div>
       </fieldset>
 

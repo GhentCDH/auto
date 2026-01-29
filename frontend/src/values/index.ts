@@ -7,10 +7,8 @@ export const environments = {
 
 export const infraTypes = {
   nomad_cluster: 'Nomad Cluster',
-  k8s_cluster: 'Kubernetes Cluster',
   server: 'Server',
   vm: 'Virtual Machine',
-  cloud: 'Cloud Service',
 };
 
 export const shareUsages = {
@@ -21,12 +19,23 @@ export const shareUsages = {
   media: 'Media',
 };
 
+export const shareTypes = {
+  smb: 'SMB',
+  nfs: 'NFS',
+};
+
 export const domainTypes = {
   A: 'A',
   AAAA: 'AAAA',
   CNAME: 'CNAME',
   MX: 'MX',
   TXT: 'TXT',
+};
+
+export const domainStatus = {
+  active: 'Active',
+  inactive: 'Inactive',
+  expired: 'Expired',
 };
 
 export const contributionTypes = {

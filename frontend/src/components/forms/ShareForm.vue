@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import type {
   NetworkShare,
   CreateNetworkShare,
   UpdateNetworkShare,
 } from '@/types';
+import { shareTypes } from '@/values';
+import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
   share?: NetworkShare;
@@ -16,15 +18,21 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const form = ref<CreateNetworkShare>({
+let pathChanged: boolean = false;
+
+function markPathChanged() {
+  pathChanged = true;
+}
+
+const form = ref({
   name: props.initialName || '',
-  path: '',
+  path: '/ghentcdh_',
   share_type: 'smb',
-  server: '',
+  server: 'files.ugent.be',
   purpose: '',
   status: 'active',
   notes: '',
-});
+} satisfies CreateNetworkShare);
 
 watch(
   () => props.share,
@@ -47,6 +55,24 @@ watch(
 function handleSubmit() {
   emit('submit', form.value);
 }
+
+watch(
+  () => form.value.name,
+  (name) => {
+    if (!pathChanged) {
+      form.value.path = `/ghentcdh_${name}`;
+    }
+  },
+  { immediate: true }
+);
+
+// if path changed manually, stop following the name in the watch, by setting pathChanged to true
+
+const nameInput = ref<HTMLInputElement>();
+
+onMounted(() => {
+  nameInput.value?.focus();
+});
 </script>
 
 <template>
@@ -54,17 +80,21 @@ function handleSubmit() {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Name *</legend>
-        <input v-model="form.name" type="text" class="input w-full" required />
+        <input
+          v-model="form.name"
+          ref="nameInput"
+          type="text"
+          class="input w-full"
+          required
+        />
       </fieldset>
 
-      <fieldset class="fieldset">
-        <legend class="fieldset-legend">Type</legend>
-        <select v-model="form.share_type" class="select w-full">
-          <option value="smb">SMB</option>
-          <option value="nfs">NFS</option>
-          <option value="cifs">CIFS</option>
-        </select>
-      </fieldset>
+      <SelectWithCustom
+        v-model="form.share_type"
+        :options="shareTypes"
+        label="Type"
+        allow-custom
+      />
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Path *</legend>
@@ -74,6 +104,7 @@ function handleSubmit() {
           class="input w-full"
           placeholder="//server/share or /mnt/share"
           required
+          @input="markPathChanged"
         />
       </fieldset>
 
