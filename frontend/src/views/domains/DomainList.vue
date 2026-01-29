@@ -21,7 +21,6 @@ import DomainForm from '@/components/forms/DomainForm.vue';
       <th>Domain</th>
       <th>Registrar</th>
       <th>Expires</th>
-      <th>SSL Expires</th>
       <th>Status</th>
     </template>
 
@@ -29,7 +28,6 @@ import DomainForm from '@/components/forms/DomainForm.vue';
       <td class="font-medium">{{ item.name }}</td>
       <td>{{ item.registrar || '-' }}</td>
       <td>{{ item.expires_at || '-' }}</td>
-      <td>{{ item.ssl_expires_at || '-' }}</td>
       <td><StatusBadge :status="item.status" /></td>
     </template>
 

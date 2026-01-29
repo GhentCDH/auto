@@ -26,7 +26,7 @@ const router = useRouter();
     </template>
 
     <template #details="{ entity }">
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-3 gap-3">
         <div>
           <div class="text-sm text-base-content/70">Registrar</div>
           <div>{{ (entity as DomainWithRelations).registrar || '-' }}</div>
@@ -38,14 +38,6 @@ const router = useRouter();
         <div>
           <div class="text-sm text-base-content/70">Expires</div>
           <div>{{ (entity as DomainWithRelations).expires_at || '-' }}</div>
-        </div>
-        <div>
-          <div class="text-sm text-base-content/70">SSL Expires</div>
-          <div>{{ (entity as DomainWithRelations).ssl_expires_at || '-' }}</div>
-        </div>
-        <div class="col-span-2">
-          <div class="text-sm text-base-content/70">SSL Issuer</div>
-          <div>{{ (entity as DomainWithRelations).ssl_issuer || '-' }}</div>
         </div>
       </div>
       <div v-if="(entity as DomainWithRelations).notes" class="mt-4">

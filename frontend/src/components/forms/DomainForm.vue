@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import type { Domain, CreateDomain, UpdateDomain } from '@/types';
+import { domainStatus } from '@/values';
 
 const props = defineProps<{
   domain?: Domain;
@@ -17,8 +18,6 @@ const form = ref<CreateDomain>({
   registrar: '',
   dns_provider: '',
   expires_at: '',
-  ssl_expires_at: '',
-  ssl_issuer: '',
   status: 'active',
   notes: '',
 });
@@ -32,8 +31,6 @@ watch(
         registrar: d.registrar || '',
         dns_provider: d.dns_provider || '',
         expires_at: d.expires_at || '',
-        ssl_expires_at: d.ssl_expires_at || '',
-        ssl_issuer: d.ssl_issuer || '',
         status: d.status,
         notes: d.notes || '',
       };
@@ -45,6 +42,12 @@ watch(
 function handleSubmit() {
   emit('submit', form.value);
 }
+
+const nameInput = ref<HTMLInputElement>();
+
+onMounted(() => {
+  nameInput.value?.focus();
+});
 </script>
 
 <template>
@@ -54,19 +57,21 @@ function handleSubmit() {
         <legend class="fieldset-legend">Domain Name *</legend>
         <input
           v-model="form.name"
+          ref="nameInput"
           type="text"
           class="input w-full"
           placeholder="example.com"
           required
+          autofocus
         />
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Status</legend>
         <select v-model="form.status" class="select w-full">
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="expired">Expired</option>
+          <option v-for="(visual, value) in domainStatus" :value="value">
+            {{ visual }}
+          </option>
         </select>
       </fieldset>
 
@@ -82,21 +87,9 @@ function handleSubmit() {
         <div class="label">optional</div>
       </fieldset>
 
-      <fieldset class="fieldset">
+      <fieldset class="fieldset md:col-span-2">
         <legend class="fieldset-legend">Domain Expires</legend>
         <input v-model="form.expires_at" type="date" class="input w-full" />
-        <div class="label">optional</div>
-      </fieldset>
-
-      <fieldset class="fieldset">
-        <legend class="fieldset-legend">SSL Expires</legend>
-        <input v-model="form.ssl_expires_at" type="date" class="input w-full" />
-        <div class="label">optional</div>
-      </fieldset>
-
-      <fieldset class="fieldset md:col-span-2">
-        <legend class="fieldset-legend">SSL Issuer</legend>
-        <input v-model="form.ssl_issuer" type="text" class="input w-full" />
         <div class="label">optional</div>
       </fieldset>
     </div>
