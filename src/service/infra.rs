@@ -9,55 +9,41 @@ use crate::{Error, Result};
 pub async fn list(
     pool: &SqlitePool,
     params: &PaginationParams,
+    infra_type: Option<&str>,
 ) -> Result<PaginatedResponse<Infra>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s));
 
-    let (items, total): (Vec<Infra>, i64) = if let Some(search) = &params.search {
-        let search_pattern = format!("%{}%", search);
-        let data = sqlx::query_as::<_, Infra>(
-            r#"
-            SELECT id, name, description, type, created_at, updated_at, created_by
-            FROM infra
-            WHERE name LIKE ?1 OR description LIKE ?1
-            ORDER BY name ASC
-            LIMIT ?2 OFFSET ?3
-            "#,
-        )
-        .bind(&search_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
+    let items = sqlx::query_as::<_, Infra>(
+        r#"
+        SELECT id, name, description, type, created_at, updated_at, created_by
+        FROM infra
+        WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
+          AND (?2 IS NULL OR type = ?2)
+        ORDER BY name ASC
+        LIMIT ?3 OFFSET ?4
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(infra_type)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
 
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM infra WHERE name LIKE ?1 OR description LIKE ?1",
-        )
-        .bind(&search_pattern)
-        .fetch_one(pool)
-        .await?;
-
-        (data, count.0)
-    } else {
-        let data = sqlx::query_as::<_, Infra>(
-            r#"
-            SELECT id, name, description, type, created_at, updated_at, created_by
-            FROM infra
-            ORDER BY name ASC
-            LIMIT ?1 OFFSET ?2
-            "#,
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM infra")
-            .fetch_one(pool)
-            .await?;
-
-        (data, count.0)
-    };
+    let (total,) = sqlx::query_as::<_, (i64,)>(
+        r#"
+        SELECT COUNT(*)
+        FROM infra
+        WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
+          AND (?2 IS NULL OR type = ?2)
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(infra_type)
+    .fetch_one(pool)
+    .await?;
 
     Ok(PaginatedResponse::new(items, total, params))
 }

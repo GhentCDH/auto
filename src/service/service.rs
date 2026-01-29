@@ -9,55 +9,46 @@ use crate::{Error, Result};
 pub async fn list(
     pool: &SqlitePool,
     params: &PaginationParams,
+    status: Option<&str>,
+    environment: Option<&str>,
 ) -> Result<PaginatedResponse<Service>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s));
 
-    let (services, total): (Vec<Service>, i64) = if let Some(search) = &params.search {
-        let search_pattern = format!("%{}%", search);
-        let items = sqlx::query_as::<_, Service>(
-            r#"
-            SELECT id, name, description, repository_url, environment, status, created_at, updated_at, created_by
-            FROM service
-            WHERE name LIKE ?1 OR description LIKE ?1
-            ORDER BY name ASC
-            LIMIT ?2 OFFSET ?3
-            "#,
-        )
-        .bind(&search_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
+    let services = sqlx::query_as::<_, Service>(
+        r#"
+        SELECT id, name, description, repository_url, environment, status, created_at, updated_at, created_by
+        FROM service
+        WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
+          AND (?2 IS NULL OR status = ?2)
+          AND (?3 IS NULL OR environment = ?3)
+        ORDER BY name ASC
+        LIMIT ?4 OFFSET ?5
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(status)
+    .bind(environment)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
 
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM service WHERE name LIKE ?1 OR description LIKE ?1",
-        )
-        .bind(&search_pattern)
-        .fetch_one(pool)
-        .await?;
-
-        (items, count.0)
-    } else {
-        let items = sqlx::query_as::<_, Service>(
-            r#"
-            SELECT id, name, description, repository_url, environment, status, created_at, updated_at, created_by
-            FROM service
-            ORDER BY name ASC
-            LIMIT ?1 OFFSET ?2
-            "#,
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM service")
-            .fetch_one(pool)
-            .await?;
-
-        (items, count.0)
-    };
+    let (total,) = sqlx::query_as::<_, (i64,)>(
+        r#"
+        SELECT COUNT(*)
+        FROM service
+        WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
+          AND (?2 IS NULL OR status = ?2)
+          AND (?3 IS NULL OR environment = ?3)
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(status)
+    .bind(environment)
+    .fetch_one(pool)
+    .await?;
 
     Ok(PaginatedResponse::new(services, total, params))
 }
@@ -206,12 +197,11 @@ pub async fn link_infra(
 }
 
 pub async fn unlink_infra(pool: &SqlitePool, service_id: &str, infra_id: &str) -> Result<()> {
-    let result =
-        sqlx::query("DELETE FROM service_infra WHERE service_id = ?1 AND infra_id = ?2")
-            .bind(service_id)
-            .bind(infra_id)
-            .execute(pool)
-            .await?;
+    let result = sqlx::query("DELETE FROM service_infra WHERE service_id = ?1 AND infra_id = ?2")
+        .bind(service_id)
+        .bind(infra_id)
+        .execute(pool)
+        .await?;
 
     if result.rows_affected() == 0 {
         return Err(Error::NotFound("Relationship not found".to_string()));

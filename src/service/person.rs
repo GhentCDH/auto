@@ -9,55 +9,41 @@ use crate::{Error, Result};
 pub async fn list(
     pool: &SqlitePool,
     params: &PaginationParams,
+    is_active: Option<bool>,
 ) -> Result<PaginatedResponse<Person>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s));
 
-    let (people, total): (Vec<Person>, i64) = if let Some(search) = &params.search {
-        let search_pattern = format!("%{}%", search);
-        let items = sqlx::query_as::<_, Person>(
-            r#"
-            SELECT id, name, email, role, department, phone, is_active, notes, created_at, updated_at, created_by
-            FROM person
-            WHERE name LIKE ?1 OR email LIKE ?1 OR role LIKE ?1
-            ORDER BY name ASC
-            LIMIT ?2 OFFSET ?3
-            "#,
-        )
-        .bind(&search_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
+    let people = sqlx::query_as::<_, Person>(
+        r#"
+        SELECT id, name, email, role, department, phone, is_active, notes, created_at, updated_at, created_by
+        FROM person
+        WHERE (?1 IS NULL OR name LIKE ?1 OR email LIKE ?1 OR role LIKE ?1)
+          AND (?2 IS NULL OR is_active = ?2)
+        ORDER BY name ASC
+        LIMIT ?3 OFFSET ?4
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(is_active)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
 
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM person WHERE name LIKE ?1 OR email LIKE ?1 OR role LIKE ?1",
-        )
-        .bind(&search_pattern)
-        .fetch_one(pool)
-        .await?;
-
-        (items, count.0)
-    } else {
-        let items = sqlx::query_as::<_, Person>(
-            r#"
-            SELECT id, name, email, role, department, phone, is_active, notes, created_at, updated_at, created_by
-            FROM person
-            ORDER BY name ASC
-            LIMIT ?1 OFFSET ?2
-            "#,
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM person")
-            .fetch_one(pool)
-            .await?;
-
-        (items, count.0)
-    };
+    let (total,) = sqlx::query_as::<_, (i64,)>(
+        r#"
+        SELECT COUNT(*)
+        FROM person
+        WHERE (?1 IS NULL OR name LIKE ?1 OR email LIKE ?1 OR role LIKE ?1)
+          AND (?2 IS NULL OR is_active = ?2)
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(is_active)
+    .fetch_one(pool)
+    .await?;
 
     Ok(PaginatedResponse::new(people, total, params))
 }

@@ -3,10 +3,20 @@ use axum::{
     extract::{Path, Query, State},
     routing::get,
 };
+use serde::Deserialize;
 
 use crate::models::{CreateInfra, PaginationParams, UpdateInfra};
 use crate::service::infra;
 use crate::{AppState, Result};
+
+#[derive(Debug, Deserialize, Default)]
+pub struct InfraFilters {
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+    pub search: Option<String>,
+    #[serde(rename = "type")]
+    pub infra_type: Option<String>,
+}
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -16,9 +26,14 @@ pub fn routes() -> Router<AppState> {
 
 async fn list(
     State(state): State<AppState>,
-    Query(params): Query<PaginationParams>,
+    Query(filters): Query<InfraFilters>,
 ) -> Result<impl axum::response::IntoResponse> {
-    let result = infra::list(&state.pool, &params).await?;
+    let params = PaginationParams {
+        page: filters.page,
+        per_page: filters.per_page,
+        search: filters.search,
+    };
+    let result = infra::list(&state.pool, &params, filters.infra_type.as_deref()).await?;
     Ok(Json(result))
 }
 

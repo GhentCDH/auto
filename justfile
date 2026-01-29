@@ -2,6 +2,7 @@ alias w := watch
 alias wf := watch-frontend
 
 export DATABASE_URL := "sqlite://data/data.db"
+export RUST_LOG := "debug,tower_http=info"
 
 # Check if sqlx-cli is installed, provide install instructions if not
 _require-sqlx:

@@ -3,10 +3,19 @@ use axum::{
     extract::{Path, Query, State},
     routing::get,
 };
+use serde::Deserialize;
 
 use crate::models::{CreatePerson, PaginationParams, UpdatePerson};
 use crate::service::person;
 use crate::{AppState, Result};
+
+#[derive(Debug, Deserialize, Default)]
+pub struct PersonFilters {
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+    pub search: Option<String>,
+    pub is_active: Option<bool>,
+}
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -16,9 +25,14 @@ pub fn routes() -> Router<AppState> {
 
 async fn list(
     State(state): State<AppState>,
-    Query(params): Query<PaginationParams>,
+    Query(filters): Query<PersonFilters>,
 ) -> Result<impl axum::response::IntoResponse> {
-    let result = person::list(&state.pool, &params).await?;
+    let params = PaginationParams {
+        page: filters.page,
+        per_page: filters.per_page,
+        search: filters.search,
+    };
+    let result = person::list(&state.pool, &params, filters.is_active).await?;
     Ok(Json(result))
 }
 
