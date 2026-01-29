@@ -11,19 +11,24 @@ env:
 
 jobs:
   generate-changelog:
-    - name: Check out repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    
-    - name: Generate a changelog
-      uses: orhun/git-cliff-action@v4
-      with:
-        config: cliff.toml
-        args: --verbose
-      env:
-        OUTPUT: CHANGELOG.md
-        GITHUB_REPO: ${{ github.repository }}
+    name: Generate changelog
+    runs-on: ubuntu-22.04
+    outputs:
+      release_body: ${{ steps.git-cliff.outputs.content }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Generate a changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose --latest
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
 
   build-and-release:
     runs-on: ubuntu-latest
