@@ -331,6 +331,7 @@ pub async fn unlink_service(pool: &SqlitePool, app_id: &str, service_id: &str) -
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn link_domain(
     pool: &SqlitePool,
     app_id: &str,
@@ -341,12 +342,25 @@ pub async fn link_domain(
     is_primary: bool,
     notes: Option<&str>,
 ) -> Result<()> {
-    get(pool, app_id).await?;
-    crate::service::domain::get(pool, domain_id).await?;
+    let app_relations = get_with_relations(pool, app_id).await?;
+
+    let domain = crate::service::domain::get(pool, domain_id).await?;
 
     // Verify infra exists if provided
     if let Some(infra_id) = target_infra_id {
         crate::service::infra::get(pool, infra_id).await?;
+
+        // if this infrastructure is not listed for the application this domain is linked to,
+        // link it to that application too
+        if !app_relations.infra.iter().any(|i| i.id == infra_id) {
+            link_infra(
+                pool,
+                app_id,
+                infra_id,
+                Some(&format!("'{}' points to this", domain.name)),
+            )
+            .await?;
+        }
     }
 
     sqlx::query(
