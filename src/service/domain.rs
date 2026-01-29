@@ -9,54 +9,41 @@ use crate::{Error, Result};
 pub async fn list(
     pool: &SqlitePool,
     params: &PaginationParams,
+    status: Option<&str>,
 ) -> Result<PaginatedResponse<Domain>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s));
 
-    let (domains, total): (Vec<Domain>, i64) = if let Some(search) = &params.search {
-        let search_pattern = format!("%{}%", search);
-        let items = sqlx::query_as::<_, Domain>(
-            r#"
-            SELECT id, name, registrar, dns_provider, expires_at, status, notes, created_at, updated_at, created_by
-            FROM domain
-            WHERE name LIKE ?1 OR registrar LIKE ?1
-            ORDER BY name ASC
-            LIMIT ?2 OFFSET ?3
-            "#,
-        )
-        .bind(&search_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
+    let domains = sqlx::query_as::<_, Domain>(
+        r#"
+        SELECT id, name, registrar, dns_provider, expires_at, status, notes, created_at, updated_at, created_by
+        FROM domain
+        WHERE (?1 IS NULL OR name LIKE ?1 OR registrar LIKE ?1)
+          AND (?2 IS NULL OR status = ?2)
+        ORDER BY name ASC
+        LIMIT ?3 OFFSET ?4
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(status)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
 
-        let count: (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM domain WHERE name LIKE ?1 OR registrar LIKE ?1")
-                .bind(&search_pattern)
-                .fetch_one(pool)
-                .await?;
-
-        (items, count.0)
-    } else {
-        let items = sqlx::query_as::<_, Domain>(
-            r#"
-            SELECT id, name, registrar, dns_provider, expires_at, status, notes, created_at, updated_at, created_by
-            FROM domain
-            ORDER BY name ASC
-            LIMIT ?1 OFFSET ?2
-            "#,
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM domain")
-            .fetch_one(pool)
-            .await?;
-
-        (items, count.0)
-    };
+    let (total,) = sqlx::query_as::<_, (i64,)>(
+        r#"
+        SELECT COUNT(*)
+        FROM domain
+        WHERE (?1 IS NULL OR name LIKE ?1 OR registrar LIKE ?1)
+          AND (?2 IS NULL OR status = ?2)
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(status)
+    .fetch_one(pool)
+    .await?;
 
     Ok(PaginatedResponse::new(domains, total, params))
 }

@@ -3,10 +3,20 @@ use axum::{
     extract::{Path, Query, State},
     routing::get,
 };
+use serde::Deserialize;
 
 use crate::models::{CreateNetworkShare, PaginationParams, UpdateNetworkShare};
 use crate::service::network_share;
 use crate::{AppState, Result};
+
+#[derive(Debug, Deserialize, Default)]
+pub struct ShareFilters {
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+    pub search: Option<String>,
+    pub status: Option<String>,
+    pub share_type: Option<String>,
+}
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -16,9 +26,20 @@ pub fn routes() -> Router<AppState> {
 
 async fn list(
     State(state): State<AppState>,
-    Query(params): Query<PaginationParams>,
+    Query(filters): Query<ShareFilters>,
 ) -> Result<impl axum::response::IntoResponse> {
-    let result = network_share::list(&state.pool, &params).await?;
+    let params = PaginationParams {
+        page: filters.page,
+        per_page: filters.per_page,
+        search: filters.search,
+    };
+    let result = network_share::list(
+        &state.pool,
+        &params,
+        filters.status.as_deref(),
+        filters.share_type.as_deref(),
+    )
+    .await?;
     Ok(Json(result))
 }
 

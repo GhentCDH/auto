@@ -51,3 +51,39 @@ export const noteTypes = {
   documentation: 'Documentation',
   changelog: 'Changelog',
 };
+
+// Filter options for use in ColumnFilter component
+export const statusFilterOptions = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'deprecated', label: 'Deprecated' },
+];
+
+export const environmentFilterOptions = [
+  { value: 'prd', label: 'Production' },
+  { value: 'qas', label: 'QAS' },
+  { value: 'dev', label: 'Development' },
+  { value: 'tst', label: 'Testing' },
+];
+
+export const domainStatusFilterOptions = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'expired', label: 'Expired' },
+];
+
+export const personActiveFilterOptions = [
+  { value: 'true', label: 'Active' },
+  { value: 'false', label: 'Inactive' },
+];
+
+export const shareTypeFilterOptions = [
+  { value: 'smb', label: 'SMB' },
+  { value: 'nfs', label: 'NFS' },
+];
+
+export const infraTypeFilterOptions = [
+  { value: 'nomad_cluster', label: 'Nomad Cluster' },
+  { value: 'server', label: 'Server' },
+  { value: 'vm', label: 'Virtual Machine' },
+];

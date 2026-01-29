@@ -10,55 +10,46 @@ use crate::{Error, Result};
 pub async fn list(
     pool: &SqlitePool,
     params: &PaginationParams,
+    status: Option<&str>,
+    environment: Option<&str>,
 ) -> Result<PaginatedResponse<Application>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s));
 
-    let (applications, total): (Vec<Application>, i64) = if let Some(search) = &params.search {
-        let search_pattern = format!("%{}%", search);
-        let apps = sqlx::query_as::<_, Application>(
-            r#"
-            SELECT id, name, description, repository_url, environment, url, status, created_at, updated_at, created_by
-            FROM application
-            WHERE name LIKE ?1 OR description LIKE ?1
-            ORDER BY name ASC
-            LIMIT ?2 OFFSET ?3
-            "#,
-        )
-        .bind(&search_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
+    let applications = sqlx::query_as::<_, Application>(
+        r#"
+        SELECT id, name, description, repository_url, environment, url, status, created_at, updated_at, created_by
+        FROM application
+        WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
+          AND (?2 IS NULL OR status = ?2)
+          AND (?3 IS NULL OR environment = ?3)
+        ORDER BY name ASC
+        LIMIT ?4 OFFSET ?5
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(status)
+    .bind(environment)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
 
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM application WHERE name LIKE ?1 OR description LIKE ?1",
-        )
-        .bind(&search_pattern)
-        .fetch_one(pool)
-        .await?;
-
-        (apps, count.0)
-    } else {
-        let apps = sqlx::query_as::<_, Application>(
-            r#"
-            SELECT id, name, description, repository_url, environment, url, status, created_at, updated_at, created_by
-            FROM application
-            ORDER BY name ASC
-            LIMIT ?1 OFFSET ?2
-            "#,
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM application")
-            .fetch_one(pool)
-            .await?;
-
-        (apps, count.0)
-    };
+    let (total,) = sqlx::query_as::<_, (i64,)>(
+        r#"
+        SELECT COUNT(*)
+        FROM application
+        WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
+          AND (?2 IS NULL OR status = ?2)
+          AND (?3 IS NULL OR environment = ?3)
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(status)
+    .bind(environment)
+    .fetch_one(pool)
+    .await?;
 
     Ok(PaginatedResponse::new(applications, total, params))
 }

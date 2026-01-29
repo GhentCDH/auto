@@ -3,10 +3,21 @@ use axum::{
     extract::{Path, Query, State},
     routing::{get, post},
 };
+use serde::Deserialize;
+use tracing::info;
 
 use crate::models::{CreateService, LinkInfra, PaginationParams, UpdateService};
 use crate::service::service;
 use crate::{AppState, Result};
+
+#[derive(Debug, Deserialize, Default)]
+pub struct ServiceFilters {
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+    pub search: Option<String>,
+    pub status: Option<String>,
+    pub environment: Option<String>,
+}
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -20,9 +31,21 @@ pub fn routes() -> Router<AppState> {
 
 async fn list(
     State(state): State<AppState>,
-    Query(params): Query<PaginationParams>,
+    Query(filters): Query<ServiceFilters>,
 ) -> Result<impl axum::response::IntoResponse> {
-    let result = service::list(&state.pool, &params).await?;
+    info!("filters.environment: {:?}", filters.status);
+    let params = PaginationParams {
+        page: filters.page,
+        per_page: filters.per_page,
+        search: filters.search,
+    };
+    let result = service::list(
+        &state.pool,
+        &params,
+        filters.status.as_deref(),
+        filters.environment.as_deref(),
+    )
+    .await?;
     Ok(Json(result))
 }
 

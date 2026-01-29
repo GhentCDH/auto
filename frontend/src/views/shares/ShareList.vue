@@ -1,13 +1,28 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { sharesApi } from '@/api';
 import type { NetworkShare } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import ShareForm from '@/components/forms/ShareForm.vue';
+import ColumnFilter from '@/components/common/ColumnFilter.vue';
+import { statusFilterOptions, shareTypeFilterOptions } from '@/values';
+
+const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
+const filters = ref<Record<string, string | null>>({
+  status: null,
+  share_type: null,
+});
+
+function onFilterChange(key: string, value: string | null) {
+  filters.value[key] = value;
+  entityListRef.value?.updateFilter(key, value);
+}
 </script>
 
 <template>
   <EntityList
+    ref="entityListRef"
     title="Network Shares"
     add-label="Add Share"
     search-placeholder="Search shares..."
@@ -16,13 +31,29 @@ import ShareForm from '@/components/forms/ShareForm.vue';
     base-path="/shares"
     :fetch-fn="sharesApi.list"
     :create-fn="sharesApi.create"
+    :filters="filters"
+    @update:filters="filters = $event"
   >
     <template #columns>
       <th>Name</th>
-      <th>Type</th>
+      <th>
+        Type
+        <ColumnFilter
+          :options="shareTypeFilterOptions"
+          :model-value="filters.share_type"
+          @update:model-value="onFilterChange('share_type', $event)"
+        />
+      </th>
       <th>Path</th>
       <th>Server</th>
-      <th>Status</th>
+      <th>
+        Status
+        <ColumnFilter
+          :options="statusFilterOptions"
+          :model-value="filters.status"
+          @update:model-value="onFilterChange('status', $event)"
+        />
+      </th>
     </template>
 
     <template #row="{ item }: { item: NetworkShare }">

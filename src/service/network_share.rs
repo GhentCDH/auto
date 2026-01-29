@@ -9,55 +9,46 @@ use crate::{Error, Result};
 pub async fn list(
     pool: &SqlitePool,
     params: &PaginationParams,
+    status: Option<&str>,
+    share_type: Option<&str>,
 ) -> Result<PaginatedResponse<NetworkShare>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
+    let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s));
 
-    let (shares, total): (Vec<NetworkShare>, i64) = if let Some(search) = &params.search {
-        let search_pattern = format!("%{}%", search);
-        let items = sqlx::query_as::<_, NetworkShare>(
-            r#"
-            SELECT id, name, path, share_type, server, purpose, status, notes, created_at, updated_at, created_by
-            FROM network_share
-            WHERE name LIKE ?1 OR path LIKE ?1 OR server LIKE ?1
-            ORDER BY name ASC
-            LIMIT ?2 OFFSET ?3
-            "#,
-        )
-        .bind(&search_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
+    let shares = sqlx::query_as::<_, NetworkShare>(
+        r#"
+        SELECT id, name, path, share_type, server, purpose, status, notes, created_at, updated_at, created_by
+        FROM network_share
+        WHERE (?1 IS NULL OR name LIKE ?1 OR path LIKE ?1 OR server LIKE ?1)
+          AND (?2 IS NULL OR status = ?2)
+          AND (?3 IS NULL OR share_type = ?3)
+        ORDER BY name ASC
+        LIMIT ?4 OFFSET ?5
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(status)
+    .bind(share_type)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
 
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM network_share WHERE name LIKE ?1 OR path LIKE ?1 OR server LIKE ?1",
-        )
-        .bind(&search_pattern)
-        .fetch_one(pool)
-        .await?;
-
-        (items, count.0)
-    } else {
-        let items = sqlx::query_as::<_, NetworkShare>(
-            r#"
-            SELECT id, name, path, share_type, server, purpose, status, notes, created_at, updated_at, created_by
-            FROM network_share
-            ORDER BY name ASC
-            LIMIT ?1 OFFSET ?2
-            "#,
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM network_share")
-            .fetch_one(pool)
-            .await?;
-
-        (items, count.0)
-    };
+    let (total,) = sqlx::query_as::<_, (i64,)>(
+        r#"
+        SELECT COUNT(*)
+        FROM network_share
+        WHERE (?1 IS NULL OR name LIKE ?1 OR path LIKE ?1 OR server LIKE ?1)
+          AND (?2 IS NULL OR status = ?2)
+          AND (?3 IS NULL OR share_type = ?3)
+        "#,
+    )
+    .bind(&search_pattern)
+    .bind(status)
+    .bind(share_type)
+    .fetch_one(pool)
+    .await?;
 
     Ok(PaginatedResponse::new(shares, total, params))
 }

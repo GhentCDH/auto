@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     routing::{get, post},
 };
+use serde::Deserialize;
 use tracing::instrument;
 
 use crate::models::{
@@ -11,6 +12,15 @@ use crate::models::{
 };
 use crate::service::application;
 use crate::{AppState, Result};
+
+#[derive(Debug, Deserialize, Default)]
+pub struct ApplicationFilters {
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+    pub search: Option<String>,
+    pub status: Option<String>,
+    pub environment: Option<String>,
+}
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -45,9 +55,20 @@ pub fn routes() -> Router<AppState> {
 
 async fn list(
     State(state): State<AppState>,
-    Query(params): Query<PaginationParams>,
+    Query(filters): Query<ApplicationFilters>,
 ) -> Result<impl axum::response::IntoResponse> {
-    let result = application::list(&state.pool, &params).await?;
+    let params = PaginationParams {
+        page: filters.page,
+        per_page: filters.per_page,
+        search: filters.search,
+    };
+    let result = application::list(
+        &state.pool,
+        &params,
+        filters.status.as_deref(),
+        filters.environment.as_deref(),
+    )
+    .await?;
     Ok(Json(result))
 }
 
