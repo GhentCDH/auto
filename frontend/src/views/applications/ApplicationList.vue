@@ -1,14 +1,30 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { applicationsApi } from '@/api';
 import type { Application } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
 import ApplicationForm from '@/components/forms/ApplicationForm.vue';
+import ColumnFilter from '@/components/common/ColumnFilter.vue';
+import { statusFilterOptions, environmentFilterOptions } from '@/values';
+
+const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
+const filters = ref<Record<string, string | null>>({
+  status: null,
+  environment: null,
+});
+
+function onFilterChange(key: string, value: string | null) {
+  filters.value[key] = value;
+  entityListRef.value?.updateFilter(key, value);
+  console.log(key, value);
+}
 </script>
 
 <template>
   <EntityList
+    ref="entityListRef"
     title="Applications"
     add-label="Add Application"
     search-placeholder="Search applications..."
@@ -17,11 +33,28 @@ import ApplicationForm from '@/components/forms/ApplicationForm.vue';
     base-path="/applications"
     :fetch-fn="applicationsApi.list"
     :create-fn="applicationsApi.create"
+    :filters="filters"
+    @update:filters="filters = $event"
   >
     <template #columns>
-      <th>Name <span class="ml-2 badge badge-sm badge-neutral">env</span></th>
+      <th>
+        Name
+        <span class="ml-2 badge badge-sm badge-neutral">env</span>
+        <ColumnFilter
+          :options="environmentFilterOptions"
+          :model-value="filters.environment"
+          @update:model-value="onFilterChange('environment', $event)"
+        />
+      </th>
       <th>Description</th>
-      <th>Status</th>
+      <th>
+        Status
+        <ColumnFilter
+          :options="statusFilterOptions"
+          :model-value="filters.status"
+          @update:model-value="onFilterChange('status', $event)"
+        />
+      </th>
       <th>Repository</th>
     </template>
 

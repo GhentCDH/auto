@@ -13,6 +13,34 @@ export interface PaginationParams {
   search?: string;
 }
 
+// Filter params for each entity type
+export interface ApplicationFilterParams extends PaginationParams {
+  status?: string;
+  environment?: string;
+}
+
+export interface ServiceFilterParams extends PaginationParams {
+  status?: string;
+  environment?: string;
+}
+
+export interface DomainFilterParams extends PaginationParams {
+  status?: string;
+}
+
+export interface PersonFilterParams extends PaginationParams {
+  is_active?: boolean;
+}
+
+export interface ShareFilterParams extends PaginationParams {
+  status?: string;
+  share_type?: string;
+}
+
+export interface InfraFilterParams extends PaginationParams {
+  type?: string;
+}
+
 // Application types
 export interface Application {
   id: string;

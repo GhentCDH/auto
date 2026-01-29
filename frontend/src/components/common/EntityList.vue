@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends { id: string }, C = unknown">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { PaginatedResponse } from '@/types';
 import LoadingSpinner from './LoadingSpinner.vue';
@@ -14,15 +14,14 @@ const props = defineProps<{
   emptyMessage: string;
   modalTitle: string;
   basePath: string;
-  fetchFn: (params: {
-    page?: number;
-    search?: string;
-  }) => Promise<PaginatedResponse<T>>;
+  fetchFn: (params: Record<string, unknown>) => Promise<PaginatedResponse<T>>;
   createFn?: (data: C) => Promise<T>;
+  filters?: Record<string, string | null>;
 }>();
 
 const emit = defineEmits<{
   created: [];
+  'update:filters': [filters: Record<string, string | null>];
 }>();
 
 const route = useRoute();
@@ -35,6 +34,20 @@ const showCreateModal = ref(false);
 const search = ref((route.query.search as string) || '');
 const page = ref(Number(route.query.page) || 1);
 
+// Initialize filters from URL query params
+const localFilters = ref<Record<string, string | null>>({});
+
+// Compute active filters (excluding null values)
+const activeFilters = computed(() => {
+  const filters: Record<string, string> = {};
+  for (const [key, value] of Object.entries(localFilters.value)) {
+    if (value !== null && value !== '') {
+      filters[key] = value;
+    }
+  }
+  return filters;
+});
+
 async function loadData() {
   loading.value = true;
   error.value = '';
@@ -42,6 +55,7 @@ async function loadData() {
     data.value = await props.fetchFn({
       page: page.value,
       search: search.value || undefined,
+      ...activeFilters.value,
     });
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load data';
@@ -74,13 +88,53 @@ function handlePageChange(newPage: number) {
 
 function handleSearch() {
   page.value = 1;
-  router.push({
-    query: { ...route.query, search: search.value || undefined, page: 1 },
-  });
+  syncToUrl();
 }
 
 function navigateToDetail(id: string) {
   router.push(`${props.basePath}/${id}`);
+}
+
+function updateFilter(key: string, value: string | null) {
+  localFilters.value = { ...localFilters.value, [key]: value };
+  page.value = 1; // Reset to page 1 when filter changes
+  syncToUrl();
+}
+
+function syncToUrl() {
+  const query: Record<string, string | undefined> = {
+    ...route.query,
+    search: search.value || undefined,
+    page: page.value > 1 ? String(page.value) : undefined,
+  };
+  // Add active filters to query
+  for (const [key, value] of Object.entries(localFilters.value)) {
+    query[key] = value || undefined;
+  }
+  router.push({ query });
+}
+
+// Initialize filters from URL and props
+function initFiltersFromUrl() {
+  const filterKeys = props.filters ? Object.keys(props.filters) : [];
+  const newFilters: Record<string, string | null> = {};
+  for (const key of filterKeys) {
+    newFilters[key] = (route.query[key] as string) || null;
+  }
+  localFilters.value = newFilters;
+}
+
+function resetFilters() {
+  for (const key in localFilters.value) {
+    updateFilter(key, null);
+  }
+  syncToUrl();
+  // Emit the reset filters back to parent
+  emit('update:filters', localFilters.value);
+}
+
+function filtersActive(): boolean {
+  return Object.values(localFilters.value).some((value) => value !== null);
 }
 
 watch(
@@ -88,12 +142,27 @@ watch(
   () => {
     page.value = Number(route.query.page) || 1;
     search.value = (route.query.search as string) || '';
+    // Update filters from URL
+    if (props.filters) {
+      for (const key of Object.keys(props.filters)) {
+        localFilters.value[key] = (route.query[key] as string) || null;
+      }
+    }
     loadData();
   },
   { immediate: true }
 );
 
-defineExpose({ loadData });
+// Initialize filters when component mounts
+watch(
+  () => props.filters,
+  () => {
+    initFiltersFromUrl();
+  },
+  { immediate: true }
+);
+
+defineExpose({ loadData, updateFilter, localFilters });
 </script>
 
 <template>
@@ -128,12 +197,20 @@ defineExpose({ loadData });
     <div v-else-if="error" class="alert alert-error">{{ error }}</div>
 
     <!-- Empty -->
-    <EmptyState
-      v-else-if="!data?.data.length"
-      :message="emptyMessage"
-      :action-label="addLabel"
-      @action="showCreateModal = true"
-    />
+    <div v-else-if="!data?.data.length">
+      <button
+        v-if="filtersActive()"
+        class="btn btn-primary"
+        @click="resetFilters"
+      >
+        Reset filters
+      </button>
+      <EmptyState
+        :message="emptyMessage"
+        :action-label="addLabel"
+        @action="showCreateModal = true"
+      />
+    </div>
 
     <!-- Table -->
     <div v-else>

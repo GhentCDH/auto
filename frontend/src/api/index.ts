@@ -1,5 +1,6 @@
 import type {
   Application,
+  ApplicationFilterParams,
   ApplicationWithRelations,
   CreateApplication,
   CreateDomain,
@@ -11,8 +12,10 @@ import type {
   CreateStack,
   DashboardStats,
   Domain,
+  DomainFilterParams,
   DomainWithRelations,
   Infra,
+  InfraFilterParams,
   InfraWithRelations,
   LinkDomain,
   LinkInfra,
@@ -25,10 +28,13 @@ import type {
   PaginatedResponse,
   PaginationParams,
   Person,
+  PersonFilterParams,
   PersonWithRelations,
   SearchResults,
   Service,
+  ServiceFilterParams,
   ServiceWithRelations,
+  ShareFilterParams,
   Stack,
   StackWithRelations,
   UpdateApplication,
@@ -79,7 +85,7 @@ function buildQueryString(params: any): string {
 
 // Applications API
 export const applicationsApi = {
-  list: (params: PaginationParams = {}) =>
+  list: (params: ApplicationFilterParams = {}) =>
     request<PaginatedResponse<Application>>(
       `/applications${buildQueryString(params)}`
     ),
@@ -170,7 +176,7 @@ export const applicationsApi = {
 
 // Services API
 export const servicesApi = {
-  list: (params: PaginationParams = {}) =>
+  list: (params: ServiceFilterParams = {}) =>
     request<PaginatedResponse<Service>>(`/services${buildQueryString(params)}`),
 
   get: (id: string) => request<ServiceWithRelations>(`/services/${id}`),
@@ -205,7 +211,7 @@ export const servicesApi = {
 
 // Infra API
 export const infraApi = {
-  list: (params: PaginationParams = {}) =>
+  list: (params: InfraFilterParams = {}) =>
     request<PaginatedResponse<Infra>>(`/infra${buildQueryString(params)}`),
 
   get: (id: string) => request<InfraWithRelations>(`/infra/${id}`),
@@ -227,7 +233,7 @@ export const infraApi = {
 
 // Domains API
 export const domainsApi = {
-  list: (params: PaginationParams = {}) =>
+  list: (params: DomainFilterParams = {}) =>
     request<PaginatedResponse<Domain>>(`/domains${buildQueryString(params)}`),
 
   get: (id: string) => request<DomainWithRelations>(`/domains/${id}`),
@@ -249,7 +255,7 @@ export const domainsApi = {
 
 // People API
 export const peopleApi = {
-  list: (params: PaginationParams = {}) =>
+  list: (params: PersonFilterParams = {}) =>
     request<PaginatedResponse<Person>>(`/people${buildQueryString(params)}`),
 
   get: (id: string) => request<PersonWithRelations>(`/people/${id}`),
@@ -271,7 +277,7 @@ export const peopleApi = {
 
 // Network Shares API
 export const sharesApi = {
-  list: (params: PaginationParams = {}) =>
+  list: (params: ShareFilterParams = {}) =>
     request<PaginatedResponse<NetworkShare>>(
       `/shares${buildQueryString(params)}`
     ),
