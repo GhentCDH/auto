@@ -1,7 +1,9 @@
 [package]
 name = "auto"
-version = "0.0.5"
+version = "0.1.0"
 edition = "2024"
+description = "Digital assets management system"
+authors = ["Miel Peeters <peetersmiel@gmail.com>"]
 
 [dependencies]
 tokio = { version = "1.49.0", features = ["full"] }
