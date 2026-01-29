@@ -9,7 +9,7 @@ A lightweight IT asset management tool for tracking applications, services, infr
 - **Applications** - Track apps with their environments, status, and repository links
 - **Services** - Manage backend services and their infrastructure dependencies
 - **Infrastructure** - Document servers, databases, and other infrastructure components
-- **Domains** - Monitor domain registrations and SSL certificate expiration
+- **Domains** - Monitor domain registrations
 - **People** - Keep track of team members and their responsibilities
 - **Network Shares** - Document file shares and mount points
 - **Tech Stacks** - Group applications by technology stack

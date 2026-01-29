@@ -13,7 +13,6 @@ pub struct DashboardStats {
     pub network_shares: EntityStats,
     pub notes: i64,
     pub expiring_domains: Vec<ExpiringDomain>,
-    pub expiring_ssl: Vec<ExpiringSsl>,
 }
 
 #[derive(Debug, Serialize)]
@@ -27,13 +26,6 @@ pub struct ExpiringDomain {
     pub id: String,
     pub name: String,
     pub expires_at: Option<String>,
-}
-
-#[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct ExpiringSsl {
-    pub id: String,
-    pub name: String,
-    pub ssl_expires_at: Option<String>,
 }
 
 pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
@@ -106,21 +98,6 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
     .fetch_all(pool)
     .await?;
 
-    // Get expiring SSL certificates (within 30 days)
-    let expiring_ssl = sqlx::query_as::<_, ExpiringSsl>(
-        r#"
-        SELECT id, name, ssl_expires_at
-        FROM domain
-        WHERE ssl_expires_at IS NOT NULL
-          AND date(ssl_expires_at) <= date('now', '+30 days')
-          AND date(ssl_expires_at) >= date('now')
-        ORDER BY ssl_expires_at ASC
-        LIMIT 10
-        "#,
-    )
-    .fetch_all(pool)
-    .await?;
-
     Ok(DashboardStats {
         applications: EntityStats {
             total: app_total.0,
@@ -148,6 +125,5 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         },
         notes: note_count.0,
         expiring_domains,
-        expiring_ssl,
     })
 }

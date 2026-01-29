@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-/// Domain entity - DNS records and SSL info
+/// Domain entity - DNS records
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Domain {
     pub id: String,
@@ -9,8 +9,6 @@ pub struct Domain {
     pub registrar: Option<String>,
     pub dns_provider: Option<String>,
     pub expires_at: Option<String>,
-    pub ssl_expires_at: Option<String>,
-    pub ssl_issuer: Option<String>,
     pub status: String,
     pub notes: Option<String>,
     pub created_at: String,
@@ -25,8 +23,6 @@ pub struct CreateDomain {
     pub registrar: Option<String>,
     pub dns_provider: Option<String>,
     pub expires_at: Option<String>,
-    pub ssl_expires_at: Option<String>,
-    pub ssl_issuer: Option<String>,
     #[serde(default = "default_status")]
     pub status: String,
     pub notes: Option<String>,
@@ -39,8 +35,6 @@ pub struct UpdateDomain {
     pub registrar: Option<String>,
     pub dns_provider: Option<String>,
     pub expires_at: Option<String>,
-    pub ssl_expires_at: Option<String>,
-    pub ssl_issuer: Option<String>,
     pub status: Option<String>,
     pub notes: Option<String>,
 }
@@ -56,7 +50,6 @@ pub struct DomainRelation {
     pub name: String,
     pub registrar: Option<String>,
     pub expires_at: Option<String>,
-    pub ssl_expires_at: Option<String>,
     pub status: String,
     pub record_type: String,
     pub target: Option<String>,
