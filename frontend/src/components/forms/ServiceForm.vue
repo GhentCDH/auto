@@ -5,6 +5,7 @@ import { environments } from '@/values';
 
 const props = defineProps<{
   service?: Service;
+  initialName?: string;
 }>();
 
 const emit = defineEmits<{
@@ -13,7 +14,7 @@ const emit = defineEmits<{
 }>();
 
 const form = ref<CreateService>({
-  name: '',
+  name: props.initialName || '',
   description: '',
   repository_url: '',
   environment: 'prd',
@@ -68,7 +69,11 @@ function handleSubmit() {
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Environment</legend>
       <select v-model="form.environment" class="select w-full">
-        <option v-for="(label, value) in environments" :key="value" :value="value">
+        <option
+          v-for="(label, value) in environments"
+          :key="value"
+          :value="value"
+        >
           {{ label }}
         </option>
       </select>

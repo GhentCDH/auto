@@ -19,17 +19,19 @@ import ApplicationForm from '@/components/forms/ApplicationForm.vue';
     :create-fn="applicationsApi.create"
   >
     <template #columns>
-      <th>Name</th>
+      <th>Name <span class="ml-2 badge badge-sm badge-neutral">env</span></th>
       <th>Description</th>
-      <th>Environment</th>
       <th>Status</th>
       <th>Repository</th>
     </template>
 
     <template #row="{ item }: { item: Application }">
-      <td class="font-medium">{{ item.name }}</td>
+      <td class="font-medium flex gap-2">
+        {{ item.name }}
+        <EnvironmentBadge :environment="item.environment" />
+      </td>
       <td class="max-w-md truncate">{{ item.description || '-' }}</td>
-      <td><EnvironmentBadge :environment="item.environment" /></td>
+
       <td><StatusBadge :status="item.status" /></td>
       <td>
         <a

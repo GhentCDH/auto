@@ -138,7 +138,7 @@ defineExpose({ loadData });
     <!-- Table -->
     <div v-else>
       <div class="overflow-x-auto">
-        <table class="table table-zebra">
+        <table class="table">
           <thead>
             <tr>
               <slot name="columns" />
@@ -146,9 +146,10 @@ defineExpose({ loadData });
           </thead>
           <tbody>
             <tr
-              v-for="item in data.data"
+              v-for="(item, index) in data.data"
               :key="item.id"
-              class="hover cursor-pointer"
+              class="hover:bg-base-200 transition-colors duration-75 cursor-pointer"
+              :class="index % 2 === 0 ? '' : 'bg-black/10'"
               @click="navigateToDetail(item.id)"
             >
               <slot name="row" :item="item" />

@@ -1,7 +1,8 @@
 export const environments = {
   dev: 'Development',
-  staging: 'Staging',
+  qas: 'Quality Assurance',
   prd: 'Production',
+  tst: 'Testing',
 };
 
 export const infraTypes = {
