@@ -779,7 +779,17 @@ onMounted(loadData);
                         {{ d.name }}
                       </td>
                       <td>{{ d.record_type }}</td>
-                      <td>{{ d.target || '-' }}</td>
+                      <td>
+                        <span
+                          v-if="d.target_infra_id"
+                          class="cursor-pointer hover:text-primary underline"
+                          @click="router.push(`/infra/${d.target_infra_id}`)"
+                        >
+                          {{ d.target_infra_name }}
+                        </span>
+                        <span v-else-if="d.target">{{ d.target }}</span>
+                        <span v-else>-</span>
+                      </td>
                       <td>{{ d.is_primary ? 'Yes' : 'No' }}</td>
                       <td>{{ d.ssl_expires_at || '-' }}</td>
                       <td><StatusBadge :status="d.status" /></td>
