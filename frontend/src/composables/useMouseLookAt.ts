@@ -35,13 +35,23 @@ export function useMouseLookAt(
   let lastUpdate = 0;
   const throttleMs = 100; // 10fps
 
-  function getElementCenter(): { x: number; y: number } | null {
-    if (!containerRef.value) return null;
+  // Cache bounding rect to avoid layout thrashing
+  let cachedCenter: { x: number; y: number } | null = null;
+
+  function updateCachedRect() {
+    if (!containerRef.value) {
+      cachedCenter = null;
+      return;
+    }
     const rect = containerRef.value.getBoundingClientRect();
-    return {
+    cachedCenter = {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
     };
+  }
+
+  function getElementCenter(): { x: number; y: number } | null {
+    return cachedCenter;
   }
 
   function handleMouseMove(event: MouseEvent) {
@@ -97,11 +107,16 @@ export function useMouseLookAt(
   }
 
   onMounted(() => {
-    window.addEventListener('mousemove', onMouseMoveWrapper);
+    updateCachedRect();
+    window.addEventListener('mousemove', onMouseMoveWrapper, { passive: true });
+    window.addEventListener('scroll', updateCachedRect, { passive: true });
+    window.addEventListener('resize', updateCachedRect, { passive: true });
   });
 
   onUnmounted(() => {
     window.removeEventListener('mousemove', onMouseMoveWrapper);
+    window.removeEventListener('scroll', updateCachedRect);
+    window.removeEventListener('resize', updateCachedRect);
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
     }

@@ -70,10 +70,10 @@ function handleSearch() {
       </div>
       <router-link
         to="/"
-        class="btn btn-ghost text-2xl inline-flex items-center gap-1 wallefont font-black"
+        class="btn btn-ghost text-2xl inline-flex items-center gap-3 wallefont font-black"
       >
         <Suspense>
-          <MascotViewer :size="50" :proximity-radius="proximityRadius" />
+          <MascotViewer :size="40" :proximity-radius="proximityRadius" />
           <template #fallback>
             <span class="loading loading-spinner loading-xs"></span>
           </template>

@@ -12,7 +12,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   size: 40,
   proximityRadius: 150,
-  depth: 5,
+  depth: 3,
   layers: 5,
 });
 
@@ -86,6 +86,7 @@ function getLayerStyle(index: number) {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  will-change: transform, filter;
   transition:
     transform 0.05s ease-out,
     filter 0.05s ease-out;
