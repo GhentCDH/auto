@@ -3,14 +3,14 @@ PRAGMA foreign_keys=OFF;
 CREATE TABLE application_new (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    url TEXT,
     description TEXT,
     repository_url TEXT,
     status TEXT NOT NULL DEFAULT 'active',
+    environment TEXT NOT NULL DEFAULT 'prd',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     created_by TEXT,
-    environment TEXT NOT NULL DEFAULT 'prd',
-    url TEXT,
     UNIQUE(name, environment)
 );
 
