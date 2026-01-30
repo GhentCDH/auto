@@ -147,17 +147,7 @@ async fn link_domain(
     Path((app_id, domain_id)): Path<(String, String)>,
     Json(input): Json<LinkDomain>,
 ) -> Result<impl axum::response::IntoResponse> {
-    application::link_domain(
-        &state.pool,
-        &app_id,
-        &domain_id,
-        &input.record_type,
-        input.target.as_deref(),
-        input.target_infra_id.as_deref(),
-        input.is_primary,
-        input.notes.as_deref(),
-    )
-    .await?;
+    application::link_domain(&state.pool, &app_id, &domain_id, input.notes.as_deref()).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 

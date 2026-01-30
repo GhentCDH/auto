@@ -1,4 +1,5 @@
 use sqlx::SqlitePool;
+use tracing::info;
 
 use crate::models::{
     Application, ApplicationWithRelations, CreateApplication, DomainRelation, InfraRelation,
@@ -97,21 +98,26 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
     .fetch_all(pool)
     .await?;
 
+    info!("Getting domains relation");
+
     let domains = sqlx::query_as::<_, DomainRelation>(
         r#"
-        SELECT d.id, d.name, d.registrar, d.expires_at, d.status,
-               ad.record_type, ad.target, ad.target_infra_id, i.name as target_infra_name,
-               ad.is_primary, ad.notes as relation_notes
+        SELECT d.id, d.fqdn, d.target_application_id, ap.name as target_application_name, 
+            d.target_service_id, s.name as target_service_name, 
+            ad.notes as relation_notes
         FROM domain d
         JOIN application_domain ad ON d.id = ad.domain_id
-        LEFT JOIN infra i ON ad.target_infra_id = i.id
+        LEFT JOIN application ap ON d.target_application_id = ap.id
+        LEFT JOIN service s ON d.target_service_id = s.id
         WHERE ad.application_id = ?1
-        ORDER BY ad.is_primary DESC, d.name
+        ORDER BY d.fqdn
         "#,
     )
     .bind(id)
     .fetch_all(pool)
     .await?;
+
+    info!("Getting peoples relation");
 
     let people = sqlx::query_as::<_, PersonRelation>(
         r#"
@@ -336,46 +342,34 @@ pub async fn link_domain(
     pool: &SqlitePool,
     app_id: &str,
     domain_id: &str,
-    record_type: &str,
-    target: Option<&str>,
-    target_infra_id: Option<&str>,
-    is_primary: bool,
     notes: Option<&str>,
 ) -> Result<()> {
     let app_relations = get_with_relations(pool, app_id).await?;
 
     let domain = crate::service::domain::get(pool, domain_id).await?;
 
-    // Verify infra exists if provided
-    if let Some(infra_id) = target_infra_id {
-        crate::service::infra::get(pool, infra_id).await?;
-
-        // if this infrastructure is not listed for the application this domain is linked to,
-        // link it to that application too
-        if !app_relations.infra.iter().any(|i| i.id == infra_id) {
-            link_infra(
-                pool,
-                app_id,
-                infra_id,
-                Some(&format!("'{}' points to this", domain.name)),
-            )
-            .await?;
-        }
+    // If this application isn't linked to the service target of the domain, link them
+    if let Some(id) = domain.target_service_id
+        && !app_relations.services.iter().any(|s| s.id == id)
+    {
+        link_service(
+            pool,
+            app_id,
+            &id,
+            Some(&format!("through '{}'", domain.fqdn)),
+        )
+        .await?;
     }
 
     sqlx::query(
         r#"
-        INSERT INTO application_domain (application_id, domain_id, record_type, target, target_infra_id, is_primary, notes)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-        ON CONFLICT (application_id, domain_id) DO UPDATE SET record_type = ?3, target = ?4, target_infra_id = ?5, is_primary = ?6, notes = ?7
+        INSERT INTO application_domain (application_id, domain_id, notes)
+        VALUES (?1, ?2, ?3)
+        ON CONFLICT (application_id, domain_id) DO UPDATE SET notes = ?3
         "#,
     )
     .bind(app_id)
     .bind(domain_id)
-    .bind(record_type)
-    .bind(target)
-    .bind(target_infra_id)
-    .bind(is_primary)
     .bind(notes)
     .execute(pool)
     .await?;

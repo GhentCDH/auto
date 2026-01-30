@@ -5,12 +5,13 @@ use sqlx::FromRow;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Domain {
     pub id: String,
-    pub name: String,
+    pub fqdn: String,
     pub registrar: Option<String>,
     pub dns_provider: Option<String>,
     pub expires_at: Option<String>,
-    pub status: String,
     pub notes: Option<String>,
+    pub target_application_id: Option<String>,
+    pub target_service_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -19,60 +20,56 @@ pub struct Domain {
 /// DTO for creating a new domain
 #[derive(Debug, Deserialize)]
 pub struct CreateDomain {
-    pub name: String,
+    pub fqdn: String,
     pub registrar: Option<String>,
     pub dns_provider: Option<String>,
     pub expires_at: Option<String>,
-    #[serde(default = "default_status")]
-    pub status: String,
     pub notes: Option<String>,
+    pub target_application_id: Option<String>,
+    pub target_service_id: Option<String>,
 }
 
 /// DTO for updating a domain
 #[derive(Debug, Deserialize)]
 pub struct UpdateDomain {
-    pub name: Option<String>,
+    pub fqdn: Option<String>,
     pub registrar: Option<String>,
     pub dns_provider: Option<String>,
     pub expires_at: Option<String>,
-    pub status: Option<String>,
     pub notes: Option<String>,
-}
-
-fn default_status() -> String {
-    "active".to_string()
+    pub target_application_id: Option<String>,
+    pub target_service_id: Option<String>,
 }
 
 /// Domain relation for application detail view
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DomainRelation {
     pub id: String,
-    pub name: String,
-    pub registrar: Option<String>,
-    pub expires_at: Option<String>,
-    pub status: String,
-    pub record_type: String,
-    pub target: Option<String>,
-    pub target_infra_id: Option<String>,
-    pub target_infra_name: Option<String>,
-    pub is_primary: bool,
+    pub fqdn: String,
+    pub target_application_id: Option<String>,
+    pub target_application_name: Option<String>,
+    pub target_service_id: Option<String>,
+    pub target_service_name: Option<String>,
     pub relation_notes: Option<String>,
 }
 
 /// DTO for linking a domain to an application
 #[derive(Debug, Deserialize)]
 pub struct LinkDomain {
-    #[serde(default = "default_record_type")]
-    pub record_type: String,
-    pub target: Option<String>,
-    pub target_infra_id: Option<String>,
-    #[serde(default)]
-    pub is_primary: bool,
     pub notes: Option<String>,
 }
 
-fn default_record_type() -> String {
-    "A".to_string()
+#[derive(Debug, Serialize)]
+pub enum DomainTarget {
+    #[serde(rename = "application")]
+    Application { id: String, name: String },
+    #[serde(rename = "service")]
+    Service { id: String, name: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TargetName {
+    pub name: String,
 }
 
 /// Domain with related applications
@@ -80,6 +77,8 @@ fn default_record_type() -> String {
 pub struct DomainWithRelations {
     #[serde(flatten)]
     pub domain: Domain,
+    pub target_application_name: Option<String>,
+    pub target_service_name: Option<String>,
     pub applications: Vec<ApplicationDomainRelation>,
 }
 
@@ -88,7 +87,4 @@ pub struct DomainWithRelations {
 pub struct ApplicationDomainRelation {
     pub id: String,
     pub name: String,
-    pub status: String,
-    pub record_type: String,
-    pub is_primary: bool,
 }

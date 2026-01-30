@@ -56,7 +56,7 @@ impl IntoResponse for Error {
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         "database_error",
-                        "Database error".to_string(),
+                        format!("Database error: {}", db_err),
                     )
                 }
             }

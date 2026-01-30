@@ -33,3 +33,4 @@ tower-http = { version = "0.6.8", features = [
 rust-embed = { version = "8.11.0", features = ["axum-ex"] }
 mime_guess = "2.0.5"
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+futures = "0.3.31"

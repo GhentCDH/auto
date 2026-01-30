@@ -14,7 +14,6 @@ pub struct DomainFilters {
     pub page: Option<u32>,
     pub per_page: Option<u32>,
     pub search: Option<String>,
-    pub status: Option<String>,
 }
 
 pub fn routes() -> Router<AppState> {
@@ -32,7 +31,7 @@ async fn list(
         per_page: filters.per_page,
         search: filters.search,
     };
-    let result = domain::list(&state.pool, &params, filters.status.as_deref()).await?;
+    let result = domain::list(&state.pool, &params).await?;
     Ok(Json(result))
 }
 

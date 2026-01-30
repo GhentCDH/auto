@@ -1,5 +1,6 @@
 use serde::Serialize;
 use sqlx::SqlitePool;
+use tracing::info;
 
 use crate::Result;
 
@@ -24,12 +25,13 @@ pub struct EntityStats {
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct ExpiringDomain {
     pub id: String,
-    pub name: String,
+    pub fqdn: String,
     pub expires_at: Option<String>,
 }
 
 pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
     // Get application stats
+    info!("Application stats");
     let app_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM application")
         .fetch_one(pool)
         .await?;
@@ -39,6 +41,7 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
             .await?;
 
     // Get service stats
+    info!("Service stats");
     let service_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM service")
         .fetch_one(pool)
         .await?;
@@ -48,20 +51,19 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
             .await?;
 
     // Get infra stats
+    info!("Infra stats");
     let infra_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM infra")
         .fetch_one(pool)
         .await?;
 
     // Get domain stats
+    info!("Domain stats");
     let domain_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM domain")
         .fetch_one(pool)
         .await?;
-    let domain_active: (i64,) =
-        sqlx::query_as("SELECT COUNT(*) FROM domain WHERE status = 'active'")
-            .fetch_one(pool)
-            .await?;
 
     // Get person stats
+    info!("Person stats");
     let person_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM person")
         .fetch_one(pool)
         .await?;
@@ -70,6 +72,7 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         .await?;
 
     // Get network share stats
+    info!("Network stats");
     let share_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM network_share")
         .fetch_one(pool)
         .await?;
@@ -79,6 +82,7 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
             .await?;
 
     // Get note count
+    info!("Note stats");
     let note_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM note")
         .fetch_one(pool)
         .await?;
@@ -86,7 +90,7 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
     // Get expiring domains (within 90 days)
     let expiring_domains = sqlx::query_as::<_, ExpiringDomain>(
         r#"
-        SELECT id, name, expires_at
+        SELECT id, fqdn, expires_at
         FROM domain
         WHERE expires_at IS NOT NULL
           AND date(expires_at) <= date('now', '+90 days')
@@ -113,7 +117,7 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         },
         domains: EntityStats {
             total: domain_total.0,
-            active: domain_active.0,
+            active: domain_total.0, // Domain doesn't have status
         },
         people: EntityStats {
             total: person_total.0,
