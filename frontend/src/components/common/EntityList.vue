@@ -188,6 +188,14 @@ defineExpose({ loadData, updateFilter, localFilters });
         />
         <button type="submit" class="btn join-item">Search</button>
       </form>
+
+      <button
+        v-if="!data?.data.length && filtersActive()"
+        class="ml-4 btn btn-primary"
+        @click="resetFilters"
+      >
+        Reset filters
+      </button>
     </div>
 
     <!-- Loading -->
@@ -198,13 +206,6 @@ defineExpose({ loadData, updateFilter, localFilters });
 
     <!-- Empty -->
     <div v-else-if="!data?.data.length">
-      <button
-        v-if="filtersActive()"
-        class="btn btn-primary"
-        @click="resetFilters"
-      >
-        Reset filters
-      </button>
       <EmptyState
         :message="emptyMessage"
         :action-label="addLabel"
