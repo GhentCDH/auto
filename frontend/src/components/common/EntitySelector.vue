@@ -110,7 +110,11 @@ onMounted(() => {
           class="menu bg-base-100 rounded-box flex-1 min-h-0 overflow-y-auto w-auto"
         >
           <li v-for="entity in filteredEntities" :key="entity.id">
-            <a @click="emit('select', entity)" class="justify-between">
+            <button
+              type="button"
+              @click="emit('select', entity)"
+              class="justify-between"
+            >
               <span class="flex gap-2">
                 {{ entity.name }}
                 <EnvironmentBadge
@@ -119,7 +123,7 @@ onMounted(() => {
                 />
               </span>
               <span class="badge badge-ghost badge-sm">Select</span>
-            </a>
+            </button>
           </li>
         </ul>
 
