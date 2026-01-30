@@ -90,7 +90,10 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<StackWith
     .fetch_all(pool)
     .await?;
 
-    Ok(StackWithRelations { stack, applications })
+    Ok(StackWithRelations {
+        stack,
+        applications,
+    })
 }
 
 pub async fn create(pool: &SqlitePool, input: CreateStack) -> Result<Stack> {

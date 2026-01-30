@@ -145,7 +145,9 @@ onMounted(search);
 
       <div v-if="results.infra.length" class="card bg-base-200">
         <div class="card-body">
-          <h2 class="card-title">Infrastructure ({{ results.infra.length }})</h2>
+          <h2 class="card-title">
+            Infrastructure ({{ results.infra.length }})
+          </h2>
           <ul class="space-y-2">
             <li
               v-for="r in results.infra"

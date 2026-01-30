@@ -83,7 +83,10 @@ onUnmounted(() => {
     <ul
       v-if="isOpen"
       class="fixed z-50 menu p-2 shadow bg-base-200 rounded-box w-40"
-      :style="{ top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px` }"
+      :style="{
+        top: `${dropdownPosition.top}px`,
+        left: `${dropdownPosition.left}px`,
+      }"
     >
       <li>
         <a

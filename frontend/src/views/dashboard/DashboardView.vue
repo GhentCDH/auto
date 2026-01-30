@@ -50,7 +50,9 @@ function formatDate(date: string | null): string {
           class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
         >
           <div class="stat-title">Services</div>
-          <div class="stat-value text-secondary">{{ stats.services.total }}</div>
+          <div class="stat-value text-secondary">
+            {{ stats.services.total }}
+          </div>
           <div class="stat-desc">{{ stats.services.active }} active</div>
         </router-link>
 

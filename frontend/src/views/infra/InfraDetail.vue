@@ -80,7 +80,9 @@ onMounted(loadData);
           </div>
           <h1 class="text-2xl font-bold flex items-center gap-3">
             {{ infra.name }}
-            <span class="badge badge-outline">{{ infraTypes[infra.type as keyof typeof infraTypes] || infra.type }}</span>
+            <span class="badge badge-outline">{{
+              infraTypes[infra.type as keyof typeof infraTypes] || infra.type
+            }}</span>
           </h1>
         </div>
         <div class="flex gap-2">
@@ -104,7 +106,12 @@ onMounted(loadData);
                 </div>
                 <div>
                   <div class="text-sm text-base-content/70">Type</div>
-                  <div>{{ infraTypes[infra.type as keyof typeof infraTypes] || infra.type }}</div>
+                  <div>
+                    {{
+                      infraTypes[infra.type as keyof typeof infraTypes] ||
+                      infra.type
+                    }}
+                  </div>
                 </div>
                 <div>
                   <div class="text-sm text-base-content/70">Created</div>

@@ -139,7 +139,8 @@ async function handleEditInfra(data: LinkInfra) {
     editingInfra.value = null;
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update infra link';
+    error.value =
+      e instanceof Error ? e.message : 'Failed to update infra link';
   }
 }
 
@@ -238,11 +239,17 @@ onMounted(loadData);
             <div class="card-body">
               <div class="flex justify-between items-center">
                 <h2 class="card-title">Infrastructure</h2>
-                <button class="btn btn-sm btn-ghost" @click="openLinkInfraModal">
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="openLinkInfraModal"
+                >
                   <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
-              <div v-if="service.infra.length === 0" class="text-base-content/70">
+              <div
+                v-if="service.infra.length === 0"
+                class="text-base-content/70"
+              >
                 No infrastructure linked
               </div>
               <div v-else class="overflow-x-auto">
@@ -263,7 +270,12 @@ onMounted(loadData);
                       >
                         {{ i.name }}
                       </td>
-                      <td>{{ infraTypes[i.type as keyof typeof infraTypes] || i.type }}</td>
+                      <td>
+                        {{
+                          infraTypes[i.type as keyof typeof infraTypes] ||
+                          i.type
+                        }}
+                      </td>
                       <td>{{ i.relation_notes || '-' }}</td>
                       <td class="flex">
                         <button
