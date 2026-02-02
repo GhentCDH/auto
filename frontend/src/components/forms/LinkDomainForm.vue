@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { LinkDomain, DomainRelation } from '@/types';
-import { domainTypes } from '@/values';
-import EntityOrFreeInput from '../common/EntityOrFreeInput.vue';
-import { infraApi } from '@/api';
-import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
   domainName: string;
@@ -17,10 +13,6 @@ const emit = defineEmits<{
 }>();
 
 const form = ref({
-  record_type: props.initial?.record_type || 'A',
-  target: props.initial?.target || null,
-  target_infra_id: props.initial?.target_infra_id || null,
-  is_primary: props.initial?.is_primary || false,
   notes: props.initial?.relation_notes || '',
 } satisfies LinkDomain);
 
@@ -35,39 +27,6 @@ function handleSubmit() {
       Link <span class="font-semibold">{{ domainName }}</span> to this
       application
     </p>
-
-    <SelectWithCustom
-      v-model="form.record_type"
-      :options="domainTypes"
-      label="Record Type"
-      allow-custom
-    />
-
-    <EntityOrFreeInput
-      label="Target"
-      entity-label="Infrastructure"
-      free-label="Free Entry"
-      free-placeholder="IP address or hostname"
-      entity-title="Infrastructure"
-      :fetch-fn="infraApi.list"
-      :initial-entity-id="initial?.target_infra_id"
-      :initial-entity-name="initial?.target_infra_name"
-      :initial-free-value="initial?.target"
-      @update:entity-id="form.target_infra_id = $event"
-      @update:free-value="form.target = $event"
-    />
-
-    <fieldset class="fieldset">
-      <legend class="fieldset-legend">Primary Domain</legend>
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input
-          v-model="form.is_primary"
-          type="checkbox"
-          class="checkbox checkbox-primary"
-        />
-        <span>This is the primary domain for this application</span>
-      </label>
-    </fieldset>
 
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Notes</legend>

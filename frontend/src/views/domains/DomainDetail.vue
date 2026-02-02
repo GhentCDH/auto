@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { domainsApi } from '@/api';
-import type { DomainWithRelations } from '@/types';
+import type { DomainNamedWithRelations, DomainWithRelations } from '@/types';
 import EntityDetail from '@/components/common/EntityDetail.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import DomainForm from '@/components/forms/DomainForm.vue';
@@ -21,37 +21,56 @@ const router = useRouter();
     "
     :delete-fn="domainsApi.delete"
   >
-    <template #status="{ entity }">
-      <StatusBadge :status="(entity as DomainWithRelations).status" />
-    </template>
-
     <template #details="{ entity }">
       <div class="grid grid-cols-3 gap-3">
         <div>
           <div class="text-sm text-base-content/70">Registrar</div>
-          <div>{{ (entity as DomainWithRelations).registrar || '-' }}</div>
+          <div>{{ (entity as DomainNamedWithRelations).registrar || '-' }}</div>
         </div>
         <div>
           <div class="text-sm text-base-content/70">DNS Provider</div>
-          <div>{{ (entity as DomainWithRelations).dns_provider || '-' }}</div>
+          <div>
+            {{ (entity as DomainNamedWithRelations).dns_provider || '-' }}
+          </div>
         </div>
         <div>
           <div class="text-sm text-base-content/70">Expires</div>
-          <div>{{ (entity as DomainWithRelations).expires_at || '-' }}</div>
+          <div>
+            {{ (entity as DomainNamedWithRelations).expires_at || '-' }}
+          </div>
         </div>
       </div>
-      <div v-if="(entity as DomainWithRelations).notes" class="mt-4">
-        <div class="text-sm text-base-content/70">Notes</div>
-        <div>{{ (entity as DomainWithRelations).notes }}</div>
+      <div class="mt-4 grid-cols-2">
+        <div v-if="(entity as DomainNamedWithRelations).notes">
+          <div class="text-sm text-base-content/70">Notes</div>
+          <div>{{ (entity as DomainNamedWithRelations).notes }}</div>
+        </div>
+        <div>
+          <div class="text-sm text-base-content/70">Target</div>
+          <router-link
+            v-if="(entity as DomainNamedWithRelations).target_application_id"
+            :to="`/applications/${(entity as DomainNamedWithRelations).target_application_id}`"
+          >
+            {{ (entity as DomainNamedWithRelations).target_application_name }}
+          </router-link>
+          <router-link
+            v-if="(entity as DomainNamedWithRelations).target_service_id"
+            :to="`/services/${(entity as DomainNamedWithRelations).target_service_id}`"
+          >
+            {{ (entity as DomainNamedWithRelations).target_service_name }}
+          </router-link>
+        </div>
       </div>
     </template>
 
     <template #relations="{ entity }">
       <h2 class="card-title">
-        Applications ({{ (entity as DomainWithRelations).applications.length }})
+        Applications ({{
+          (entity as DomainNamedWithRelations).applications.length
+        }})
       </h2>
       <div
-        v-if="(entity as DomainWithRelations).applications.length === 0"
+        v-if="(entity as DomainNamedWithRelations).applications.length === 0"
         class="text-base-content/70"
       >
         No applications linked
@@ -61,22 +80,16 @@ const router = useRouter();
           <thead>
             <tr>
               <th>Name</th>
-              <th>Record Type</th>
-              <th>Primary</th>
-              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="a in (entity as DomainWithRelations).applications"
+              v-for="a in (entity as DomainNamedWithRelations).applications"
               :key="a.id"
               class="hover cursor-pointer"
               @click="router.push(`/applications/${a.id}`)"
             >
               <td>{{ a.name }}</td>
-              <td>{{ a.record_type }}</td>
-              <td>{{ a.is_primary ? 'Yes' : 'No' }}</td>
-              <td><StatusBadge :status="a.status" /></td>
             </tr>
           </tbody>
         </table>
@@ -85,7 +98,7 @@ const router = useRouter();
 
     <template #form="{ entity, onSubmit, onCancel }">
       <DomainForm
-        :domain="entity as DomainWithRelations"
+        :domain="entity as DomainNamedWithRelations"
         @submit="onSubmit"
         @cancel="onCancel"
       />

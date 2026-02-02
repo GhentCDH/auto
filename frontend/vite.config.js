@@ -27,13 +27,6 @@ export default defineConfig({
         },
       },
     },
-    watch: process.env.VITE_WATCH
-      ? {
-          chokidar: {
-            usePolling: true,
-            interval: 100,
-          },
-        }
-      : null,
+    watch: process.env.VITE_WATCH ? true : null,
   },
 });

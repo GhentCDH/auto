@@ -5,10 +5,10 @@ import LoadingSpinner from './LoadingSpinner.vue';
 import Modal from './Modal.vue';
 import ConfirmDialog from './ConfirmDialog.vue';
 
-interface BaseEntity {
+type BaseEntity = {
   id: string;
   name: string;
-}
+};
 
 const props = defineProps<{
   entityName: string;
@@ -76,6 +76,10 @@ function onFormSubmit(formData: unknown) {
 onMounted(loadData);
 
 defineExpose({ loadData, entity });
+
+function nameOrFqdn(entity: BaseEntity): string {
+  return entity.name;
+}
 </script>
 
 <template>
@@ -95,12 +99,12 @@ defineExpose({ loadData, entity });
                   listLabel || entityName + 's'
                 }}</router-link>
               </li>
-              <li>{{ entity.name }}</li>
+              <li>{{ nameOrFqdn(entity) }}</li>
             </ul>
           </div>
           <h1 class="text-2xl font-bold flex items-center gap-3">
             <slot name="title" :entity="entity">
-              {{ entity.name }}
+              {{ nameOrFqdn(entity) }}
             </slot>
             <slot name="status" :entity="entity" />
           </h1>

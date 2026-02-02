@@ -24,10 +24,6 @@ export interface ServiceFilterParams extends PaginationParams {
   environment?: string;
 }
 
-export interface DomainFilterParams extends PaginationParams {
-  status?: string;
-}
-
 export interface PersonFilterParams extends PaginationParams {
   is_active?: boolean;
 }
@@ -192,46 +188,52 @@ export interface LinkInfra {
 // Domain types
 export interface Domain {
   id: string;
-  name: string;
+  fqdn: string;
   registrar: string | null;
   dns_provider: string | null;
   expires_at: string | null;
-  status: string;
   notes: string | null;
+  target_application_id: string | null;
+  target_application_name: string | null;
+  target_service_id: string | null;
+  target_service_name: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
 }
 
-export interface CreateDomain {
+export interface DomainNamed extends Domain {
   name: string;
+}
+
+export interface CreateDomain {
+  fqdn: string;
   registrar?: string;
   dns_provider?: string;
   expires_at?: string;
-  status?: string;
+  target_application_id?: string;
+  target_service_id?: string;
   notes?: string;
 }
 
 export interface UpdateDomain {
-  name?: string;
+  fqdn?: string;
   registrar?: string;
   dns_provider?: string;
   expires_at?: string;
+  target_application_id?: string;
+  target_service_id?: string;
   status?: string;
   notes?: string;
 }
 
 export interface DomainRelation {
   id: string;
-  name: string;
-  registrar: string | null;
-  expires_at: string | null;
-  status: string;
-  record_type: string;
-  target: string | null;
-  target_infra_id: string | null;
-  target_infra_name: string | null;
-  is_primary: boolean;
+  fqdn: string;
+  target_application_id: string | null;
+  target_application_name: string | null;
+  target_service_id: string | null;
+  target_service_name: string | null;
   relation_notes: string | null;
 }
 
@@ -239,19 +241,16 @@ export interface DomainWithRelations extends Domain {
   applications: ApplicationDomainRelation[];
 }
 
+export interface DomainNamedWithRelations extends DomainWithRelations {
+  name: string;
+}
+
 export interface ApplicationDomainRelation {
   id: string;
   name: string;
-  status: string;
-  record_type: string;
-  is_primary: boolean;
 }
 
 export interface LinkDomain {
-  record_type?: string;
-  target?: string | null;
-  target_infra_id?: string | null;
-  is_primary?: boolean;
   notes?: string;
 }
 

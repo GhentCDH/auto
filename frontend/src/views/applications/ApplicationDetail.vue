@@ -228,7 +228,7 @@ async function handleCreateService(data: CreateService) {
 async function handleCreateDomain(data: CreateDomain) {
   try {
     const created = await domainsApi.create(data);
-    selectedEntity.value = { id: created.id, name: created.name };
+    selectedEntity.value = { id: created.id, name: created.fqdn };
     linkStep.value = 'form';
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to create domain';
@@ -762,11 +762,7 @@ onMounted(loadData);
                   <thead>
                     <tr>
                       <th>Domain</th>
-                      <th>Record Type</th>
                       <th>Target</th>
-                      <th>Primary</th>
-                      <th>Status</th>
-                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -775,22 +771,31 @@ onMounted(loadData);
                         class="cursor-pointer hover:text-primary"
                         @click="router.push(`/domains/${d.id}`)"
                       >
-                        {{ d.name }}
+                        {{ d.fqdn }}
                       </td>
-                      <td>{{ d.record_type }}</td>
-                      <td>
-                        <span
-                          v-if="d.target_infra_id"
-                          class="cursor-pointer hover:text-primary underline"
-                          @click="router.push(`/infra/${d.target_infra_id}`)"
-                        >
-                          {{ d.target_infra_name }}
-                        </span>
-                        <span v-else-if="d.target">{{ d.target }}</span>
-                        <span v-else>-</span>
+                      <td
+                        v-if="d.target_application_id"
+                        class="cursor-pointer hover:text-primary hover:underline"
+                        @click="
+                          router.push(
+                            `/applications/${d.target_application_id}`
+                          )
+                        "
+                      >
+                        {{ d.target_application_name }}
+                        {{
+                          d.target_application_name === app.name
+                            ? '(this!)'
+                            : ''
+                        }}
                       </td>
-                      <td>{{ d.is_primary ? 'Yes' : 'No' }}</td>
-                      <td><StatusBadge :status="d.status" /></td>
+                      <td
+                        v-else-if="d.target_service_id"
+                        class="cursor-pointer hover:text-primary hover:underline"
+                        @click="router.push(`/services/${d.target_service_id}`)"
+                      >
+                        {{ d.target_service_name }}
+                      </td>
                       <td class="flex justify-end">
                         <button
                           class="btn btn-ghost btn-xs"
@@ -800,7 +805,7 @@ onMounted(loadData);
                         </button>
                         <button
                           class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('domain', d.id, d.name)"
+                          @click="confirmUnlink('domain', d.id, d.fqdn)"
                         >
                           <Link2Off class="w-4 h-4" />
                         </button>
@@ -1232,7 +1237,7 @@ onMounted(loadData);
     >
       <LinkDomainForm
         v-if="editingDomain"
-        :domain-name="editingDomain.name"
+        :domain-name="editingDomain.fqdn"
         :initial="editingDomain"
         @submit="handleEditDomain"
         @cancel="showEditDomainModal = false"

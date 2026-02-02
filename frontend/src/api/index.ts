@@ -13,6 +13,7 @@ import type {
   DashboardStats,
   Domain,
   DomainFilterParams,
+  DomainNamed,
   DomainWithRelations,
   Infra,
   InfraFilterParams,
@@ -233,10 +234,26 @@ export const infraApi = {
 
 // Domains API
 export const domainsApi = {
-  list: (params: DomainFilterParams = {}) =>
-    request<PaginatedResponse<Domain>>(`/domains${buildQueryString(params)}`),
+  list: async (params: DomainFilterParams = {}) => {
+    const response = await request<PaginatedResponse<DomainWithRelations>>(
+      `/domains${buildQueryString(params)}`
+    );
+    return {
+      ...response,
+      data: response.data.map((domain) => ({
+        ...domain,
+        name: domain.fqdn,
+      })),
+    };
+  },
 
-  get: (id: string) => request<DomainWithRelations>(`/domains/${id}`),
+  get: async (id: string) => {
+    const response = await request<DomainWithRelations>(`/domains/${id}`);
+    return {
+      ...response,
+      name: response.fqdn,
+    };
+  },
 
   create: (data: CreateDomain) =>
     request<Domain>('/domains', {
