@@ -44,6 +44,7 @@ async fn version() -> Json<serde_json::Value> {
     }))
 }
 
+#[allow(unused)]
 pub struct FlexibleInput<T>(pub T);
 
 impl<S, T> axum::extract::FromRequest<S> for FlexibleInput<T>

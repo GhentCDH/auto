@@ -1,9 +1,8 @@
 use futures::future::try_join_all;
 use sqlx::SqlitePool;
-use tracing::info;
 
 use crate::models::{
-    ApplicationDomainRelation, CreateDomain, Domain, DomainTarget, DomainWithRelations,
+    ApplicationDomainRelation, CreateDomain, Domain, DomainWithRelations,
     PaginatedResponse, PaginationParams, TargetName, UpdateDomain, new_id,
 };
 use crate::{Error, Result, service};

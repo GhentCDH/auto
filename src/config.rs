@@ -14,13 +14,6 @@ fn var(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("Environment variable `{name}` should be set"))
 }
 
-fn var_default(name: &str, default: String) -> String {
-    match std::env::var(name) {
-        Ok(v) => v,
-        Err(_) => default,
-    }
-}
-
 impl Config {
     /// # Panics
     /// If one of the required environment variables has not been set or has the wrong format.
