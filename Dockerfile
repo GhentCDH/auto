@@ -29,6 +29,7 @@ COPY src ./src
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
 
 COPY --from=planner /app/recipe.json .
 RUN cargo chef cook --release
