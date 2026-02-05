@@ -4,6 +4,7 @@ import type {
   ApplicationWithRelations,
   CreateApplication,
   CreateDomain,
+  CreateHealthcheck,
   CreateInfra,
   CreateNetworkShare,
   CreateNote,
@@ -15,9 +16,14 @@ import type {
   DomainFilterParams,
   DomainNamed,
   DomainWithRelations,
+  Healthcheck,
+  HealthcheckExecuteResult,
+  HealthcheckFilterParams,
+  HealthcheckWithRelations,
   Infra,
   InfraFilterParams,
   InfraWithRelations,
+  KumaMonitor,
   LinkDomain,
   LinkInfra,
   LinkNetworkShare,
@@ -40,6 +46,7 @@ import type {
   StackWithRelations,
   UpdateApplication,
   UpdateDomain,
+  UpdateHealthcheck,
   UpdateInfra,
   UpdateNetworkShare,
   UpdateNote,
@@ -371,6 +378,37 @@ export const stacksApi = {
 export const searchApi = {
   search: (query: string) =>
     request<SearchResults>(`/search${buildQueryString({ q: query })}`),
+};
+
+// Healthchecks API
+export const healthchecksApi = {
+  list: (params: HealthcheckFilterParams = {}) =>
+    request<PaginatedResponse<HealthcheckWithRelations>>(
+      `/healthchecks${buildQueryString(params)}`
+    ),
+
+  get: (id: string) =>
+    request<HealthcheckWithRelations>(`/healthchecks/${id}`),
+
+  create: (data: CreateHealthcheck) =>
+    request<Healthcheck>('/healthchecks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateHealthcheck) =>
+    request<Healthcheck>(`/healthchecks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    request<void>(`/healthchecks/${id}`, { method: 'DELETE' }),
+
+  execute: (id: string) =>
+    request<HealthcheckExecuteResult>(`/healthchecks/${id}/execute`),
+
+  exportKuma: () => request<KumaMonitor[]>('/healthchecks/export/kuma'),
 };
 
 // Version API

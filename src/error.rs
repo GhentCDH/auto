@@ -22,6 +22,8 @@ pub enum Error {
     ValidationError(String),
     #[error("{0}")]
     Conflict(String),
+    #[error("{0}")]
+    InternalError(String),
 }
 
 /// Error response body for API endpoints
@@ -39,6 +41,9 @@ impl IntoResponse for Error {
                 (StatusCode::BAD_REQUEST, "validation_error", msg.clone())
             }
             Error::Conflict(msg) => (StatusCode::CONFLICT, "conflict", msg.clone()),
+            Error::InternalError(msg) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "internal_error", msg.clone())
+            }
             Error::SqlxError(sqlx::Error::RowNotFound) => (
                 StatusCode::NOT_FOUND,
                 "not_found",

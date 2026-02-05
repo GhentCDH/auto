@@ -333,6 +333,43 @@ onMounted(loadData);
               </ul>
             </div>
           </div>
+
+          <!-- Healthchecks Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <div class="flex justify-between items-center">
+                <h2 class="card-title">Healthchecks</h2>
+                <router-link
+                  :to="`/healthchecks?service_id=${id}`"
+                  class="btn btn-sm btn-ghost"
+                >
+                  View All
+                </router-link>
+              </div>
+              <div
+                v-if="service.healthchecks.length === 0"
+                class="text-base-content/70"
+              >
+                No healthchecks configured
+              </div>
+              <ul v-else class="space-y-2">
+                <li
+                  v-for="h in service.healthchecks"
+                  :key="h.id"
+                  class="flex items-center justify-between cursor-pointer hover:bg-base-300 rounded p-1 -m-1"
+                  @click="router.push(`/healthchecks/${h.id}`)"
+                >
+                  <div>
+                    <span class="font-medium">{{ h.name }}</span>
+                    <div class="text-xs text-base-content/70 font-mono">
+                      {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
+                    </div>
+                  </div>
+                  <StatusBadge :status="h.is_enabled ? 'active' : 'inactive'" />
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import LoadingSpinner from './LoadingSpinner.vue';
 import EnvironmentBadge from './EnvironmentBadge.vue';
+import { SearchX } from 'lucide-vue-next';
 
 const props = defineProps<{
   title: string;
@@ -130,9 +131,10 @@ onMounted(() => {
         <!-- Empty state -->
         <div
           v-else
-          class="flex-1 flex flex-col items-center justify-center py-6"
+          class="flex-1 flex flex-col items-center justify-center py-6 text-base-content/50"
         >
-          <p class="text-base-content/70 mb-4">
+          <SearchX class="w-10 h-10 mb-3 opacity-50" />
+          <p class="text-sm">
             No {{ title.toLowerCase() }} found{{
               search ? ` matching "${search}"` : ''
             }}
@@ -142,17 +144,17 @@ onMounted(() => {
     </div>
 
     <!-- Footer actions - always visible -->
-    <div class="grid grid-cols-2 gap-2 pt-2">
-      <button type="button" class="btn btn-ghost" @click="emit('cancel')">
-        Cancel
-      </button>
+    <div class="flex flex-col gap-2 pt-2 border-t border-base-300">
       <button
         v-if="canCreate"
         type="button"
-        class="btn btn-primary btn-sm"
+        class="btn btn-primary btn-sm w-full"
         @click="handleCreate"
       >
         + Create {{ singularTitle }}{{ search ? `: "${search}"` : '' }}
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" @click="emit('cancel')">
+        Cancel
       </button>
     </div>
   </div>

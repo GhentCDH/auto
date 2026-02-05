@@ -9,6 +9,7 @@ use crate::AppState;
 mod applications;
 mod dashboard;
 mod domains;
+mod healthchecks;
 mod infra;
 mod notes;
 mod people;
@@ -29,6 +30,7 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .nest("/shares", shares::routes())
         .nest("/notes", notes::routes())
         .nest("/stacks", stacks::routes())
+        .nest("/healthchecks", healthchecks::routes())
         .nest("/dashboard", dashboard::routes())
         .nest("/search", search::routes())
         .with_state(state)
