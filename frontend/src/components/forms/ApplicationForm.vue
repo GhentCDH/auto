@@ -9,6 +9,7 @@ import { environments } from '@/values';
 
 const props = defineProps<{
   application?: Application;
+  initialName?: string;
 }>();
 
 const emit = defineEmits<{
@@ -17,7 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const form = ref<CreateApplication>({
-  name: '',
+  name: props.initialName || '',
   description: '',
   repository_url: '',
   environment: 'prd',

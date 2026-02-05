@@ -593,3 +593,33 @@ export interface KumaMonitor {
   target_type: string;
   target_name: string;
 }
+
+// Kuma import types (for importing from Uptime Kuma export)
+export interface KumaMonitorImport {
+  kuma_id: number;
+  name: string;
+  url: string;
+  hostname: string;
+  path: string;
+  protocol: string;
+  method: string;
+  expected_status: number;
+  timeout_seconds: number;
+  headers: string | null;
+  keyword: string | null;
+}
+
+export interface ImportMapping {
+  monitor: KumaMonitorImport;
+  domain_id: string | null; // null = needs creation
+  domain_fqdn: string; // for display/creation
+  // Healthcheck target
+  application_id: string | null;
+  service_id: string | null;
+  target_name: string; // for display
+  // Domain target (used when creating new domain)
+  domain_application_id: string | null;
+  domain_service_id: string | null;
+  domain_target_name: string;
+  skip: boolean;
+}

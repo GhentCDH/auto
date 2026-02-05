@@ -1,13 +1,28 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { healthchecksApi } from '@/api';
-import type { HealthcheckWithRelations } from '@/types';
+import type { Healthcheck, HealthcheckWithRelations } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
+import ImportWizard from '@/components/import/ImportWizard.vue';
 
 const exportLoading = ref(false);
 const exportError = ref('');
+
+// import modal state
+const showImport = ref(false);
+const importPanelOpen = ref(false);
+const importPanelWidthRem = ref(0);
+
+// Base modal width in rem
+const BASE_MODAL_WIDTH_REM = 48;
+
+// Compute modal width style
+const modalWidthStyle = computed(() => {
+  const width = BASE_MODAL_WIDTH_REM + (importPanelOpen.value ? importPanelWidthRem.value : 0);
+  return { width: `${width}rem` };
+});
 
 async function exportKuma() {
   exportLoading.value = true;
@@ -33,6 +48,29 @@ async function exportKuma() {
 function buildUrl(hc: HealthcheckWithRelations): string {
   return `${hc.protocol}://${hc.domain_fqdn}${hc.path}`;
 }
+
+// optional: refresh list after import
+const entityListRef = ref<InstanceType<typeof EntityList>>();
+
+function handleImported(count: number) {
+  showImport.value = false;
+  importPanelOpen.value = false;
+  importPanelWidthRem.value = 0;
+  if (count > 0) {
+    entityListRef.value?.reload?.();
+  }
+}
+
+function handleImportClose() {
+  showImport.value = false;
+  importPanelOpen.value = false;
+  importPanelWidthRem.value = 0;
+}
+
+function handlePanelChange(isOpen: boolean, widthRem: number) {
+  importPanelOpen.value = isOpen;
+  importPanelWidthRem.value = widthRem;
+}
 </script>
 
 <template>
@@ -56,9 +94,11 @@ function buildUrl(hc: HealthcheckWithRelations): string {
       <th>Status</th>
     </template>
 
-    <template #row="{ item }: { item: HealthcheckWithRelations }">
+    <template #row="{ item }: { item: Healthcheck }">
       <td class="font-medium">{{ item.name }}</td>
-      <td class="text-sm font-mono truncate max-w-xs">{{ buildUrl(item) }}</td>
+      <td class="text-sm font-mono truncate max-w-xs">
+        {{ buildUrl(item as HealthcheckWithRelations) }}
+      </td>
       <td>
         <router-link
           v-if="item.application_id"
@@ -66,7 +106,7 @@ function buildUrl(hc: HealthcheckWithRelations): string {
           class="link link-hover"
           @click.stop
         >
-          {{ item.application_name }}
+          {{ (item as HealthcheckWithRelations).application_name }}
         </router-link>
         <router-link
           v-else-if="item.service_id"
@@ -74,7 +114,7 @@ function buildUrl(hc: HealthcheckWithRelations): string {
           class="link link-hover"
           @click.stop
         >
-          {{ item.service_name }}
+          {{ (item as HealthcheckWithRelations).service_name }}
         </router-link>
       </td>
       <td>
@@ -91,8 +131,28 @@ function buildUrl(hc: HealthcheckWithRelations): string {
     </template>
   </EntityList>
 
-  <!-- Export Kuma button -->
-  <div class="fixed bottom-6 right-6">
+  <dialog class="modal" :class="{ 'modal-open': showImport }">
+    <div
+      class="modal-box max-w-[90vw] transition-[width] duration-200"
+      :style="modalWidthStyle"
+    >
+      <ImportWizard
+        @close="handleImportClose"
+        @imported="handleImported"
+        @panel-change="handlePanelChange"
+      />
+    </div>
+
+    <form method="dialog" class="modal-backdrop">
+      <button @click="handleImportClose">close</button>
+    </form>
+  </dialog>
+
+  <div class="fixed bottom-6 right-6 flex flex-col gap-2">
+    <button class="btn btn-primary shadow-lg" @click="showImport = true">
+      Import Kuma
+    </button>
+
     <button
       class="btn btn-secondary shadow-lg"
       :disabled="exportLoading"
@@ -102,7 +162,6 @@ function buildUrl(hc: HealthcheckWithRelations): string {
       Export Kuma
     </button>
   </div>
-
   <!-- Export error toast -->
   <div v-if="exportError" class="toast toast-end">
     <div class="alert alert-error">
