@@ -29,6 +29,7 @@ import type {
   DomainRelation,
   PersonRelation,
   NetworkShareRelation,
+  HealthcheckRelation,
   Note,
   CreateNote,
   UpdateNote,
@@ -809,6 +810,58 @@ onMounted(loadData);
                         >
                           <Link2Off class="w-4 h-4" />
                         </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Healthchecks Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <div class="flex justify-between items-center">
+                <h2 class="card-title">Healthchecks</h2>
+                <router-link
+                  :to="`/healthchecks?application_id=${id}`"
+                  class="btn btn-sm btn-ghost"
+                >
+                  View All
+                </router-link>
+              </div>
+              <div
+                v-if="app.healthchecks.length === 0"
+                class="text-base-content/70"
+              >
+                No healthchecks configured
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>URL</th>
+                      <th>Expected</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="h in app.healthchecks"
+                      :key="h.id"
+                      class="cursor-pointer hover:bg-base-300"
+                      @click="router.push(`/healthchecks/${h.id}`)"
+                    >
+                      <td>{{ h.name }}</td>
+                      <td class="font-mono text-xs truncate max-w-[200px]">
+                        {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
+                      </td>
+                      <td>{{ h.expected_status }}</td>
+                      <td>
+                        <StatusBadge
+                          :status="h.is_enabled ? 'active' : 'inactive'"
+                        />
                       </td>
                     </tr>
                   </tbody>

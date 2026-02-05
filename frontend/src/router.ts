@@ -68,6 +68,15 @@ const routes = [
     path: '/stack/:id',
     component: () => import('./views/stack/StackDetail.vue'),
   },
+  // Healthchecks
+  {
+    path: '/healthchecks',
+    component: () => import('./views/healthchecks/HealthcheckList.vue'),
+  },
+  {
+    path: '/healthchecks/:id',
+    component: () => import('./views/healthchecks/HealthcheckDetail.vue'),
+  },
   // Search
   {
     path: '/search',

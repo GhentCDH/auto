@@ -77,6 +77,7 @@ export interface ApplicationWithRelations extends Application {
   network_shares: NetworkShareRelation[];
   notes: Note[];
   stacks: StackRelation[];
+  healthchecks: HealthcheckRelation[];
 }
 
 // Service types
@@ -119,6 +120,7 @@ export interface ServiceRelation {
 export interface ServiceWithRelations extends Service {
   applications: ApplicationServiceRelation[];
   infra: InfraRelation[];
+  healthchecks: HealthcheckRelation[];
 }
 
 export interface ApplicationServiceRelation {
@@ -492,4 +494,102 @@ export interface ApplicationStackRelation {
   id: string;
   name: string;
   status: string;
+}
+
+// Healthcheck types
+export interface Healthcheck {
+  id: string;
+  name: string;
+  application_id: string | null;
+  service_id: string | null;
+  domain_id: string;
+  protocol: string;
+  path: string;
+  method: string;
+  headers: string | null;
+  expected_status: number;
+  expected_body: string | null;
+  timeout_seconds: number;
+  is_enabled: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface CreateHealthcheck {
+  name: string;
+  application_id?: string;
+  service_id?: string;
+  domain_id: string;
+  protocol?: string;
+  path?: string;
+  method?: string;
+  headers?: string;
+  expected_status?: number;
+  expected_body?: string;
+  timeout_seconds?: number;
+  is_enabled?: boolean;
+  notes?: string;
+}
+
+export interface UpdateHealthcheck {
+  name?: string;
+  application_id?: string;
+  service_id?: string;
+  domain_id?: string;
+  protocol?: string;
+  path?: string;
+  method?: string;
+  headers?: string;
+  expected_status?: number;
+  expected_body?: string;
+  timeout_seconds?: number;
+  is_enabled?: boolean;
+  notes?: string;
+}
+
+export interface HealthcheckWithRelations extends Healthcheck {
+  application_name: string | null;
+  service_name: string | null;
+  domain_fqdn: string;
+  parsed_headers: Record<string, string> | null;
+}
+
+export interface HealthcheckRelation {
+  id: string;
+  name: string;
+  protocol: string;
+  domain_fqdn: string;
+  path: string;
+  expected_status: number;
+  is_enabled: boolean;
+}
+
+export interface HealthcheckExecuteResult {
+  healthcheck_id: string;
+  url: string;
+  success: boolean;
+  status_code: number | null;
+  response_time_ms: number;
+  body_match: boolean | null;
+  error: string | null;
+  executed_at: string;
+}
+
+export interface HealthcheckFilterParams extends PaginationParams {
+  application_id?: string;
+  service_id?: string;
+  is_enabled?: boolean;
+}
+
+export interface KumaMonitor {
+  name: string;
+  url: string;
+  method: string;
+  expected_status: number;
+  timeout: number;
+  headers: Record<string, string> | null;
+  target_type: string;
+  target_name: string;
 }

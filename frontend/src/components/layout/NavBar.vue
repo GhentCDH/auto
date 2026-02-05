@@ -30,6 +30,7 @@ const navItems = [
   { name: 'People', path: '/people' },
   { name: 'Shares', path: '/shares' },
   { name: 'Stack', path: '/stack' },
+  { name: 'Healthchecks', path: '/healthchecks' },
 ];
 
 function handleSearch() {
