@@ -68,6 +68,7 @@ pub struct ServiceWithRelations {
     pub service: Service,
     pub applications: Vec<ApplicationServiceRelation>,
     pub infra: Vec<super::InfraRelation>,
+    pub healthchecks: Vec<super::HealthcheckRelation>,
 }
 
 /// Application relation for service detail view

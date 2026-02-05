@@ -1,5 +1,6 @@
 mod application;
 mod domain;
+mod healthcheck;
 mod infra;
 mod network_share;
 mod note;
@@ -9,6 +10,7 @@ mod stack;
 
 pub use application::*;
 pub use domain::*;
+pub use healthcheck::*;
 pub use infra::*;
 pub use network_share::*;
 pub use note::*;
