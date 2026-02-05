@@ -112,10 +112,10 @@ async fn search_domains(
 ) -> Result<Vec<SearchResult>> {
     Ok(sqlx::query_as::<_, SearchResult>(
         r#"
-        SELECT id, name, registrar as description, 'domain' as entity_type
+        SELECT id, fqdn as name, registrar as description, 'domain' as entity_type
         FROM domain
-        WHERE name LIKE ?1 OR registrar LIKE ?1
-        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name ASC
+        WHERE fqdn LIKE ?1 OR registrar LIKE ?1
+        ORDER BY CASE WHEN fqdn LIKE ?2 THEN 0 ELSE 1 END, fqdn ASC
         LIMIT 20
         "#,
     )
