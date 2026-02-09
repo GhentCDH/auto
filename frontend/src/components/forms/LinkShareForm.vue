@@ -78,7 +78,7 @@ function handleSubmit() {
         Cancel
       </button>
       <button type="submit" class="btn btn-primary">
-        {{ initial ? 'Update' : 'Link Share' }}
+        {{ initial ? 'Update' : 'Link Storage' }}
       </button>
     </div>
   </form>

@@ -205,7 +205,7 @@ onMounted(search);
       <div v-if="results.network_shares.length" class="card bg-base-200">
         <div class="card-body">
           <h2 class="card-title">
-            Network Shares ({{ results.network_shares.length }})
+            Storage ({{ results.network_shares.length }})
           </h2>
           <ul class="space-y-2">
             <li

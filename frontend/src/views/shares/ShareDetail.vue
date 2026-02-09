@@ -11,9 +11,9 @@ const router = useRouter();
 
 <template>
   <EntityDetail
-    entity-name="Network Share"
+    entity-name="Storage"
     list-path="/shares"
-    list-label="Network Shares"
+    list-label="Storage"
     :fetch-fn="
       sharesApi.get as (id: string) => Promise<{ id: string; name: string }>
     "

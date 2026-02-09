@@ -588,96 +588,6 @@ onMounted(loadData);
             </div>
           </div>
 
-          <!-- Stack Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Tech Stack</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('stack')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div v-if="app.stacks.length === 0" class="text-base-content/70">
-                No technologies linked
-              </div>
-              <div v-else class="flex flex-wrap gap-2">
-                <StackBadge
-                  v-for="s in app.stacks"
-                  @click="router.push(`/stack/${s.id}`)"
-                  :key="s.id"
-                  :name="s.name"
-                  removable
-                  clickable
-                  @remove="confirmUnlink('stack', s.id, s.name)"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Infra Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Infrastructure</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('infra')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div v-if="app.infra.length === 0" class="text-base-content/70">
-                No infrastructure linked
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Notes</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="i in app.infra" :key="i.id">
-                      <td
-                        class="cursor-pointer hover:text-primary"
-                        @click="router.push(`/infra/${i.id}`)"
-                      >
-                        {{ i.name }}
-                      </td>
-                      <td>
-                        {{
-                          infraTypes[i.type as keyof typeof infraTypes] ||
-                          i.type
-                        }}
-                      </td>
-                      <td>{{ i.relation_notes || '-' }}</td>
-                      <td class="flex justify-end">
-                        <button
-                          class="btn btn-ghost btn-xs"
-                          @click="openEditInfra(i)"
-                        >
-                          <Edit class="w-4 h-4" />
-                        </button>
-                        <button
-                          class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('infra', i.id, i.name)"
-                        >
-                          <Link2Off class="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
           <!-- Services Card -->
           <div class="card bg-base-200">
             <div class="card-body">
@@ -818,6 +728,115 @@ onMounted(loadData);
             </div>
           </div>
 
+          <!-- Infra Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <div class="flex justify-between items-center">
+                <h2 class="card-title">Infrastructure</h2>
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="openLinkModal('infra')"
+                >
+                  <Plus class="w-4 h-4" /> Add
+                </button>
+              </div>
+              <div v-if="app.infra.length === 0" class="text-base-content/70">
+                No infrastructure linked
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Notes</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="i in app.infra" :key="i.id">
+                      <td
+                        class="cursor-pointer hover:text-primary"
+                        @click="router.push(`/infra/${i.id}`)"
+                      >
+                        {{ i.name }}
+                      </td>
+                      <td>
+                        {{
+                          infraTypes[i.type as keyof typeof infraTypes] ||
+                          i.type
+                        }}
+                      </td>
+                      <td>{{ i.relation_notes || '-' }}</td>
+                      <td class="flex justify-end">
+                        <button
+                          class="btn btn-ghost btn-xs"
+                          @click="openEditInfra(i)"
+                        >
+                          <Edit class="w-4 h-4" />
+                        </button>
+                        <button
+                          class="btn btn-ghost btn-xs text-error"
+                          @click="confirmUnlink('infra', i.id, i.name)"
+                        >
+                          <Link2Off class="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Network Shares Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <div class="flex justify-between items-center">
+                <h2 class="card-title">Storage</h2>
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="openLinkModal('share')"
+                >
+                  <Plus class="w-4 h-4" /> Add
+                </button>
+              </div>
+              <div
+                v-if="app.network_shares.length === 0"
+                class="text-base-content/70"
+              >
+                No storage linked
+              </div>
+              <ul v-else class="space-y-2">
+                <li v-for="s in app.network_shares" :key="s.id">
+                  <div class="flex items-center justify-between">
+                    <router-link
+                      :to="`/shares/${s.id}`"
+                      class="link link-hover"
+                    >
+                      {{ s.name }}
+                    </router-link>
+                    <div class="flex justify-end">
+                      <button
+                        class="btn btn-ghost btn-xs"
+                        @click="openEditShare(s)"
+                      >
+                        <Edit class="w-4 h-4" />
+                      </button>
+                      <button
+                        class="btn btn-ghost btn-xs text-error"
+                        @click="confirmUnlink('share', s.id, s.name)"
+                      >
+                        <Link2Off class="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="text-xs text-base-content/70">{{ s.path }}</div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
           <!-- Healthchecks Card -->
           <div class="card bg-base-200">
             <div class="card-body">
@@ -923,51 +942,32 @@ onMounted(loadData);
             </div>
           </div>
 
-          <!-- Network Shares Card -->
+          <!-- Stack Card -->
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
-                <h2 class="card-title">Shares</h2>
+                <h2 class="card-title">Tech Stack</h2>
                 <button
                   class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('share')"
+                  @click="openLinkModal('stack')"
                 >
                   <Plus class="w-4 h-4" /> Add
                 </button>
               </div>
-              <div
-                v-if="app.network_shares.length === 0"
-                class="text-base-content/70"
-              >
-                No shares linked
+              <div v-if="app.stacks.length === 0" class="text-base-content/70">
+                No technologies linked
               </div>
-              <ul v-else class="space-y-2">
-                <li v-for="s in app.network_shares" :key="s.id">
-                  <div class="flex items-center justify-between">
-                    <router-link
-                      :to="`/shares/${s.id}`"
-                      class="link link-hover"
-                    >
-                      {{ s.name }}
-                    </router-link>
-                    <div class="flex justify-end">
-                      <button
-                        class="btn btn-ghost btn-xs"
-                        @click="openEditShare(s)"
-                      >
-                        <Edit class="w-4 h-4" />
-                      </button>
-                      <button
-                        class="btn btn-ghost btn-xs text-error"
-                        @click="confirmUnlink('share', s.id, s.name)"
-                      >
-                        <Link2Off class="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-xs text-base-content/70">{{ s.path }}</div>
-                </li>
-              </ul>
+              <div v-else class="flex flex-wrap gap-2">
+                <StackBadge
+                  v-for="s in app.stacks"
+                  @click="router.push(`/stack/${s.id}`)"
+                  :key="s.id"
+                  :name="s.name"
+                  removable
+                  clickable
+                  @remove="confirmUnlink('stack', s.id, s.name)"
+                />
+              </div>
             </div>
           </div>
 
@@ -1191,15 +1191,13 @@ onMounted(loadData);
 
     <!-- Link Share Modal -->
     <Modal
-      :title="
-        linkStep === 'create' ? 'Create Network Share' : 'Link Network Share'
-      "
+      :title="linkStep === 'create' ? 'Create Storage' : 'Link Storage'"
       :open="showLinkShareModal"
       @close="closeLinkModal('share')"
     >
       <EntitySelector
         v-if="linkStep === 'select'"
-        title="Network Shares"
+        title="Storage"
         allow-create
         :fetch-fn="sharesApi.list"
         :exclude-ids="app?.network_shares.map((s) => s.id)"
@@ -1314,7 +1312,7 @@ onMounted(loadData);
 
     <!-- Edit Share Modal -->
     <Modal
-      title="Edit Share Link"
+      title="Edit Storage Link"
       :open="showEditShareModal"
       @close="showEditShareModal = false"
     >

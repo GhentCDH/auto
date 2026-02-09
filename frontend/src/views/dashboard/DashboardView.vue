@@ -87,7 +87,7 @@ function formatDate(date: string | null): string {
           to="/shares"
           class="stat bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
         >
-          <div class="stat-title">Shares</div>
+          <div class="stat-title">Storage</div>
           <div class="stat-value text-error">
             {{ stats.network_shares.total }}
           </div>
