@@ -28,7 +28,7 @@ const navItems = [
   { name: 'Infra', path: '/infra' },
   { name: 'Domains', path: '/domains' },
   { name: 'People', path: '/people' },
-  { name: 'Shares', path: '/shares' },
+  { name: 'Storage', path: '/shares' },
   { name: 'Stack', path: '/stack' },
   { name: 'Healthchecks', path: '/healthchecks' },
 ];

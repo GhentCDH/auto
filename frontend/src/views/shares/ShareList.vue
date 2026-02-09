@@ -23,11 +23,11 @@ function onFilterChange(key: string, value: string | null) {
 <template>
   <EntityList
     ref="entityListRef"
-    title="Network Shares"
-    add-label="Add Share"
-    search-placeholder="Search shares..."
-    empty-message="No shares found"
-    modal-title="Create Network Share"
+    title="Storage"
+    add-label="Add Storag"
+    search-placeholder="Search storage..."
+    empty-message="No storage found"
+    modal-title="Create Storage"
     base-path="/shares"
     :fetch-fn="sharesApi.list"
     :create-fn="sharesApi.create"
