@@ -16,8 +16,10 @@ const selectedDomainName = ref<string | null>(null);
 
 const props = defineProps<{
   healthcheck?: Healthcheck;
+  initialName?: string;
   initialApplicationId?: string;
   initialServiceId?: string;
+  initialTargetName?: string;
 }>();
 
 const emit = defineEmits<{
@@ -25,8 +27,18 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
+if (props.initialApplicationId) {
+  target_type.value = 'application';
+} else if (props.initialServiceId) {
+  target_type.value = 'service';
+}
+
+if (props.initialTargetName) {
+  selectedTargetName.value = props.initialTargetName;
+}
+
 const form = ref<CreateHealthcheck>({
-  name: '',
+  name: props.initialName || '',
   application_id: props.initialApplicationId,
   service_id: props.initialServiceId,
   domain_id: '',
@@ -355,11 +367,7 @@ function removeHeader(index: number) {
               &times;
             </button>
           </div>
-          <button
-            type="button"
-            class="btn btn-ghost btn-sm"
-            @click="addHeader"
-          >
+          <button type="button" class="btn btn-ghost btn-sm" @click="addHeader">
             + Add Header
           </button>
         </div>

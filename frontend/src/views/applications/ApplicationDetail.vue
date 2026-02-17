@@ -10,29 +10,30 @@ import {
   sharesApi,
   notesApi,
   stacksApi,
+  healthchecksApi,
 } from '@/api';
 import type {
   ApplicationWithRelations,
-  LinkInfra,
-  LinkService,
-  LinkDomain,
-  LinkPerson,
-  LinkNetworkShare,
+  CreateHealthcheck,
   CreateInfra,
   CreateService,
   CreateDomain,
   CreatePerson,
   CreateNetworkShare,
-  CreateStack,
-  InfraRelation,
-  ServiceRelation,
-  DomainRelation,
-  PersonRelation,
-  NetworkShareRelation,
-  HealthcheckRelation,
-  Note,
   CreateNote,
+  CreateStack,
+  DomainRelation,
+  InfraRelation,
+  LinkInfra,
+  LinkService,
+  LinkDomain,
+  LinkPerson,
+  LinkNetworkShare,
+  NetworkShareRelation,
+  Note,
+  PersonRelation,
   UpdateNote,
+  ServiceRelation,
 } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -57,6 +58,7 @@ import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
 import { infraTypes } from '@/values';
 import { Pin, ExternalLink, Plus, Edit, Link2Off } from 'lucide-vue-next';
+import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -79,6 +81,7 @@ const showLinkDomainModal = ref(false);
 const showLinkPersonModal = ref(false);
 const showLinkShareModal = ref(false);
 const showLinkStackModal = ref(false);
+const showLinkHealthModal = ref(false);
 
 // Edit modal states
 const showEditInfraModal = ref(false);
@@ -169,6 +172,9 @@ function openLinkModal(type: string) {
     case 'stack':
       showLinkStackModal.value = true;
       break;
+    case 'health':
+      showLinkHealthModal.value = true;
+      break;
   }
 }
 
@@ -192,6 +198,9 @@ function closeLinkModal(type: string) {
     case 'stack':
       showLinkStackModal.value = false;
       break;
+    case 'health':
+      showLinkHealthModal.value = false;
+      break;
   }
 }
 
@@ -213,6 +222,17 @@ async function handleCreateInfra(data: CreateInfra) {
     linkStep.value = 'form';
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to create infra';
+  }
+}
+
+async function handleCreateHealth(data: CreateHealthcheck) {
+  try {
+    await healthchecksApi.create(data);
+    showLinkHealthModal.value = false;
+    loadData();
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : 'Failed to create healthcheck';
   }
 }
 
@@ -842,12 +862,12 @@ onMounted(loadData);
             <div class="card-body">
               <div class="flex justify-between items-center">
                 <h2 class="card-title">Healthchecks</h2>
-                <router-link
-                  :to="`/healthchecks?application_id=${id}`"
+                <button
                   class="btn btn-sm btn-ghost"
+                  @click="openLinkModal('health')"
                 >
-                  View All
-                </router-link>
+                  <Plus class="w-4 h-4" /> Add
+                </button>
               </div>
               <div
                 v-if="app.healthchecks.length === 0"
@@ -873,7 +893,7 @@ onMounted(loadData);
                       @click="router.push(`/healthchecks/${h.id}`)"
                     >
                       <td>{{ h.name }}</td>
-                      <td class="font-mono text-xs truncate max-w-[200px]">
+                      <td class="font-mono text-xs truncate max-w-50">
                         {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
                       </td>
                       <td>{{ h.expected_status }}</td>
@@ -1097,6 +1117,20 @@ onMounted(loadData);
         v-else-if="selectedEntity"
         @submit="handleLinkInfra"
         @cancel="closeLinkModal('infra')"
+      />
+    </Modal>
+
+    <!-- Link Healthcheck Modal -->
+    <Modal
+      title="Create Healthcheck"
+      :open="showLinkHealthModal"
+      @close="closeLinkModal('health')"
+    >
+      <HealthcheckForm
+        @submit="(data) => handleCreateHealth(data as CreateHealthcheck)"
+        :initial-application-id="app?.id"
+        :initial-name="app?.name"
+        :initial-target-name="app?.name"
       />
     </Modal>
 

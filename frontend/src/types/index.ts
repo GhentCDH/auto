@@ -37,6 +37,8 @@ export interface InfraFilterParams extends PaginationParams {
   type?: string;
 }
 
+export interface DomainFilterParams extends PaginationParams {}
+
 // Application types
 export interface Application {
   id: string;

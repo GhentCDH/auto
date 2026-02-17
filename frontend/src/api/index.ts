@@ -14,7 +14,6 @@ import type {
   DashboardStats,
   Domain,
   DomainFilterParams,
-  DomainNamed,
   DomainWithRelations,
   Healthcheck,
   HealthcheckExecuteResult,
@@ -387,8 +386,7 @@ export const healthchecksApi = {
       `/healthchecks${buildQueryString(params)}`
     ),
 
-  get: (id: string) =>
-    request<HealthcheckWithRelations>(`/healthchecks/${id}`),
+  get: (id: string) => request<HealthcheckWithRelations>(`/healthchecks/${id}`),
 
   create: (data: CreateHealthcheck) =>
     request<Healthcheck>('/healthchecks', {
