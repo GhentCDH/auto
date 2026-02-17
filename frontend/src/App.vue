@@ -18,7 +18,7 @@ onMounted(async () => {
 <template>
   <div class="flex min-h-screen flex-col bg-base-100">
     <NavBar />
-    <main class="container mx-auto max-w-7xl flex-1">
+    <main class="container mx-auto flex-1">
       <router-view />
     </main>
     <footer class="py-4 text-center text-sm text-base-content/50 font-mono">
