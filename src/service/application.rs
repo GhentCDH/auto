@@ -2,11 +2,11 @@ use sqlx::SqlitePool;
 use tracing::info;
 
 use crate::models::{
-    Application, ApplicationWithRelations, CreateApplication, DomainRelation, HealthcheckRelation,
-    InfraRelation, NetworkShareRelation, Note, PaginatedResponse, PaginationParams, PersonRelation,
+    Application, ApplicationWithRelations, CreateApplication, DomainRelation, InfraRelation,
+    NetworkShareRelation, Note, PaginatedResponse, PaginationParams, PersonRelation,
     ServiceRelation, StackRelation, UpdateApplication, new_id,
 };
-use crate::{Error, Result};
+use crate::{Error, Result, service};
 
 pub async fn list(
     pool: &SqlitePool,
@@ -172,18 +172,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
     .fetch_all(pool)
     .await?;
 
-    let healthchecks = sqlx::query_as::<_, HealthcheckRelation>(
-        r#"
-        SELECT h.id, h.name, h.protocol, d.fqdn as domain_fqdn, h.path, h.expected_status, h.is_enabled
-        FROM healthcheck h
-        JOIN domain d ON h.domain_id = d.id
-        WHERE h.application_id = ?1
-        ORDER BY h.name
-        "#,
-    )
-    .bind(id)
-    .fetch_all(pool)
-    .await?;
+    let healthchecks = service::healthcheck::get_for_application(pool, id).await?;
 
     Ok(ApplicationWithRelations {
         application,
