@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { servicesApi, infraApi } from '@/api';
+import { servicesApi, infraApi, healthchecksApi } from '@/api';
 import type {
   ServiceWithRelations,
   LinkInfra,
   CreateInfra,
   InfraRelation,
+  CreateHealthcheck,
 } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -19,6 +20,7 @@ import InfraForm from '@/components/forms/InfraForm.vue';
 import LinkInfraForm from '@/components/forms/LinkInfraForm.vue';
 import { infraTypes } from '@/values';
 import { Plus, Edit, Link2Off } from 'lucide-vue-next';
+import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -45,6 +47,9 @@ const unlinkType = ref<string>('');
 const unlinkId = ref<string>('');
 const unlinkName = ref<string>('');
 const showUnlinkDialog = ref(false);
+
+// Create health modal
+const showCreateHealthModal = ref(false);
 
 const id = route.params.id as string;
 
@@ -111,6 +116,17 @@ async function handleCreateInfra(data: CreateInfra) {
     linkStep.value = 'form';
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to create infra';
+  }
+}
+
+async function handleCreateHealth(data: CreateHealthcheck) {
+  try {
+    await healthchecksApi.create(data);
+    showCreateHealthModal.value = false;
+    loadData();
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : 'Failed to create healthcheck';
   }
 }
 
@@ -234,7 +250,7 @@ onMounted(loadData);
             </div>
           </div>
 
-          <!-- Infra Card -->
+          <!-- Healthchecks Card -->
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
@@ -297,6 +313,43 @@ onMounted(loadData);
               </div>
             </div>
           </div>
+
+          <!-- Healthchecks Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <div class="flex justify-between items-center">
+                <h2 class="card-title">Healthchecks</h2>
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="showCreateHealthModal = true"
+                >
+                  <Plus class="w-4 h-4" /> Add
+                </button>
+              </div>
+              <div
+                v-if="service.healthchecks.length === 0"
+                class="text-base-content/70"
+              >
+                No healthchecks configured
+              </div>
+              <ul v-else class="space-y-2">
+                <li
+                  v-for="h in service.healthchecks"
+                  :key="h.id"
+                  class="flex items-center justify-between cursor-pointer hover:bg-base-300 rounded p-1 -m-1"
+                  @click="router.push(`/healthchecks/${h.id}`)"
+                >
+                  <div>
+                    <span class="font-medium">{{ h.name }}</span>
+                    <div class="text-xs text-base-content/70 font-mono">
+                      {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
+                    </div>
+                  </div>
+                  <StatusBadge :status="h.is_enabled ? 'active' : 'inactive'" />
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
 
         <div class="space-y-6">
@@ -329,43 +382,6 @@ onMounted(loadData);
                     />
                   </div>
                   <StatusBadge :status="a.status" />
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Healthchecks Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Healthchecks</h2>
-                <router-link
-                  :to="`/healthchecks?service_id=${id}`"
-                  class="btn btn-sm btn-ghost"
-                >
-                  View All
-                </router-link>
-              </div>
-              <div
-                v-if="service.healthchecks.length === 0"
-                class="text-base-content/70"
-              >
-                No healthchecks configured
-              </div>
-              <ul v-else class="space-y-2">
-                <li
-                  v-for="h in service.healthchecks"
-                  :key="h.id"
-                  class="flex items-center justify-between cursor-pointer hover:bg-base-300 rounded p-1 -m-1"
-                  @click="router.push(`/healthchecks/${h.id}`)"
-                >
-                  <div>
-                    <span class="font-medium">{{ h.name }}</span>
-                    <div class="text-xs text-base-content/70 font-mono">
-                      {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
-                    </div>
-                  </div>
-                  <StatusBadge :status="h.is_enabled ? 'active' : 'inactive'" />
                 </li>
               </ul>
             </div>
@@ -449,6 +465,19 @@ onMounted(loadData);
         v-if="editingInfra"
         @submit="handleEditInfra"
         @cancel="showEditInfraModal = false"
+      />
+    </Modal>
+
+    <Modal
+      title="Create Healthcheck"
+      :open="showCreateHealthModal"
+      @close="showCreateHealthModal = false"
+    >
+      <HealthcheckForm
+        @submit="(data) => handleCreateHealth(data as CreateHealthcheck)"
+        :initial-service-id="service?.id"
+        :initial-name="service?.name"
+        :initial-target-name="service?.name"
       />
     </Modal>
   </div>
