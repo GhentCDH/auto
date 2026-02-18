@@ -19,6 +19,12 @@ pub struct Healthcheck {
     pub timeout_seconds: i32,
     pub is_enabled: bool,
     pub notes: Option<String>,
+    pub retry: i32,
+    pub retry_interval: i32,
+    pub request_body_encoding: String,
+    pub request_body: Option<String>,
+    pub http_auth_user: Option<String>,
+    pub http_auth_pass: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -46,6 +52,15 @@ pub struct CreateHealthcheck {
     #[serde(default = "default_enabled")]
     pub is_enabled: bool,
     pub notes: Option<String>,
+    #[serde(default)]
+    pub retry: i32,
+    #[serde(default = "default_retry_interval")]
+    pub retry_interval: i32,
+    #[serde(default = "default_request_body_encoding")]
+    pub request_body_encoding: String,
+    pub request_body: Option<String>,
+    pub http_auth_user: Option<String>,
+    pub http_auth_pass: Option<String>,
 }
 
 /// DTO for updating a healthcheck
@@ -64,6 +79,12 @@ pub struct UpdateHealthcheck {
     pub timeout_seconds: Option<i32>,
     pub is_enabled: Option<bool>,
     pub notes: Option<String>,
+    pub retry: Option<i32>,
+    pub retry_interval: Option<i32>,
+    pub request_body_encoding: Option<String>,
+    pub request_body: Option<String>,
+    pub http_auth_user: Option<String>,
+    pub http_auth_pass: Option<String>,
 }
 
 fn default_protocol() -> String {
@@ -88,6 +109,14 @@ fn default_timeout() -> i32 {
 
 fn default_enabled() -> bool {
     true
+}
+
+fn default_retry_interval() -> i32 {
+    60
+}
+
+fn default_request_body_encoding() -> String {
+    "JSON".to_string()
 }
 
 /// Healthcheck with resolved relations

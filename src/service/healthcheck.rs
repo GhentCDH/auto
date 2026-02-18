@@ -27,6 +27,8 @@ pub async fn list(
         SELECT h.id, h.name, h.application_id, h.service_id, h.domain_id,
                h.protocol, h.path, h.method, h.headers, h.expected_status,
                h.expected_body, h.timeout_seconds, h.is_enabled, h.notes,
+               h.retry, h.retry_interval, h.request_body_encoding, h.request_body,
+               h.http_auth_user, h.http_auth_pass,
                h.created_at, h.updated_at, h.created_by
         FROM healthcheck h
         WHERE (?1 IS NULL OR h.name LIKE ?1)
@@ -77,6 +79,8 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Healthcheck> {
         SELECT id, name, application_id, service_id, domain_id,
                protocol, path, method, headers, expected_status,
                expected_body, timeout_seconds, is_enabled, notes,
+               retry, retry_interval, request_body_encoding, request_body,
+               http_auth_user, http_auth_pass,
                created_at, updated_at, created_by
         FROM healthcheck
         WHERE id = ?1
@@ -178,8 +182,10 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
         r#"
         INSERT INTO healthcheck (id, name, application_id, service_id, domain_id,
                                  protocol, path, method, headers, expected_status,
-                                 expected_body, timeout_seconds, is_enabled, notes)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+                                 expected_body, timeout_seconds, is_enabled, notes,
+                                 retry, retry_interval, request_body_encoding, request_body,
+                                 http_auth_user, http_auth_pass)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
         "#,
     )
     .bind(&id)
@@ -196,6 +202,12 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
     .bind(input.timeout_seconds)
     .bind(input.is_enabled)
     .bind(&input.notes)
+    .bind(input.retry)
+    .bind(input.retry_interval)
+    .bind(&input.request_body_encoding)
+    .bind(&input.request_body)
+    .bind(&input.http_auth_user)
+    .bind(&input.http_auth_pass)
     .execute(pool)
     .await?;
 
@@ -245,6 +257,14 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     let timeout_seconds = input.timeout_seconds.unwrap_or(existing.timeout_seconds);
     let is_enabled = input.is_enabled.unwrap_or(existing.is_enabled);
     let notes = input.notes.or(existing.notes);
+    let retry = input.retry.unwrap_or(existing.retry);
+    let retry_interval = input.retry_interval.unwrap_or(existing.retry_interval);
+    let request_body_encoding = input
+        .request_body_encoding
+        .unwrap_or(existing.request_body_encoding);
+    let request_body = input.request_body.or(existing.request_body);
+    let http_auth_user = input.http_auth_user.or(existing.http_auth_user);
+    let http_auth_pass = input.http_auth_pass.or(existing.http_auth_pass);
 
     sqlx::query(
         r#"
@@ -252,8 +272,11 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
         SET name = ?1, application_id = ?2, service_id = ?3, domain_id = ?4,
             protocol = ?5, path = ?6, method = ?7, headers = ?8,
             expected_status = ?9, expected_body = ?10, timeout_seconds = ?11,
-            is_enabled = ?12, notes = ?13, updated_at = datetime('now')
-        WHERE id = ?14
+            is_enabled = ?12, notes = ?13, retry = ?14, retry_interval = ?15,
+            request_body_encoding = ?16, request_body = ?17,
+            http_auth_user = ?18, http_auth_pass = ?19,
+            updated_at = datetime('now')
+        WHERE id = ?20
         "#,
     )
     .bind(&name)
@@ -269,6 +292,12 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     .bind(timeout_seconds)
     .bind(is_enabled)
     .bind(&notes)
+    .bind(retry)
+    .bind(retry_interval)
+    .bind(&request_body_encoding)
+    .bind(&request_body)
+    .bind(&http_auth_user)
+    .bind(&http_auth_pass)
     .bind(id)
     .execute(pool)
     .await?;
@@ -312,29 +341,82 @@ pub async fn execute(pool: &SqlitePool, id: &str) -> Result<HealthcheckExecuteRe
         .build()
         .map_err(|e| Error::InternalError(format!("Failed to create HTTP client: {}", e)))?;
 
-    let mut request = match healthcheck.healthcheck.method.as_str() {
-        "GET" => client.get(&url),
-        "HEAD" => client.head(&url),
-        "POST" => client.post(&url),
-        _ => {
-            return Err(Error::ValidationError(format!(
-                "Unsupported HTTP method: {}",
-                healthcheck.healthcheck.method
-            )))
-        }
-    };
-
-    // Add custom headers
-    if let Some(headers) = &healthcheck.parsed_headers {
-        for (key, value) in headers {
-            request = request.header(key, value);
-        }
+    // Validate HTTP method upfront
+    if !["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
+        .contains(&healthcheck.healthcheck.method.as_str())
+    {
+        return Err(Error::ValidationError(format!(
+            "Unsupported HTTP method: {}",
+            healthcheck.healthcheck.method
+        )));
     }
+
+    // Helper to build a fresh request
+    let build_request = || {
+        let mut req = match healthcheck.healthcheck.method.as_str() {
+            "GET" => client.get(&url),
+            "HEAD" => client.head(&url),
+            "POST" => client.post(&url),
+            "PUT" => client.put(&url),
+            "PATCH" => client.patch(&url),
+            "DELETE" => client.delete(&url),
+            _ => unreachable!(),
+        };
+
+        // Add HTTP Basic Authentication if configured
+        if let (Some(user), Some(pass)) = (
+            &healthcheck.healthcheck.http_auth_user,
+            &healthcheck.healthcheck.http_auth_pass,
+        ) {
+            req = req.basic_auth(user, Some(pass));
+        }
+
+        // Add custom headers
+        if let Some(headers) = &healthcheck.parsed_headers {
+            for (key, value) in headers {
+                req = req.header(key, value);
+            }
+        }
+
+        // Add request body if provided (for POST/PUT/PATCH)
+        if let Some(body) = &healthcheck.healthcheck.request_body {
+            let content_type = match healthcheck.healthcheck.request_body_encoding.as_str() {
+                "JSON" => "application/json",
+                "x-www-form-urlencoded" => "application/x-www-form-urlencoded",
+                "XML" => "application/xml",
+                _ => "application/json",
+            };
+            req = req.header("Content-Type", content_type).body(body.clone());
+        }
+
+        req
+    };
 
     let start = Instant::now();
     let executed_at = chrono::Utc::now().to_rfc3339();
 
-    let result = request.send().await;
+    // Execute with retry support
+    let max_attempts = healthcheck.healthcheck.retry + 1;
+    let retry_interval_ms = healthcheck.healthcheck.retry_interval as u64 * 1000;
+    let mut last_result = None;
+
+    for attempt in 0..max_attempts {
+        if attempt > 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(retry_interval_ms)).await;
+        }
+
+        let request = build_request();
+        last_result = Some(request.send().await);
+
+        // Check if successful to potentially skip remaining retries
+        if let Some(Ok(ref response)) = last_result {
+            if response.status().as_u16() == healthcheck.healthcheck.expected_status as u16 {
+                break;
+            }
+        }
+    }
+
+    let result = last_result.unwrap();
     let response_time_ms = start.elapsed().as_millis() as u64;
 
     match result {
@@ -393,6 +475,8 @@ pub async fn export_kuma(pool: &SqlitePool) -> Result<Vec<KumaMonitor>> {
         SELECT id, name, application_id, service_id, domain_id,
                protocol, path, method, headers, expected_status,
                expected_body, timeout_seconds, is_enabled, notes,
+               retry, retry_interval, request_body_encoding, request_body,
+               http_auth_user, http_auth_pass,
                created_at, updated_at, created_by
         FROM healthcheck
         WHERE is_enabled = 1
