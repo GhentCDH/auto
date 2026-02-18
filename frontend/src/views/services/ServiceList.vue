@@ -36,16 +36,18 @@ function onFilterChange(key: string, value: string | null) {
     @update:filters="filters = $event"
   >
     <template #columns>
-      <th>
+      <th class="name-env">
         Name
-        <span class="ml-2 badge badge-sm badge-neutral">env</span>
-        <ColumnFilter
-          :options="environmentFilterOptions"
-          :model-value="filters.environment"
-          @update:model-value="onFilterChange('environment', $event)"
-        />
+        <div>
+          <ColumnFilter
+            :options="environmentFilterOptions"
+            :model-value="filters.environment"
+            @update:model-value="onFilterChange('environment', $event)"
+          />
+          <span class="ml-2 badge badge-sm badge-neutral">env</span>
+        </div>
       </th>
-      <th>Description</th>
+      <th class="w-full">Description</th>
       <th>
         Status
         <ColumnFilter
@@ -58,7 +60,7 @@ function onFilterChange(key: string, value: string | null) {
     </template>
 
     <template #row="{ item }: { item: Service }">
-      <td class="font-medium flex gap-2">
+      <td class="font-medium name-env">
         {{ item.name }}
         <EnvironmentBadge :environment="item.environment" />
       </td>

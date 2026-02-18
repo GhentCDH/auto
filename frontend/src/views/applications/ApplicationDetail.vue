@@ -670,25 +670,29 @@ onMounted(loadData);
                 <table class="table table-sm">
                   <thead>
                     <tr>
-                      <th class="flex gap-2">
-                        Name
-                        <span class="badge badge-sm badge-neutral">env</span>
+                      <th class="name-env">
+                        <div>Name</div>
+                        <span class="badge badge-sm badge-ghost badge-outline"
+                          >env</span
+                        >
                       </th>
-                      <th>Notes</th>
+                      <th class="w-full">Notes</th>
                       <th class="w-10">Status</th>
                       <th class="w-20"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="s in app.services" :key="s.id">
+                    <tr
+                      v-for="s in app.services"
+                      :key="s.id"
+                      class="align-middle"
+                    >
                       <td
-                        class="cursor-pointer hover:text-primary"
+                        class="cursor-pointer hover:text-primary name-env"
                         @click="router.push(`/services/${s.id}`)"
                       >
-                        <span class="flex gap-2">
-                          {{ s.name }}
-                          <EnvironmentBadge :environment="s.environment" />
-                        </span>
+                        {{ s.name }}
+                        <EnvironmentBadge :environment="s.environment" />
                       </td>
                       <td>{{ s.relation_notes || '-' }}</td>
                       <td><StatusBadge :status="s.status" /></td>
@@ -1521,3 +1525,20 @@ onMounted(loadData);
     />
   </div>
 </template>
+
+<style>
+@reference "tailwindcss";
+
+table {
+  @apply border-collapse;
+}
+
+td {
+  @apply border-b-0;
+}
+
+tr:not(:last-child) {
+  border-bottom: var(--border) solid
+    color-mix(in oklch, var(--color-base-content) 5%, #0000);
+}
+</style>
