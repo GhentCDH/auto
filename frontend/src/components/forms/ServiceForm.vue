@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
-import type { Service, CreateService, UpdateService } from '@/types';
+import type { Service, CreateService, ImageRef, UpdateService } from '@/types';
 import { environments } from '@/values';
+import { Plus, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
   service?: Service;
@@ -21,6 +22,8 @@ const form = ref<CreateService>({
   status: 'active',
 });
 
+const imageRefList = ref<ImageRef[]>([]);
+
 watch(
   () => props.service,
   (svc) => {
@@ -32,13 +35,31 @@ watch(
         environment: svc.environment,
         status: svc.status,
       };
+      imageRefList.value = svc.image_refs ? JSON.parse(svc.image_refs) : [];
     }
   },
   { immediate: true }
 );
 
+function addImageRef() {
+  imageRefList.value.push({ url: '', alias: '' });
+}
+
+function removeImageRef(index: number) {
+  imageRefList.value.splice(index, 1);
+}
+
 function handleSubmit() {
-  emit('submit', form.value);
+  const refs = imageRefList.value.filter((r) => r.url.trim());
+  emit('submit', {
+    ...form.value,
+    image_refs: JSON.stringify(
+      refs.map((r) => ({
+        url: r.url,
+        ...(r.alias ? { alias: r.alias } : {}),
+      }))
+    ),
+  });
 }
 
 const nameInput = ref<HTMLInputElement>();
@@ -99,6 +120,41 @@ onMounted(() => {
         <option value="deprecated">Deprecated</option>
         <option value="archived">Archived</option>
       </select>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Image References</legend>
+      <div class="space-y-2">
+        <div
+          v-for="(imgRef, index) in imageRefList"
+          :key="index"
+          class="flex gap-2 items-center"
+        >
+          <input
+            v-model="imgRef.url"
+            type="url"
+            class="input input-sm flex-1"
+            placeholder="https://hub.docker.com/r/org/image"
+          />
+          <input
+            v-model="imgRef.alias"
+            type="text"
+            class="input input-sm w-32"
+            placeholder="alias (opt.)"
+          />
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm text-error"
+            @click="removeImageRef(index)"
+          >
+            <Trash2 class="w-4 h-4" />
+          </button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" @click="addImageRef">
+          <Plus class="w-4 h-4" /> Add image
+        </button>
+      </div>
+      <div class="label">optional - Docker Hub, GHCR, etc.</div>
     </fieldset>
 
     <div class="flex justify-end gap-2">

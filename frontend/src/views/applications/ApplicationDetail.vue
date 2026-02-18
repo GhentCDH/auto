@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, type ComputedRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   applicationsApi,
@@ -60,7 +60,8 @@ import NoteForm from '@/components/forms/NoteForm.vue';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
 import { infraTypes } from '@/values';
-import { Pin, ExternalLink, Plus, Edit, Link2Off } from 'lucide-vue-next';
+import type { ImageRef } from '@/types';
+import { Pin, ExternalLink, Plus, Edit, Link2Off, Package } from 'lucide-vue-next';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 
 const route = useRoute();
@@ -123,6 +124,15 @@ const unlinkMessage = computed(() => {
 });
 
 const id = route.params.id as string;
+
+const imageRefs: ComputedRef<ImageRef[]> = computed(() => {
+  if (!app.value?.image_refs) return [];
+  try {
+    return JSON.parse(app.value.image_refs);
+  } catch {
+    return [];
+  }
+});
 
 async function loadData() {
   loading.value = true;
@@ -643,6 +653,21 @@ onMounted(loadData);
                 <div>
                   <div class="text-sm text-base-content/70">Created</div>
                   <div>{{ new Date(app.created_at).toLocaleString() }}</div>
+                </div>
+                <div v-if="imageRefs.length > 0" class="md:col-span-2">
+                  <div class="text-sm text-base-content/70 mb-1">Images</div>
+                  <div class="flex flex-wrap gap-2">
+                    <a
+                      v-for="ref in imageRefs"
+                      :key="ref.url"
+                      :href="ref.url"
+                      target="_blank"
+                      class="badge badge-outline gap-1 hover:badge-primary"
+                    >
+                      <Package class="w-3 h-3" />
+                      {{ ref.alias || ref.url }}
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

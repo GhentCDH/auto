@@ -39,6 +39,12 @@ export interface InfraFilterParams extends PaginationParams {
 
 export interface DomainFilterParams extends PaginationParams {}
 
+// Image reference types
+export interface ImageRef {
+  url: string;
+  alias?: string;
+}
+
 // Application types
 export interface Application {
   id: string;
@@ -48,6 +54,7 @@ export interface Application {
   environment: string;
   url: string | null;
   status: string;
+  image_refs: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -60,6 +67,7 @@ export interface CreateApplication {
   environment?: string;
   url?: string;
   status?: string;
+  image_refs?: string;
 }
 
 export interface UpdateApplication {
@@ -69,6 +77,7 @@ export interface UpdateApplication {
   environment?: string;
   url?: string;
   status?: string;
+  image_refs?: string;
 }
 
 export interface ApplicationWithRelations extends Application {
@@ -90,6 +99,7 @@ export interface Service {
   repository_url: string | null;
   environment: string;
   status: string;
+  image_refs: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -101,6 +111,7 @@ export interface CreateService {
   repository_url?: string;
   environment?: string;
   status?: string;
+  image_refs?: string;
 }
 
 export interface UpdateService {
@@ -109,6 +120,7 @@ export interface UpdateService {
   repository_url?: string;
   environment?: string;
   status?: string;
+  image_refs?: string;
 }
 
 export interface ServiceRelation {

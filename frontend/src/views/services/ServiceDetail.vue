@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, type ComputedRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { servicesApi, infraApi, healthchecksApi } from '@/api';
 import type {
@@ -8,6 +8,7 @@ import type {
   CreateInfra,
   InfraRelation,
   CreateHealthcheck,
+  ImageRef,
 } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -19,7 +20,7 @@ import ServiceForm from '@/components/forms/ServiceForm.vue';
 import InfraForm from '@/components/forms/InfraForm.vue';
 import LinkInfraForm from '@/components/forms/LinkInfraForm.vue';
 import { infraTypes } from '@/values';
-import { Plus, Edit, Link2Off } from 'lucide-vue-next';
+import { Plus, Edit, Link2Off, Package } from 'lucide-vue-next';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 
 const route = useRoute();
@@ -52,6 +53,15 @@ const showUnlinkDialog = ref(false);
 const showCreateHealthModal = ref(false);
 
 const id = route.params.id as string;
+
+const imageRefs: ComputedRef<ImageRef[]> = computed(() => {
+  if (!service.value?.image_refs) return [];
+  try {
+    return JSON.parse(service.value.image_refs);
+  } catch {
+    return [];
+  }
+});
 
 async function loadData() {
   loading.value = true;
@@ -246,11 +256,26 @@ onMounted(loadData);
                   <div class="text-sm text-base-content/70">Updated</div>
                   <div>{{ new Date(service.updated_at).toLocaleString() }}</div>
                 </div>
+                <div v-if="imageRefs.length > 0" class="md:col-span-2">
+                  <div class="text-sm text-base-content/70 mb-1">Images</div>
+                  <div class="flex flex-wrap gap-2">
+                    <a
+                      v-for="ref in imageRefs"
+                      :key="ref.url"
+                      :href="ref.url"
+                      target="_blank"
+                      class="badge badge-outline gap-1 hover:badge-primary"
+                    >
+                      <Package class="w-3 h-3" />
+                      {{ ref.alias || ref.url }}
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Healthchecks Card -->
+          <!-- Infrastructure Card -->
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
