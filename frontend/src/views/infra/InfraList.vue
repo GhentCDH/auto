@@ -2,12 +2,12 @@
 import { ref } from 'vue';
 import { infraApi } from '@/api';
 import type { Infra } from '@/types';
-import EntityList from '@/components/common/EntityList.vue';
+import EntityList, { type EntityListExposed } from '@/components/common/EntityList.vue';
 import InfraForm from '@/components/forms/InfraForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { infraTypes, infraTypeFilterOptions } from '@/values';
 
-const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
+const entityListRef = ref<EntityListExposed | null>(null);
 const filters = ref<Record<string, string | null>>({
   type: null,
 });

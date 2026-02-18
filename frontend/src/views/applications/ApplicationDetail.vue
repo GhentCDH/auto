@@ -1,67 +1,45 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import {
-  applicationsApi,
-  infraApi,
-  servicesApi,
-  domainsApi,
-  peopleApi,
-  sharesApi,
-  notesApi,
-  stacksApi,
-  healthchecksApi,
-} from '@/api';
+import { applicationsApi, notesApi } from '@/api';
 import type {
   ApplicationWithRelations,
-  CreateHealthcheck,
-  CreateInfra,
-  CreateService,
-  CreateDomain,
-  CreatePerson,
-  CreateNetworkShare,
   CreateNote,
-  CreateStack,
-  DomainRelation,
-  Healthcheck,
-  InfraRelation,
+  Note,
+  UpdateNote,
   LinkInfra,
   LinkService,
   LinkDomain,
   LinkPerson,
   LinkNetworkShare,
-  NetworkShareRelation,
-  Note,
-  PersonRelation,
   UpdateHealthcheck,
-  UpdateNote,
+  InfraRelation,
   ServiceRelation,
+  DomainRelation,
+  PersonRelation,
+  NetworkShareRelation,
   HealthcheckRelation,
 } from '@/types';
+import { createApplicationRelationConfigs } from '@/config/relationConfigs';
+import { useRelationManager } from '@/composables/useRelationManager';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
-import EntitySelector from '@/components/common/EntitySelector.vue';
+import RelationCard from '@/components/common/RelationCard.vue';
+import RelationLinkModal from '@/components/common/RelationLinkModal.vue';
 import ApplicationForm from '@/components/forms/ApplicationForm.vue';
-import InfraForm from '@/components/forms/InfraForm.vue';
-import ServiceForm from '@/components/forms/ServiceForm.vue';
-import DomainForm from '@/components/forms/DomainForm.vue';
-import PersonForm from '@/components/forms/PersonForm.vue';
-import ShareForm from '@/components/forms/ShareForm.vue';
 import LinkInfraForm from '@/components/forms/LinkInfraForm.vue';
 import LinkServiceForm from '@/components/forms/LinkServiceForm.vue';
 import LinkDomainForm from '@/components/forms/LinkDomainForm.vue';
 import LinkPersonForm from '@/components/forms/LinkPersonForm.vue';
 import LinkShareForm from '@/components/forms/LinkShareForm.vue';
-import StackForm from '@/components/forms/StackForm.vue';
 import NoteForm from '@/components/forms/NoteForm.vue';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
 import { infraTypes } from '@/values';
-import { Pin, ExternalLink, Plus, Edit, Link2Off } from 'lucide-vue-next';
-import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
+import { Pin, ExternalLink, Edit, Link2Off } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -72,35 +50,35 @@ const error = ref('');
 const showEditModal = ref(false);
 const showDeleteDialog = ref(false);
 
-// Link modal states
-type LinkStep = 'select' | 'create' | 'form';
-const linkStep = ref<LinkStep>('select');
-const selectedEntity = ref<{ id: string; name: string } | null>(null);
-const initialName = ref('');
+const id = route.params.id as string;
 
-const showLinkInfraModal = ref(false);
-const showLinkServiceModal = ref(false);
-const showLinkDomainModal = ref(false);
-const showLinkPersonModal = ref(false);
-const showLinkShareModal = ref(false);
-const showLinkStackModal = ref(false);
-const showLinkHealthModal = ref(false);
+// Create relation configs with a getter function for app
+const relationConfigs = createApplicationRelationConfigs(() => app.value, id);
 
-// Edit modal states
-const showEditInfraModal = ref(false);
-const showEditHealthModal = ref(false);
-const showEditServiceModal = ref(false);
-const showEditDomainModal = ref(false);
-const showEditPersonModal = ref(false);
-const showEditShareModal = ref(false);
-const editingInfra = ref<InfraRelation | null>(null);
-const editingHealth = ref<Healthcheck | null>(null);
-const editingService = ref<ServiceRelation | null>(null);
-const editingDomain = ref<DomainRelation | null>(null);
-const editingPerson = ref<PersonRelation | null>(null);
-const editingShare = ref<NetworkShareRelation | null>(null);
+// Initialize relation manager
+const {
+  modalStates,
+  unlinkState,
+  unlinkMessage,
+  openLinkModal,
+  closeLinkModal,
+  setLinkStep,
+  handleEntitySelect,
+  handleCreateRequest,
+  handleCreate,
+  handleLink,
+  openEditModal,
+  closeEditModal,
+  handleEdit,
+  confirmUnlink,
+  handleUnlink,
+  cancelUnlink,
+} = useRelationManager(relationConfigs, {
+  onSuccess: () => loadData(),
+  onError: (msg) => (error.value = msg),
+});
 
-// Note modal states
+// Note modal states (Notes use a different CRUD pattern)
 const showCreateNoteModal = ref(false);
 const showEditNoteModal = ref(false);
 const showViewNoteModal = ref(false);
@@ -108,21 +86,6 @@ const showDeleteNoteDialog = ref(false);
 const editingNote = ref<Note | null>(null);
 const viewingNote = ref<Note | null>(null);
 const deletingNote = ref<Note | null>(null);
-
-// Unlink confirm states
-const unlinkType = ref<string>('');
-const unlinkId = ref<string>('');
-const unlinkName = ref<string>('');
-const showUnlinkDialog = ref(false);
-const unlinkMessage = computed(() => {
-  if (unlinkType.value !== 'health') {
-    return `Are you sure you want to unlink '${unlinkName.value}' from this application?`;
-  } else {
-    return `Are you sure you want to remove healthcheck '${unlinkName.value}'?`;
-  }
-});
-
-const id = route.params.id as string;
 
 async function loadData() {
   loading.value = true;
@@ -160,328 +123,7 @@ async function handleDelete() {
   }
 }
 
-// Link handlers
-function openLinkModal(type: string) {
-  linkStep.value = 'select';
-  selectedEntity.value = null;
-  initialName.value = '';
-  switch (type) {
-    case 'infra':
-      showLinkInfraModal.value = true;
-      break;
-    case 'service':
-      showLinkServiceModal.value = true;
-      break;
-    case 'domain':
-      showLinkDomainModal.value = true;
-      break;
-    case 'person':
-      showLinkPersonModal.value = true;
-      break;
-    case 'share':
-      showLinkShareModal.value = true;
-      break;
-    case 'stack':
-      showLinkStackModal.value = true;
-      break;
-    case 'health':
-      showLinkHealthModal.value = true;
-      break;
-  }
-}
-
-function closeLinkModal(type: string) {
-  switch (type) {
-    case 'infra':
-      showLinkInfraModal.value = false;
-      break;
-    case 'service':
-      showLinkServiceModal.value = false;
-      break;
-    case 'domain':
-      showLinkDomainModal.value = false;
-      break;
-    case 'person':
-      showLinkPersonModal.value = false;
-      break;
-    case 'share':
-      showLinkShareModal.value = false;
-      break;
-    case 'stack':
-      showLinkStackModal.value = false;
-      break;
-    case 'health':
-      showLinkHealthModal.value = false;
-      break;
-  }
-}
-
-function handleEntitySelect(entity: { id: string; name: string }) {
-  selectedEntity.value = entity;
-  linkStep.value = 'form';
-}
-
-function handleCreateRequest(searchTerm: string) {
-  initialName.value = searchTerm;
-  linkStep.value = 'create';
-}
-
-// Entity creation handlers
-async function handleCreateInfra(data: CreateInfra) {
-  try {
-    const created = await infraApi.create(data);
-    selectedEntity.value = { id: created.id, name: created.name };
-    linkStep.value = 'form';
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create infra';
-  }
-}
-
-async function handleCreateHealth(data: CreateHealthcheck) {
-  try {
-    await healthchecksApi.create(data);
-    showLinkHealthModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to create healthcheck';
-  }
-}
-
-async function handleCreateService(data: CreateService) {
-  try {
-    const created = await servicesApi.create(data);
-    selectedEntity.value = { id: created.id, name: created.name };
-    linkStep.value = 'form';
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create service';
-  }
-}
-
-async function handleCreateDomain(data: CreateDomain) {
-  try {
-    const created = await domainsApi.create(data);
-    selectedEntity.value = { id: created.id, name: created.fqdn };
-    linkStep.value = 'form';
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create domain';
-  }
-}
-
-async function handleCreatePerson(data: CreatePerson) {
-  try {
-    const created = await peopleApi.create(data);
-    selectedEntity.value = { id: created.id, name: created.name };
-    linkStep.value = 'form';
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create person';
-  }
-}
-
-async function handleCreateShare(data: CreateNetworkShare) {
-  try {
-    const created = await sharesApi.create(data);
-    selectedEntity.value = { id: created.id, name: created.name };
-    linkStep.value = 'form';
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create share';
-  }
-}
-
-async function handleCreateStack(data: CreateStack) {
-  try {
-    const created = await stacksApi.create(data);
-    await applicationsApi.linkStack(id, created.id);
-    showLinkStackModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create stack';
-  }
-}
-
-async function handleStackSelect(entity: { id: string; name: string }) {
-  try {
-    await applicationsApi.linkStack(id, entity.id);
-    showLinkStackModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link stack';
-  }
-}
-
-// Link submission handlers
-async function handleLinkInfra(data: LinkInfra) {
-  if (!selectedEntity.value) return;
-  try {
-    await applicationsApi.linkInfra(id, selectedEntity.value.id, data);
-    showLinkInfraModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link infra';
-  }
-}
-
-async function handleLinkService(data: LinkService) {
-  if (!selectedEntity.value) return;
-  try {
-    await applicationsApi.linkService(id, selectedEntity.value.id, data);
-    showLinkServiceModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link service';
-  }
-}
-
-async function handleLinkDomain(data: LinkDomain) {
-  if (!selectedEntity.value) return;
-  try {
-    await applicationsApi.linkDomain(id, selectedEntity.value.id, data);
-    showLinkDomainModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link domain';
-  }
-}
-
-async function handleLinkPerson(data: LinkPerson) {
-  if (!selectedEntity.value) return;
-  try {
-    await applicationsApi.linkPerson(id, selectedEntity.value.id, data);
-    showLinkPersonModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link person';
-  }
-}
-
-async function handleLinkShare(data: LinkNetworkShare) {
-  if (!selectedEntity.value) return;
-  try {
-    await applicationsApi.linkShare(id, selectedEntity.value.id, data);
-    showLinkShareModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link share';
-  }
-}
-
-// Edit handlers
-function openEditInfra(infra: InfraRelation) {
-  editingInfra.value = infra;
-  showEditInfraModal.value = true;
-}
-
-// Edit handlers
-async function openEditHealth(health: HealthcheckRelation) {
-  try {
-    // Fetch the full healthcheck data since HealthcheckRelation is missing fields
-    const fullHealthcheck = await healthchecksApi.get(health.id);
-    editingHealth.value = fullHealthcheck;
-    showEditHealthModal.value = true;
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load healthcheck';
-  }
-}
-
-function openEditService(service: ServiceRelation) {
-  editingService.value = service;
-  showEditServiceModal.value = true;
-}
-
-function openEditDomain(domain: DomainRelation) {
-  editingDomain.value = domain;
-  showEditDomainModal.value = true;
-}
-
-function openEditPerson(person: PersonRelation) {
-  editingPerson.value = person;
-  showEditPersonModal.value = true;
-}
-
-function openEditShare(share: NetworkShareRelation) {
-  editingShare.value = share;
-  showEditShareModal.value = true;
-}
-
-async function handleEditInfra(data: LinkInfra) {
-  if (!editingInfra.value) return;
-  try {
-    await applicationsApi.linkInfra(id, editingInfra.value.id, data);
-    showEditInfraModal.value = false;
-    editingInfra.value = null;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update infra link';
-  }
-}
-
-async function handleEditHealth(data: UpdateHealthcheck) {
-  if (!editingHealth.value) return;
-  try {
-    await healthchecksApi.update(editingHealth.value.id, data);
-    showEditHealthModal.value = false;
-    editingHealth.value = null;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update healthcheck';
-  }
-}
-
-async function handleEditService(data: LinkService) {
-  if (!editingService.value) return;
-  try {
-    await applicationsApi.linkService(id, editingService.value.id, data);
-    showEditServiceModal.value = false;
-    editingService.value = null;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update service link';
-  }
-}
-
-async function handleEditDomain(data: LinkDomain) {
-  if (!editingDomain.value) return;
-  try {
-    await applicationsApi.linkDomain(id, editingDomain.value.id, data);
-    showEditDomainModal.value = false;
-    editingDomain.value = null;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update domain link';
-  }
-}
-
-async function handleEditPerson(data: LinkPerson) {
-  if (!editingPerson.value) return;
-  try {
-    await applicationsApi.linkPerson(id, editingPerson.value.id, data);
-    showEditPersonModal.value = false;
-    editingPerson.value = null;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update person link';
-  }
-}
-
-async function handleEditShare(data: LinkNetworkShare) {
-  if (!editingShare.value) return;
-  try {
-    await applicationsApi.linkShare(id, editingShare.value.id, data);
-    showEditShareModal.value = false;
-    editingShare.value = null;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update share link';
-  }
-}
-
-// Note handlers
+// Note handlers (separate CRUD pattern)
 function openViewNote(note: Note) {
   viewingNote.value = note;
   showViewNoteModal.value = true;
@@ -531,45 +173,37 @@ async function handleDeleteNote() {
   }
 }
 
-// Unlink handlers
-function confirmUnlink(type: string, entityId: string, name: string) {
-  unlinkType.value = type;
-  unlinkId.value = entityId;
-  unlinkName.value = name;
-  showUnlinkDialog.value = true;
-}
+// Helper to get config
+const getConfig = (type: string) => relationConfigs[type as keyof typeof relationConfigs];
 
-async function handleUnlink() {
-  try {
-    switch (unlinkType.value) {
-      case 'infra':
-        await applicationsApi.unlinkInfra(id, unlinkId.value);
-        break;
-      case 'service':
-        await applicationsApi.unlinkService(id, unlinkId.value);
-        break;
-      case 'domain':
-        await applicationsApi.unlinkDomain(id, unlinkId.value);
-        break;
-      case 'person':
-        await applicationsApi.unlinkPerson(id, unlinkId.value);
-        break;
-      case 'share':
-        await applicationsApi.unlinkShare(id, unlinkId.value);
-        break;
-      case 'stack':
-        await applicationsApi.unlinkStack(id, unlinkId.value);
-        break;
-      case 'health':
-        await healthchecksApi.delete(unlinkId.value);
-        break;
-    }
-    showUnlinkDialog.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to unlink';
-  }
-}
+// Computed props for link forms
+const domainLinkFormProps = computed(() => ({
+  domainName: modalStates.domain.selectedEntity?.name,
+}));
+
+const personLinkFormProps = computed(() => ({
+  personName: modalStates.person.selectedEntity?.name,
+}));
+
+const shareLinkFormProps = computed(() => ({
+  shareName: modalStates.share.selectedEntity?.name,
+}));
+
+// Edit form props
+const editDomainFormProps = computed(() => ({
+  domainName: (modalStates.domain.editing as DomainRelation)?.fqdn,
+  initial: modalStates.domain.editing,
+}));
+
+const editPersonFormProps = computed(() => ({
+  personName: (modalStates.person.editing as PersonRelation)?.name,
+  initial: modalStates.person.editing,
+}));
+
+const editShareFormProps = computed(() => ({
+  shareName: (modalStates.share.editing as NetworkShareRelation)?.name,
+  initial: modalStates.share.editing,
+}));
 
 onMounted(loadData);
 </script>
@@ -581,6 +215,7 @@ onMounted(loadData);
     <div v-else-if="error" class="alert alert-error">{{ error }}</div>
 
     <div v-else-if="app">
+      <!-- Header -->
       <div
         class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6"
       >
@@ -649,408 +284,209 @@ onMounted(loadData);
           </div>
 
           <!-- Services Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Services</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('service')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div
-                v-if="app.services.length === 0"
-                class="text-base-content/70"
+          <RelationCard
+            :title="getConfig('service')!.title"
+            :items="app.services"
+            :empty-message="getConfig('service')!.emptyMessage"
+            :show-edit="true"
+            :show-unlink="true"
+            :table-layout="true"
+            @add="openLinkModal('service')"
+            @edit="(s) => openEditModal('service', s)"
+            @unlink="(s) => confirmUnlink('service', s.id, s.name)"
+          >
+            <template #tableHeader>
+              <th class="name-env">
+                <div>Name</div>
+                <span class="badge badge-sm badge-ghost badge-outline">env</span>
+              </th>
+              <th class="w-full">Notes</th>
+              <th class="w-10">Status</th>
+            </template>
+            <template #tableRow="{ item: s }">
+              <td
+                class="cursor-pointer hover:text-primary name-env"
+                @click="router.push(`/services/${s.id}`)"
               >
-                No services linked
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="table table-sm">
-                  <thead>
-                    <tr>
-                      <th class="name-env">
-                        <div>Name</div>
-                        <span class="badge badge-sm badge-ghost badge-outline"
-                          >env</span
-                        >
-                      </th>
-                      <th class="w-full">Notes</th>
-                      <th class="w-10">Status</th>
-                      <th class="w-20"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="s in app.services"
-                      :key="s.id"
-                      class="align-middle"
-                    >
-                      <td
-                        class="cursor-pointer hover:text-primary name-env"
-                        @click="router.push(`/services/${s.id}`)"
-                      >
-                        {{ s.name }}
-                        <EnvironmentBadge :environment="s.environment" />
-                      </td>
-                      <td>{{ s.relation_notes || '-' }}</td>
-                      <td><StatusBadge :status="s.status" /></td>
-                      <td class="flex justify-end">
-                        <button
-                          class="btn btn-ghost btn-xs"
-                          @click="openEditService(s)"
-                        >
-                          <Edit class="w-4 h-4" />
-                        </button>
-                        <button
-                          class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('service', s.id, s.name)"
-                        >
-                          <Link2Off class="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+                {{ s.name }}
+                <EnvironmentBadge :environment="s.environment" />
+              </td>
+              <td>{{ s.relation_notes || '-' }}</td>
+              <td><StatusBadge :status="s.status" /></td>
+            </template>
+          </RelationCard>
 
           <!-- Domains Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Domains</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('domain')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div v-if="app.domains.length === 0" class="text-base-content/70">
-                No domains linked
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Domain</th>
-                      <th>Target</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="d in app.domains" :key="d.id">
-                      <td
-                        class="cursor-pointer hover:text-primary"
-                        @click="router.push(`/domains/${d.id}`)"
-                      >
-                        {{ d.fqdn }}
-                      </td>
-                      <td
-                        v-if="d.target_application_id"
-                        class="cursor-pointer hover:text-primary hover:underline"
-                        @click="
-                          router.push(
-                            `/applications/${d.target_application_id}`
-                          )
-                        "
-                      >
-                        {{ d.target_application_name }}
-                        {{
-                          d.target_application_name === app.name
-                            ? '(this!)'
-                            : ''
-                        }}
-                      </td>
-                      <td
-                        v-else-if="d.target_service_id"
-                        class="cursor-pointer hover:text-primary hover:underline"
-                        @click="router.push(`/services/${d.target_service_id}`)"
-                      >
-                        {{ d.target_service_name }}
-                      </td>
-                      <td class="flex justify-end">
-                        <button
-                          class="btn btn-ghost btn-xs"
-                          @click="openEditDomain(d)"
-                        >
-                          <Edit class="w-4 h-4" />
-                        </button>
-                        <button
-                          class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('domain', d.id, d.fqdn)"
-                        >
-                          <Link2Off class="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <RelationCard
+            :title="getConfig('domain')!.title"
+            :items="app.domains"
+            :empty-message="getConfig('domain')!.emptyMessage"
+            :show-edit="true"
+            :show-unlink="true"
+            :table-layout="true"
+            @add="openLinkModal('domain')"
+            @edit="(d) => openEditModal('domain', d)"
+            @unlink="(d) => confirmUnlink('domain', d.id, d.fqdn)"
+          >
+            <template #tableHeader>
+              <th>Domain</th>
+              <th>Target</th>
+            </template>
+            <template #tableRow="{ item: d }">
+              <td
+                class="cursor-pointer hover:text-primary"
+                @click="router.push(`/domains/${d.id}`)"
+              >
+                {{ d.fqdn }}
+              </td>
+              <td
+                v-if="d.target_application_id"
+                class="cursor-pointer hover:text-primary hover:underline"
+                @click="router.push(`/applications/${d.target_application_id}`)"
+              >
+                {{ d.target_application_name }}
+                {{ d.target_application_name === app.name ? '(this!)' : '' }}
+              </td>
+              <td
+                v-else-if="d.target_service_id"
+                class="cursor-pointer hover:text-primary hover:underline"
+                @click="router.push(`/services/${d.target_service_id}`)"
+              >
+                {{ d.target_service_name }}
+              </td>
+              <td v-else></td>
+            </template>
+          </RelationCard>
 
-          <!-- Infra Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Infrastructure</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('infra')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div v-if="app.infra.length === 0" class="text-base-content/70">
-                No infrastructure linked
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Notes</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="i in app.infra" :key="i.id">
-                      <td
-                        class="cursor-pointer hover:text-primary"
-                        @click="router.push(`/infra/${i.id}`)"
-                      >
-                        {{ i.name }}
-                      </td>
-                      <td>
-                        {{
-                          infraTypes[i.type as keyof typeof infraTypes] ||
-                          i.type
-                        }}
-                      </td>
-                      <td>{{ i.relation_notes || '-' }}</td>
-                      <td class="flex justify-end">
-                        <button
-                          class="btn btn-ghost btn-xs"
-                          @click="openEditInfra(i)"
-                        >
-                          <Edit class="w-4 h-4" />
-                        </button>
-                        <button
-                          class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('infra', i.id, i.name)"
-                        >
-                          <Link2Off class="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <!-- Infrastructure Card -->
+          <RelationCard
+            :title="getConfig('infra')!.title"
+            :items="app.infra"
+            :empty-message="getConfig('infra')!.emptyMessage"
+            :show-edit="true"
+            :show-unlink="true"
+            :table-layout="true"
+            @add="openLinkModal('infra')"
+            @edit="(i) => openEditModal('infra', i)"
+            @unlink="(i) => confirmUnlink('infra', i.id, i.name)"
+          >
+            <template #tableHeader>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Notes</th>
+            </template>
+            <template #tableRow="{ item: i }">
+              <td
+                class="cursor-pointer hover:text-primary"
+                @click="router.push(`/infra/${i.id}`)"
+              >
+                {{ i.name }}
+              </td>
+              <td>
+                {{ infraTypes[i.type as keyof typeof infraTypes] || i.type }}
+              </td>
+              <td>{{ i.relation_notes || '-' }}</td>
+            </template>
+          </RelationCard>
 
           <!-- Network Shares Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Storage</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('share')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div
-                v-if="app.network_shares.length === 0"
-                class="text-base-content/70"
-              >
-                No storage linked
-              </div>
-              <ul v-else class="space-y-2">
-                <li v-for="s in app.network_shares" :key="s.id">
-                  <div class="flex items-center justify-between">
-                    <router-link
-                      :to="`/shares/${s.id}`"
-                      class="link link-hover"
-                    >
-                      {{ s.name }}
-                    </router-link>
-                    <div class="flex justify-end">
-                      <button
-                        class="btn btn-ghost btn-xs"
-                        @click="openEditShare(s)"
-                      >
-                        <Edit class="w-4 h-4" />
-                      </button>
-                      <button
-                        class="btn btn-ghost btn-xs text-error"
-                        @click="confirmUnlink('share', s.id, s.name)"
-                      >
-                        <Link2Off class="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-xs text-base-content/70">{{ s.path }}</div>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <RelationCard
+            :title="getConfig('share')!.title"
+            :items="app.network_shares"
+            :empty-message="getConfig('share')!.emptyMessage"
+            :show-edit="true"
+            :show-unlink="true"
+            @add="openLinkModal('share')"
+            @edit="(s) => openEditModal('share', s)"
+            @unlink="(s) => confirmUnlink('share', s.id, s.name)"
+          >
+            <template #listItem="{ item: s }">
+              <router-link :to="`/shares/${s.id}`" class="link link-hover">
+                {{ s.name }}
+              </router-link>
+              <div class="text-xs text-base-content/70">{{ s.path }}</div>
+            </template>
+          </RelationCard>
 
           <!-- Healthchecks Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Healthchecks</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('health')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div
-                v-if="app.healthchecks.length === 0"
-                class="text-base-content/70"
+          <RelationCard
+            :title="getConfig('health')!.title"
+            :items="app.healthchecks"
+            :empty-message="getConfig('health')!.emptyMessage"
+            :show-edit="true"
+            :show-unlink="true"
+            :table-layout="true"
+            @add="openLinkModal('health')"
+            @edit="(h) => openEditModal('health', h)"
+            @unlink="(h) => confirmUnlink('health', h.id, h.name)"
+          >
+            <template #tableHeader>
+              <th>Name</th>
+              <th>URL</th>
+              <th>Expected</th>
+              <th class="w-10">Status</th>
+            </template>
+            <template #tableRow="{ item: h }">
+              <td
+                class="cursor-pointer hover:text-primary"
+                @click="router.push(`/healthchecks/${h.id}`)"
               >
-                No healthchecks configured
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>URL</th>
-                      <th>Expected</th>
-                      <th class="w-10">Status</th>
-                      <th class="w-20"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="h in app.healthchecks"
-                      :key="h.id"
-                      class="cursor-pointer hover:bg-base-300"
-                      @click="router.push(`/healthchecks/${h.id}`)"
-                    >
-                      <td>{{ h.name }}</td>
-                      <td class="font-mono text-xs truncate max-w-50">
-                        {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
-                      </td>
-                      <td>{{ h.expected_status }}</td>
-                      <td>
-                        <StatusBadge
-                          :status="h.is_enabled ? 'active' : 'inactive'"
-                        />
-                      </td>
-                      <td class="flex justify-end">
-                        <button
-                          class="btn btn-ghost btn-xs"
-                          @click.stop="openEditHealth(h)"
-                        >
-                          <Edit class="w-4 h-4" />
-                        </button>
-                        <button
-                          class="btn btn-ghost btn-xs text-error"
-                          @click.stop="confirmUnlink('health', h.id, h.name)"
-                        >
-                          <Link2Off class="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+                {{ h.name }}
+              </td>
+              <td class="font-mono text-xs truncate max-w-50">
+                {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
+              </td>
+              <td>{{ h.expected_status }}</td>
+              <td>
+                <StatusBadge :status="h.is_enabled ? 'active' : 'inactive'" />
+              </td>
+            </template>
+          </RelationCard>
         </div>
 
         <div class="space-y-6">
           <!-- People Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">People</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('person')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div v-if="app.people.length === 0" class="text-base-content/70">
-                No people linked
-              </div>
-              <ul v-else class="space-y-2">
-                <li
-                  v-for="p in app.people"
-                  :key="p.id"
-                  class="flex items-center justify-between"
-                >
-                  <div>
-                    <router-link
-                      :to="`/people/${p.id}`"
-                      class="link link-hover"
-                    >
-                      {{ p.name }}
-                    </router-link>
-                    <span class="badge badge-outline badge-sm ml-2">
-                      {{ p.contribution_type }}
-                    </span>
-                  </div>
-                  <div class="flex justify-end">
-                    <button
-                      class="btn btn-ghost btn-xs"
-                      @click="openEditPerson(p)"
-                    >
-                      <Edit class="w-4 h-4" />
-                    </button>
-                    <button
-                      class="btn btn-ghost btn-xs text-error"
-                      @click="confirmUnlink('person', p.id, p.name)"
-                    >
-                      <Link2Off class="w-4 h-4" />
-                    </button>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <RelationCard
+            :title="getConfig('person')!.title"
+            :items="app.people"
+            :empty-message="getConfig('person')!.emptyMessage"
+            :show-edit="true"
+            :show-unlink="true"
+            @add="openLinkModal('person')"
+            @edit="(p) => openEditModal('person', p)"
+            @unlink="(p) => confirmUnlink('person', p.id, p.name)"
+          >
+            <template #listItem="{ item: p }">
+              <router-link :to="`/people/${p.id}`" class="link link-hover">
+                {{ p.name }}
+              </router-link>
+              <span class="badge badge-outline badge-sm ml-2">
+                {{ p.contribution_type }}
+              </span>
+            </template>
+          </RelationCard>
 
-          <!-- Stack Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Tech Stack</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkModal('stack')"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div v-if="app.stacks.length === 0" class="text-base-content/70">
-                No technologies linked
-              </div>
-              <div v-else class="flex flex-wrap gap-2">
-                <StackBadge
-                  v-for="s in app.stacks"
-                  @click="router.push(`/stack/${s.id}`)"
-                  :key="s.id"
-                  :name="s.name"
-                  removable
-                  clickable
-                  @remove="confirmUnlink('stack', s.id, s.name)"
-                />
-              </div>
-            </div>
-          </div>
+          <!-- Tech Stack Card -->
+          <RelationCard
+            :title="getConfig('stack')!.title"
+            :items="app.stacks"
+            :empty-message="getConfig('stack')!.emptyMessage"
+            :show-edit="false"
+            :show-unlink="false"
+            @add="openLinkModal('stack')"
+          >
+            <template #badge="{ item: s }">
+              <StackBadge
+                :name="s.name"
+                removable
+                clickable
+                @click="router.push(`/stack/${s.id}`)"
+                @remove="confirmUnlink('stack', s.id, s.name)"
+              />
+            </template>
+          </RelationCard>
 
-          <!-- Notes Card -->
+          <!-- Notes Card (separate pattern) -->
           <div class="card bg-base-200">
             <div class="card-body">
               <div class="flex justify-between items-center">
@@ -1059,7 +495,8 @@ onMounted(loadData);
                   class="btn btn-sm btn-ghost"
                   @click="showCreateNoteModal = true"
                 >
-                  <Plus class="w-4 h-4" /> Add
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Add
                 </button>
               </div>
               <div v-if="app.notes.length === 0" class="text-base-content/70">
@@ -1151,288 +588,249 @@ onMounted(loadData);
     />
 
     <!-- Link Infra Modal -->
-    <Modal
-      :title="linkStep === 'create' ? 'Create Infra' : 'Link Infra'"
-      :open="showLinkInfraModal"
+    <RelationLinkModal
+      :open="modalStates.infra.isLinkOpen"
+      :step="modalStates.infra.linkStep"
+      :title="getConfig('infra')!.title"
+      :singular-title="getConfig('infra')!.singularTitle"
+      :selected-entity="modalStates.infra.selectedEntity"
+      :initial-name="modalStates.infra.initialName"
+      :fetch-fn="getConfig('infra')!.listApi"
+      :exclude-ids="getConfig('infra')!.getExcludeIds?.()"
+      :allow-create="true"
+      :create-form-component="getConfig('infra')!.createFormComponent"
+      :link-form-component="getConfig('infra')!.linkFormComponent"
       @close="closeLinkModal('infra')"
-    >
-      <EntitySelector
-        v-if="linkStep === 'select'"
-        title="Infrastructure"
-        :fetch-fn="infraApi.list"
-        :exclude-ids="app?.infra.map((i) => i.id)"
-        :allow-create="true"
-        @select="handleEntitySelect"
-        @create="handleCreateRequest"
-        @cancel="closeLinkModal('infra')"
-      />
-      <InfraForm
-        v-else-if="linkStep === 'create'"
-        :initial-name="initialName"
-        @submit="(data) => handleCreateInfra(data as CreateInfra)"
-        @cancel="linkStep = 'select'"
-      />
-      <LinkInfraForm
-        v-else-if="selectedEntity"
-        @submit="handleLinkInfra"
-        @cancel="closeLinkModal('infra')"
-      />
-    </Modal>
-
-    <!-- Link Healthcheck Modal -->
-    <Modal
-      title="Create Healthcheck"
-      :open="showLinkHealthModal"
-      @close="closeLinkModal('health')"
-    >
-      <HealthcheckForm
-        @submit="(data) => handleCreateHealth(data as CreateHealthcheck)"
-        :initial-application-id="app?.id"
-        :initial-name="app?.name"
-        :initial-target-name="app?.name"
-      />
-    </Modal>
+      @select="(e) => handleEntitySelect('infra', e)"
+      @create-request="(t) => handleCreateRequest('infra', t)"
+      @create="(d) => handleCreate('infra', d)"
+      @link="(d) => handleLink('infra', d as LinkInfra)"
+      @back-to-select="setLinkStep('infra', 'select')"
+    />
 
     <!-- Link Service Modal -->
-    <Modal
-      :title="linkStep === 'create' ? 'Create Service' : 'Link Service'"
-      :open="showLinkServiceModal"
+    <RelationLinkModal
+      :open="modalStates.service.isLinkOpen"
+      :step="modalStates.service.linkStep"
+      :title="getConfig('service')!.title"
+      :singular-title="getConfig('service')!.singularTitle"
+      :selected-entity="modalStates.service.selectedEntity"
+      :initial-name="modalStates.service.initialName"
+      :fetch-fn="getConfig('service')!.listApi"
+      :exclude-ids="getConfig('service')!.getExcludeIds?.()"
+      :allow-create="true"
+      :create-form-component="getConfig('service')!.createFormComponent"
+      :link-form-component="getConfig('service')!.linkFormComponent"
       @close="closeLinkModal('service')"
-    >
-      <EntitySelector
-        v-if="linkStep === 'select'"
-        title="Services"
-        :fetch-fn="servicesApi.list"
-        :exclude-ids="app?.services.map((s) => s.id)"
-        :allow-create="true"
-        @select="handleEntitySelect"
-        @create="handleCreateRequest"
-        @cancel="closeLinkModal('service')"
-      />
-      <ServiceForm
-        v-else-if="linkStep === 'create'"
-        :initial-name="initialName"
-        @submit="(data) => handleCreateService(data as CreateService)"
-        @cancel="linkStep = 'select'"
-      />
-      <LinkServiceForm
-        v-else-if="selectedEntity"
-        @submit="handleLinkService"
-        @cancel="closeLinkModal('service')"
-      />
-    </Modal>
+      @select="(e) => handleEntitySelect('service', e)"
+      @create-request="(t) => handleCreateRequest('service', t)"
+      @create="(d) => handleCreate('service', d)"
+      @link="(d) => handleLink('service', d as LinkService)"
+      @back-to-select="setLinkStep('service', 'select')"
+    />
 
     <!-- Link Domain Modal -->
-    <Modal
-      :title="linkStep === 'create' ? 'Create Domain' : 'Link Domain'"
-      :open="showLinkDomainModal"
+    <RelationLinkModal
+      :open="modalStates.domain.isLinkOpen"
+      :step="modalStates.domain.linkStep"
+      :title="getConfig('domain')!.title"
+      :singular-title="getConfig('domain')!.singularTitle"
+      :selected-entity="modalStates.domain.selectedEntity"
+      :initial-name="modalStates.domain.initialName"
+      :fetch-fn="getConfig('domain')!.listApi"
+      :exclude-ids="getConfig('domain')!.getExcludeIds?.()"
+      :allow-create="true"
+      :create-form-component="getConfig('domain')!.createFormComponent"
+      :link-form-component="getConfig('domain')!.linkFormComponent"
+      :link-form-props="domainLinkFormProps"
       @close="closeLinkModal('domain')"
-    >
-      <EntitySelector
-        v-if="linkStep === 'select'"
-        title="Domains"
-        allow-create
-        :fetch-fn="domainsApi.list"
-        :exclude-ids="app?.domains.map((d) => d.id)"
-        @select="handleEntitySelect"
-        @create="handleCreateRequest"
-        @cancel="closeLinkModal('domain')"
-      />
-      <DomainForm
-        v-else-if="linkStep === 'create'"
-        :initial-name="initialName"
-        @submit="(data) => handleCreateDomain(data as CreateDomain)"
-        @cancel="linkStep = 'select'"
-      />
-      <LinkDomainForm
-        v-else-if="selectedEntity"
-        :domain-name="selectedEntity.name"
-        @submit="handleLinkDomain"
-        @cancel="closeLinkModal('domain')"
-      />
-    </Modal>
+      @select="(e) => handleEntitySelect('domain', e)"
+      @create-request="(t) => handleCreateRequest('domain', t)"
+      @create="(d) => handleCreate('domain', d)"
+      @link="(d) => handleLink('domain', d as LinkDomain)"
+      @back-to-select="setLinkStep('domain', 'select')"
+    />
 
     <!-- Link Person Modal -->
-    <Modal
-      :title="linkStep === 'create' ? 'Create Person' : 'Link Person'"
-      :open="showLinkPersonModal"
+    <RelationLinkModal
+      :open="modalStates.person.isLinkOpen"
+      :step="modalStates.person.linkStep"
+      :title="getConfig('person')!.title"
+      :singular-title="getConfig('person')!.singularTitle"
+      :selected-entity="modalStates.person.selectedEntity"
+      :initial-name="modalStates.person.initialName"
+      :fetch-fn="getConfig('person')!.listApi"
+      :exclude-ids="getConfig('person')!.getExcludeIds?.()"
+      :allow-create="true"
+      :create-form-component="getConfig('person')!.createFormComponent"
+      :link-form-component="getConfig('person')!.linkFormComponent"
+      :link-form-props="personLinkFormProps"
       @close="closeLinkModal('person')"
-    >
-      <EntitySelector
-        v-if="linkStep === 'select'"
-        title="People"
-        allow-create
-        :fetch-fn="peopleApi.list"
-        :exclude-ids="app?.people.map((p) => p.id)"
-        @select="handleEntitySelect"
-        @create="handleCreateRequest"
-        @cancel="closeLinkModal('person')"
-      />
-      <PersonForm
-        v-else-if="linkStep === 'create'"
-        :initial-name="initialName"
-        @submit="(data) => handleCreatePerson(data as CreatePerson)"
-        @cancel="linkStep = 'select'"
-      />
-      <LinkPersonForm
-        v-else-if="selectedEntity"
-        :person-name="selectedEntity.name"
-        @submit="handleLinkPerson"
-        @cancel="closeLinkModal('person')"
-      />
-    </Modal>
+      @select="(e) => handleEntitySelect('person', e)"
+      @create-request="(t) => handleCreateRequest('person', t)"
+      @create="(d) => handleCreate('person', d)"
+      @link="(d) => handleLink('person', d as LinkPerson)"
+      @back-to-select="setLinkStep('person', 'select')"
+    />
 
     <!-- Link Share Modal -->
-    <Modal
-      :title="linkStep === 'create' ? 'Create Storage' : 'Link Storage'"
-      :open="showLinkShareModal"
+    <RelationLinkModal
+      :open="modalStates.share.isLinkOpen"
+      :step="modalStates.share.linkStep"
+      :title="getConfig('share')!.title"
+      :singular-title="getConfig('share')!.singularTitle"
+      :selected-entity="modalStates.share.selectedEntity"
+      :initial-name="modalStates.share.initialName"
+      :fetch-fn="getConfig('share')!.listApi"
+      :exclude-ids="getConfig('share')!.getExcludeIds?.()"
+      :allow-create="true"
+      :create-form-component="getConfig('share')!.createFormComponent"
+      :link-form-component="getConfig('share')!.linkFormComponent"
+      :link-form-props="shareLinkFormProps"
       @close="closeLinkModal('share')"
-    >
-      <EntitySelector
-        v-if="linkStep === 'select'"
-        title="Storage"
-        allow-create
-        :fetch-fn="sharesApi.list"
-        :exclude-ids="app?.network_shares.map((s) => s.id)"
-        @select="handleEntitySelect"
-        @create="handleCreateRequest"
-        @cancel="closeLinkModal('share')"
-      />
-      <ShareForm
-        v-else-if="linkStep === 'create'"
-        :initial-name="initialName"
-        @submit="(data) => handleCreateShare(data as CreateNetworkShare)"
-        @cancel="linkStep = 'select'"
-      />
-      <LinkShareForm
-        v-else-if="selectedEntity"
-        :share-name="selectedEntity.name"
-        @submit="handleLinkShare"
-        @cancel="closeLinkModal('share')"
-      />
-    </Modal>
+      @select="(e) => handleEntitySelect('share', e)"
+      @create-request="(t) => handleCreateRequest('share', t)"
+      @create="(d) => handleCreate('share', d)"
+      @link="(d) => handleLink('share', d as LinkNetworkShare)"
+      @back-to-select="setLinkStep('share', 'select')"
+    />
 
     <!-- Link Stack Modal -->
-    <Modal
-      :title="linkStep === 'create' ? 'Create Stack' : 'Link Stack'"
-      :open="showLinkStackModal"
+    <RelationLinkModal
+      :open="modalStates.stack.isLinkOpen"
+      :step="modalStates.stack.linkStep"
+      :title="getConfig('stack')!.title"
+      :singular-title="getConfig('stack')!.singularTitle"
+      :selected-entity="modalStates.stack.selectedEntity"
+      :initial-name="modalStates.stack.initialName"
+      :fetch-fn="getConfig('stack')!.listApi"
+      :exclude-ids="getConfig('stack')!.getExcludeIds?.()"
+      :allow-create="true"
+      :create-form-component="getConfig('stack')!.createFormComponent"
+      :link-form-component="null"
       @close="closeLinkModal('stack')"
-    >
-      <EntitySelector
-        v-if="linkStep === 'select'"
-        title="Technology"
-        allow-create
-        :fetch-fn="stacksApi.list"
-        :exclude-ids="app?.stacks.map((s) => s.id)"
-        @select="handleStackSelect"
-        @create="handleCreateRequest"
-        @cancel="closeLinkModal('stack')"
-      />
-      <StackForm
-        v-else-if="linkStep === 'create'"
-        :initial-name="initialName"
-        @submit="(data) => handleCreateStack(data as CreateStack)"
-        @cancel="linkStep = 'select'"
-      />
-    </Modal>
+      @select="(e) => handleEntitySelect('stack', e)"
+      @create-request="(t) => handleCreateRequest('stack', t)"
+      @create="(d) => handleCreate('stack', d)"
+      @back-to-select="setLinkStep('stack', 'select')"
+    />
+
+    <!-- Link/Create Healthcheck Modal -->
+    <RelationLinkModal
+      :open="modalStates.health.isLinkOpen"
+      :step="modalStates.health.linkStep"
+      :title="getConfig('health')!.title"
+      :singular-title="getConfig('health')!.singularTitle"
+      :selected-entity="null"
+      :initial-name="modalStates.health.initialName"
+      :fetch-fn="getConfig('health')!.listApi"
+      :allow-create="true"
+      :create-form-component="getConfig('health')!.createFormComponent"
+      :link-form-component="null"
+      :create-only="true"
+      :create-form-props="getConfig('health')!.getCreateFormProps?.()"
+      @close="closeLinkModal('health')"
+      @create="(d) => handleCreate('health', d)"
+    />
 
     <!-- Unlink Confirmation -->
     <ConfirmDialog
-      :open="showUnlinkDialog"
+      :open="unlinkState.isOpen"
       title="Unlink Entity"
       :message="unlinkMessage"
       confirm-label="Unlink"
       danger
       @confirm="handleUnlink"
-      @cancel="showUnlinkDialog = false"
+      @cancel="cancelUnlink"
     />
 
     <!-- Edit Infra Modal -->
     <Modal
       title="Edit Infra Link"
-      :open="showEditInfraModal"
-      @close="showEditInfraModal = false"
+      :open="modalStates.infra.isEditOpen"
+      @close="closeEditModal('infra')"
     >
       <LinkInfraForm
-        v-if="editingInfra"
-        @submit="handleEditInfra"
-        @cancel="showEditInfraModal = false"
-      />
-    </Modal>
-
-    <!-- Edit Health Modal -->
-    <Modal
-      title="Edit Healthcheck"
-      :open="showEditHealthModal"
-      @close="showEditHealthModal = false"
-    >
-      <HealthcheckForm
-        v-if="editingHealth"
-        :healthcheck="editingHealth"
-        @submit="(data) => handleEditHealth(data as UpdateHealthcheck)"
-        @cancel="showEditHealthModal = false"
+        v-if="modalStates.infra.editing"
+        @submit="(d) => handleEdit('infra', d as LinkInfra)"
+        @cancel="closeEditModal('infra')"
       />
     </Modal>
 
     <!-- Edit Service Modal -->
     <Modal
       title="Edit Service Link"
-      :open="showEditServiceModal"
-      @close="showEditServiceModal = false"
+      :open="modalStates.service.isEditOpen"
+      @close="closeEditModal('service')"
     >
       <LinkServiceForm
-        v-if="editingService"
-        @submit="handleEditService"
-        @cancel="showEditServiceModal = false"
+        v-if="modalStates.service.editing"
+        @submit="(d) => handleEdit('service', d as LinkService)"
+        @cancel="closeEditModal('service')"
       />
     </Modal>
 
     <!-- Edit Domain Modal -->
     <Modal
       title="Edit Domain Link"
-      :open="showEditDomainModal"
-      @close="showEditDomainModal = false"
+      :open="modalStates.domain.isEditOpen"
+      @close="closeEditModal('domain')"
     >
       <LinkDomainForm
-        v-if="editingDomain"
-        :domain-name="editingDomain.fqdn"
-        :initial="editingDomain"
-        @submit="handleEditDomain"
-        @cancel="showEditDomainModal = false"
+        v-if="modalStates.domain.editing"
+        :domain-name="(modalStates.domain.editing as DomainRelation).fqdn"
+        :initial="modalStates.domain.editing as DomainRelation"
+        @submit="(d) => handleEdit('domain', d as LinkDomain)"
+        @cancel="closeEditModal('domain')"
       />
     </Modal>
 
     <!-- Edit Person Modal -->
     <Modal
       title="Edit Person Link"
-      :open="showEditPersonModal"
-      @close="showEditPersonModal = false"
+      :open="modalStates.person.isEditOpen"
+      @close="closeEditModal('person')"
     >
       <LinkPersonForm
-        v-if="editingPerson"
-        :person-name="editingPerson.name"
-        :initial="editingPerson"
-        @submit="handleEditPerson"
-        @cancel="showEditPersonModal = false"
+        v-if="modalStates.person.editing"
+        :person-name="(modalStates.person.editing as PersonRelation).name"
+        :initial="modalStates.person.editing as PersonRelation"
+        @submit="(d) => handleEdit('person', d as LinkPerson)"
+        @cancel="closeEditModal('person')"
       />
     </Modal>
 
     <!-- Edit Share Modal -->
     <Modal
       title="Edit Storage Link"
-      :open="showEditShareModal"
-      @close="showEditShareModal = false"
+      :open="modalStates.share.isEditOpen"
+      @close="closeEditModal('share')"
     >
       <LinkShareForm
-        v-if="editingShare"
-        :share-name="editingShare.name"
-        :initial="editingShare"
-        @submit="handleEditShare"
-        @cancel="showEditShareModal = false"
+        v-if="modalStates.share.editing"
+        :share-name="(modalStates.share.editing as NetworkShareRelation).name"
+        :initial="modalStates.share.editing as NetworkShareRelation"
+        @submit="(d) => handleEdit('share', d as LinkNetworkShare)"
+        @cancel="closeEditModal('share')"
       />
     </Modal>
 
-    <!-- Create Note Modal -->
+    <!-- Edit Healthcheck Modal -->
+    <Modal
+      title="Edit Healthcheck"
+      :open="modalStates.health.isEditOpen"
+      @close="closeEditModal('health')"
+    >
+      <component
+        v-if="modalStates.health.editing"
+        :is="getConfig('health')!.createFormComponent"
+        :healthcheck="modalStates.health.editing"
+        @submit="(d: unknown) => handleEdit('health', d as UpdateHealthcheck)"
+        @cancel="closeEditModal('health')"
+      />
+    </Modal>
+
+    <!-- Note Modals (separate CRUD pattern) -->
     <Modal
       title="Create Note"
       :open="showCreateNoteModal"
@@ -1446,7 +844,6 @@ onMounted(loadData);
       />
     </Modal>
 
-    <!-- Edit Note Modal -->
     <Modal
       title="Edit Note"
       :open="showEditNoteModal"
@@ -1462,7 +859,6 @@ onMounted(loadData);
       />
     </Modal>
 
-    <!-- View Note Modal -->
     <Modal
       :title="viewingNote?.title || 'Note'"
       :open="showViewNoteModal"
@@ -1513,7 +909,6 @@ onMounted(loadData);
       </div>
     </Modal>
 
-    <!-- Delete Note Confirmation -->
     <ConfirmDialog
       :open="showDeleteNoteDialog"
       title="Delete Note"

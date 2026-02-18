@@ -2,14 +2,14 @@
 import { ref } from 'vue';
 import { applicationsApi } from '@/api';
 import type { Application } from '@/types';
-import EntityList from '@/components/common/EntityList.vue';
+import EntityList, { type EntityListExposed } from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
 import ApplicationForm from '@/components/forms/ApplicationForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { statusFilterOptions, environmentFilterOptions } from '@/values';
 
-const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
+const entityListRef = ref<EntityListExposed | null>(null);
 const filters = ref<Record<string, string | null>>({
   status: null,
   environment: null,

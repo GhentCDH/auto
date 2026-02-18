@@ -1,26 +1,26 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { servicesApi, infraApi, healthchecksApi } from '@/api';
+import { servicesApi, healthchecksApi } from '@/api';
 import type {
   ServiceWithRelations,
   LinkInfra,
-  CreateInfra,
-  InfraRelation,
   CreateHealthcheck,
+  InfraRelation,
+  UpdateHealthcheck,
 } from '@/types';
+import { createServiceRelationConfigs } from '@/config/relationConfigs';
+import { useRelationManager } from '@/composables/useRelationManager';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
-import EntitySelector from '@/components/common/EntitySelector.vue';
+import RelationCard from '@/components/common/RelationCard.vue';
+import RelationLinkModal from '@/components/common/RelationLinkModal.vue';
 import ServiceForm from '@/components/forms/ServiceForm.vue';
-import InfraForm from '@/components/forms/InfraForm.vue';
 import LinkInfraForm from '@/components/forms/LinkInfraForm.vue';
 import { infraTypes } from '@/values';
-import { Plus, Edit, Link2Off } from 'lucide-vue-next';
-import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -31,27 +31,33 @@ const error = ref('');
 const showEditModal = ref(false);
 const showDeleteDialog = ref(false);
 
-// Link modal states
-type LinkStep = 'select' | 'create' | 'form';
-const linkStep = ref<LinkStep>('select');
-const selectedEntity = ref<{ id: string; name: string } | null>(null);
-const initialName = ref('');
-const showLinkInfraModal = ref(false);
-
-// Edit modal states
-const showEditInfraModal = ref(false);
-const editingInfra = ref<InfraRelation | null>(null);
-
-// Unlink confirm states
-const unlinkType = ref<string>('');
-const unlinkId = ref<string>('');
-const unlinkName = ref<string>('');
-const showUnlinkDialog = ref(false);
-
-// Create health modal
-const showCreateHealthModal = ref(false);
-
 const id = route.params.id as string;
+
+// Create relation configs with a getter function for service
+const relationConfigs = createServiceRelationConfigs(() => service.value, id);
+
+// Initialize relation manager
+const {
+  modalStates,
+  unlinkState,
+  unlinkMessage,
+  openLinkModal,
+  closeLinkModal,
+  setLinkStep,
+  handleEntitySelect,
+  handleCreateRequest,
+  handleCreate,
+  handleLink,
+  openEditModal,
+  closeEditModal,
+  handleEdit,
+  confirmUnlink,
+  handleUnlink,
+  cancelUnlink,
+} = useRelationManager(relationConfigs, {
+  onSuccess: () => loadData(),
+  onError: (msg) => (error.value = msg),
+});
 
 async function loadData() {
   loading.value = true;
@@ -87,98 +93,8 @@ async function handleDelete() {
   }
 }
 
-// Link handlers
-function openLinkInfraModal() {
-  linkStep.value = 'select';
-  selectedEntity.value = null;
-  initialName.value = '';
-  showLinkInfraModal.value = true;
-}
-
-function closeLinkInfraModal() {
-  showLinkInfraModal.value = false;
-}
-
-function handleEntitySelect(entity: { id: string; name: string }) {
-  selectedEntity.value = entity;
-  linkStep.value = 'form';
-}
-
-function handleCreateRequest(searchTerm: string) {
-  initialName.value = searchTerm;
-  linkStep.value = 'create';
-}
-
-async function handleCreateInfra(data: CreateInfra) {
-  try {
-    const created = await infraApi.create(data);
-    selectedEntity.value = { id: created.id, name: created.name };
-    linkStep.value = 'form';
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create infra';
-  }
-}
-
-async function handleCreateHealth(data: CreateHealthcheck) {
-  try {
-    await healthchecksApi.create(data);
-    showCreateHealthModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to create healthcheck';
-  }
-}
-
-async function handleLinkInfra(data: LinkInfra) {
-  if (!selectedEntity.value) return;
-  try {
-    await servicesApi.linkInfra(id, selectedEntity.value.id, data);
-    showLinkInfraModal.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link infra';
-  }
-}
-
-// Edit handler
-function openEditInfra(infra: InfraRelation) {
-  editingInfra.value = infra;
-  showEditInfraModal.value = true;
-}
-
-async function handleEditInfra(data: LinkInfra) {
-  if (!editingInfra.value) return;
-  try {
-    await servicesApi.linkInfra(id, editingInfra.value.id, data);
-    showEditInfraModal.value = false;
-    editingInfra.value = null;
-    loadData();
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update infra link';
-  }
-}
-
-// Unlink handlers
-function confirmUnlink(type: string, entityId: string, name: string) {
-  unlinkType.value = type;
-  unlinkId.value = entityId;
-  unlinkName.value = name;
-  showUnlinkDialog.value = true;
-}
-
-async function handleUnlink() {
-  try {
-    if (unlinkType.value === 'infra') {
-      await servicesApi.unlinkInfra(id, unlinkId.value);
-    }
-    showUnlinkDialog.value = false;
-    loadData();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to unlink';
-  }
-}
+// Helper to get config
+const getConfig = (type: string) => relationConfigs[type as keyof typeof relationConfigs];
 
 onMounted(loadData);
 </script>
@@ -190,6 +106,7 @@ onMounted(loadData);
     <div v-else-if="error" class="alert alert-error">{{ error }}</div>
 
     <div v-else-if="service">
+      <!-- Header -->
       <div
         class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6"
       >
@@ -250,106 +167,61 @@ onMounted(loadData);
             </div>
           </div>
 
-          <!-- Healthchecks Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Infrastructure</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="openLinkInfraModal"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
-              <div
-                v-if="service.infra.length === 0"
-                class="text-base-content/70"
+          <!-- Infrastructure Card -->
+          <RelationCard
+            :title="getConfig('infra')!.title"
+            :items="service.infra"
+            :empty-message="getConfig('infra')!.emptyMessage"
+            :show-edit="true"
+            :show-unlink="true"
+            :table-layout="true"
+            @add="openLinkModal('infra')"
+            @edit="(i) => openEditModal('infra', i)"
+            @unlink="(i) => confirmUnlink('infra', i.id, i.name)"
+          >
+            <template #tableHeader>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Notes</th>
+            </template>
+            <template #tableRow="{ item: i }">
+              <td
+                class="cursor-pointer hover:text-primary"
+                @click="router.push(`/infra/${i.id}`)"
               >
-                No infrastructure linked
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Notes</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="i in service.infra" :key="i.id">
-                      <td
-                        class="cursor-pointer hover:text-primary"
-                        @click="router.push(`/infra/${i.id}`)"
-                      >
-                        {{ i.name }}
-                      </td>
-                      <td>
-                        {{
-                          infraTypes[i.type as keyof typeof infraTypes] ||
-                          i.type
-                        }}
-                      </td>
-                      <td>{{ i.relation_notes || '-' }}</td>
-                      <td class="flex">
-                        <button
-                          class="btn btn-ghost btn-xs"
-                          @click="openEditInfra(i)"
-                        >
-                          <Edit class="w-4 h-4" />
-                        </button>
-                        <button
-                          class="btn btn-ghost btn-xs text-error"
-                          @click="confirmUnlink('infra', i.id, i.name)"
-                        >
-                          <Link2Off class="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+                {{ i.name }}
+              </td>
+              <td>
+                {{ infraTypes[i.type as keyof typeof infraTypes] || i.type }}
+              </td>
+              <td>{{ i.relation_notes || '-' }}</td>
+            </template>
+          </RelationCard>
 
           <!-- Healthchecks Card -->
-          <div class="card bg-base-200">
-            <div class="card-body">
-              <div class="flex justify-between items-center">
-                <h2 class="card-title">Healthchecks</h2>
-                <button
-                  class="btn btn-sm btn-ghost"
-                  @click="showCreateHealthModal = true"
-                >
-                  <Plus class="w-4 h-4" /> Add
-                </button>
-              </div>
+          <RelationCard
+            :title="getConfig('health')!.title"
+            :items="service.healthchecks"
+            :empty-message="getConfig('health')!.emptyMessage"
+            :show-edit="false"
+            :show-unlink="false"
+            @add="openLinkModal('health')"
+          >
+            <template #listItem="{ item: h }">
               <div
-                v-if="service.healthchecks.length === 0"
-                class="text-base-content/70"
+                class="flex items-center justify-between cursor-pointer hover:bg-base-300 rounded p-1 -m-1"
+                @click="router.push(`/healthchecks/${h.id}`)"
               >
-                No healthchecks configured
-              </div>
-              <ul v-else class="space-y-2">
-                <li
-                  v-for="h in service.healthchecks"
-                  :key="h.id"
-                  class="flex items-center justify-between cursor-pointer hover:bg-base-300 rounded p-1 -m-1"
-                  @click="router.push(`/healthchecks/${h.id}`)"
-                >
-                  <div>
-                    <span class="font-medium">{{ h.name }}</span>
-                    <div class="text-xs text-base-content/70 font-mono">
-                      {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
-                    </div>
+                <div>
+                  <span class="font-medium">{{ h.name }}</span>
+                  <div class="text-xs text-base-content/70 font-mono">
+                    {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
                   </div>
-                  <StatusBadge :status="h.is_enabled ? 'active' : 'inactive'" />
-                </li>
-              </ul>
-            </div>
-          </div>
+                </div>
+                <StatusBadge :status="h.is_enabled ? 'active' : 'inactive'" />
+              </div>
+            </template>
+          </RelationCard>
         </div>
 
         <div class="space-y-6">
@@ -416,68 +288,65 @@ onMounted(loadData);
     />
 
     <!-- Link Infra Modal -->
-    <Modal
-      :title="linkStep === 'create' ? 'Create Infra' : 'Link Infra'"
-      :open="showLinkInfraModal"
-      @close="closeLinkInfraModal"
-    >
-      <EntitySelector
-        v-if="linkStep === 'select'"
-        title="Infrastructure"
-        :fetch-fn="infraApi.list"
-        :exclude-ids="service?.infra.map((i) => i.id)"
-        :allow-create="true"
-        @select="handleEntitySelect"
-        @create="handleCreateRequest"
-        @cancel="closeLinkInfraModal"
-      />
-      <InfraForm
-        v-else-if="linkStep === 'create'"
-        :initial-name="initialName"
-        @submit="(data) => handleCreateInfra(data as CreateInfra)"
-        @cancel="linkStep = 'select'"
-      />
-      <LinkInfraForm
-        v-else-if="selectedEntity"
-        @submit="handleLinkInfra"
-        @cancel="closeLinkInfraModal"
-      />
-    </Modal>
+    <RelationLinkModal
+      :open="modalStates.infra.isLinkOpen"
+      :step="modalStates.infra.linkStep"
+      :title="getConfig('infra')!.title"
+      :singular-title="getConfig('infra')!.singularTitle"
+      :selected-entity="modalStates.infra.selectedEntity"
+      :initial-name="modalStates.infra.initialName"
+      :fetch-fn="getConfig('infra')!.listApi"
+      :exclude-ids="getConfig('infra')!.getExcludeIds?.()"
+      :allow-create="true"
+      :create-form-component="getConfig('infra')!.createFormComponent"
+      :link-form-component="getConfig('infra')!.linkFormComponent"
+      @close="closeLinkModal('infra')"
+      @select="(e) => handleEntitySelect('infra', e)"
+      @create-request="(t) => handleCreateRequest('infra', t)"
+      @create="(d) => handleCreate('infra', d)"
+      @link="(d) => handleLink('infra', d as LinkInfra)"
+      @back-to-select="setLinkStep('infra', 'select')"
+    />
+
+    <!-- Link/Create Healthcheck Modal -->
+    <RelationLinkModal
+      :open="modalStates.health.isLinkOpen"
+      :step="modalStates.health.linkStep"
+      :title="getConfig('health')!.title"
+      :singular-title="getConfig('health')!.singularTitle"
+      :selected-entity="null"
+      :initial-name="modalStates.health.initialName"
+      :fetch-fn="getConfig('health')!.listApi"
+      :allow-create="true"
+      :create-form-component="getConfig('health')!.createFormComponent"
+      :link-form-component="null"
+      :create-only="true"
+      :create-form-props="getConfig('health')!.getCreateFormProps?.()"
+      @close="closeLinkModal('health')"
+      @create="(d) => handleCreate('health', d)"
+    />
 
     <!-- Unlink Confirmation -->
     <ConfirmDialog
-      :open="showUnlinkDialog"
+      :open="unlinkState.isOpen"
       title="Unlink Entity"
-      :message="`Are you sure you want to unlink '${unlinkName}' from this service?`"
+      :message="unlinkMessage"
       confirm-label="Unlink"
       danger
       @confirm="handleUnlink"
-      @cancel="showUnlinkDialog = false"
+      @cancel="cancelUnlink"
     />
 
     <!-- Edit Infra Modal -->
     <Modal
       title="Edit Infra Link"
-      :open="showEditInfraModal"
-      @close="showEditInfraModal = false"
+      :open="modalStates.infra.isEditOpen"
+      @close="closeEditModal('infra')"
     >
       <LinkInfraForm
-        v-if="editingInfra"
-        @submit="handleEditInfra"
-        @cancel="showEditInfraModal = false"
-      />
-    </Modal>
-
-    <Modal
-      title="Create Healthcheck"
-      :open="showCreateHealthModal"
-      @close="showCreateHealthModal = false"
-    >
-      <HealthcheckForm
-        @submit="(data) => handleCreateHealth(data as CreateHealthcheck)"
-        :initial-service-id="service?.id"
-        :initial-name="service?.name"
-        :initial-target-name="service?.name"
+        v-if="modalStates.infra.editing"
+        @submit="(d) => handleEdit('infra', d as LinkInfra)"
+        @cancel="closeEditModal('infra')"
       />
     </Modal>
   </div>
