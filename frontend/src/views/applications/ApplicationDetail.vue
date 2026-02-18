@@ -674,9 +674,9 @@ onMounted(loadData);
                         Name
                         <span class="badge badge-sm badge-neutral">env</span>
                       </th>
-                      <th>Status</th>
                       <th>Notes</th>
-                      <th></th>
+                      <th class="w-10">Status</th>
+                      <th class="w-20"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -690,8 +690,8 @@ onMounted(loadData);
                           <EnvironmentBadge :environment="s.environment" />
                         </span>
                       </td>
-                      <td><StatusBadge :status="s.status" /></td>
                       <td>{{ s.relation_notes || '-' }}</td>
+                      <td><StatusBadge :status="s.status" /></td>
                       <td class="flex justify-end">
                         <button
                           class="btn btn-ghost btn-xs"
@@ -922,7 +922,8 @@ onMounted(loadData);
                       <th>Name</th>
                       <th>URL</th>
                       <th>Expected</th>
-                      <th>Status</th>
+                      <th class="w-10">Status</th>
+                      <th class="w-20"></th>
                     </tr>
                   </thead>
                   <tbody>
