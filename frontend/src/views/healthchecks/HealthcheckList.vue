@@ -20,7 +20,9 @@ const BASE_MODAL_WIDTH_REM = 48;
 
 // Compute modal width style
 const modalWidthStyle = computed(() => {
-  const width = BASE_MODAL_WIDTH_REM + (importPanelOpen.value ? importPanelWidthRem.value : 0);
+  const width =
+    BASE_MODAL_WIDTH_REM +
+    (importPanelOpen.value ? importPanelWidthRem.value : 0);
   return { width: `${width}rem` };
 });
 

@@ -18,7 +18,9 @@ const executeError = ref('');
 
 const entityDetailRef = ref<InstanceType<typeof EntityDetail> | null>(null);
 
-const healthcheck = computed(() => entityDetailRef.value?.entity as HealthcheckWithRelations | null);
+const healthcheck = computed(
+  () => entityDetailRef.value?.entity as HealthcheckWithRelations | null
+);
 
 async function executeHealthcheck() {
   if (!healthcheck.value) return;
@@ -52,7 +54,9 @@ function formatHeaders(
     entity-name="Healthcheck"
     list-path="/healthchecks"
     :fetch-fn="
-      healthchecksApi.get as (id: string) => Promise<{ id: string; name: string }>
+      healthchecksApi.get as (
+        id: string
+      ) => Promise<{ id: string; name: string }>
     "
     :update-fn="
       healthchecksApi.update as (id: string, data: unknown) => Promise<unknown>
@@ -61,7 +65,11 @@ function formatHeaders(
   >
     <template #status="{ entity }">
       <StatusBadge
-        :status="(entity as HealthcheckWithRelations).is_enabled ? 'active' : 'inactive'"
+        :status="
+          (entity as HealthcheckWithRelations).is_enabled
+            ? 'active'
+            : 'inactive'
+        "
       />
     </template>
 
@@ -211,7 +219,9 @@ function formatHeaders(
             <div>
               <span
                 class="badge"
-                :class="executeResult.body_match ? 'badge-success' : 'badge-error'"
+                :class="
+                  executeResult.body_match ? 'badge-success' : 'badge-error'
+                "
               >
                 {{ executeResult.body_match ? 'Matched' : 'No Match' }}
               </span>
@@ -219,11 +229,15 @@ function formatHeaders(
           </div>
           <div class="col-span-2">
             <div class="text-base-content/70">URL Tested</div>
-            <div class="font-mono text-xs break-all">{{ executeResult.url }}</div>
+            <div class="font-mono text-xs break-all">
+              {{ executeResult.url }}
+            </div>
           </div>
           <div class="col-span-2">
             <div class="text-base-content/70">Executed At</div>
-            <div>{{ new Date(executeResult.executed_at).toLocaleString() }}</div>
+            <div>
+              {{ new Date(executeResult.executed_at).toLocaleString() }}
+            </div>
           </div>
         </div>
       </div>

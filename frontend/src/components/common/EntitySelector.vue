@@ -153,7 +153,11 @@ onMounted(() => {
       >
         + Create {{ singularTitle }}{{ search ? `: "${search}"` : '' }}
       </button>
-      <button type="button" class="btn btn-ghost btn-sm" @click="emit('cancel')">
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm"
+        @click="emit('cancel')"
+      >
         Cancel
       </button>
     </div>

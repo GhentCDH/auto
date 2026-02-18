@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   applicationsApi,
@@ -23,6 +23,7 @@ import type {
   CreateNote,
   CreateStack,
   DomainRelation,
+  Healthcheck,
   InfraRelation,
   LinkInfra,
   LinkService,
@@ -32,8 +33,10 @@ import type {
   NetworkShareRelation,
   Note,
   PersonRelation,
+  UpdateHealthcheck,
   UpdateNote,
   ServiceRelation,
+  HealthcheckRelation,
 } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
@@ -85,11 +88,13 @@ const showLinkHealthModal = ref(false);
 
 // Edit modal states
 const showEditInfraModal = ref(false);
+const showEditHealthModal = ref(false);
 const showEditServiceModal = ref(false);
 const showEditDomainModal = ref(false);
 const showEditPersonModal = ref(false);
 const showEditShareModal = ref(false);
 const editingInfra = ref<InfraRelation | null>(null);
+const editingHealth = ref<Healthcheck | null>(null);
 const editingService = ref<ServiceRelation | null>(null);
 const editingDomain = ref<DomainRelation | null>(null);
 const editingPerson = ref<PersonRelation | null>(null);
@@ -109,6 +114,13 @@ const unlinkType = ref<string>('');
 const unlinkId = ref<string>('');
 const unlinkName = ref<string>('');
 const showUnlinkDialog = ref(false);
+const unlinkMessage = computed(() => {
+  if (unlinkType.value !== 'health') {
+    return `Are you sure you want to unlink '${unlinkName.value}' from this application?`;
+  } else {
+    return `Are you sure you want to remove healthcheck '${unlinkName.value}'?`;
+  }
+});
 
 const id = route.params.id as string;
 
@@ -359,6 +371,18 @@ function openEditInfra(infra: InfraRelation) {
   showEditInfraModal.value = true;
 }
 
+// Edit handlers
+async function openEditHealth(health: HealthcheckRelation) {
+  try {
+    // Fetch the full healthcheck data since HealthcheckRelation is missing fields
+    const fullHealthcheck = await healthchecksApi.get(health.id);
+    editingHealth.value = fullHealthcheck;
+    showEditHealthModal.value = true;
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to load healthcheck';
+  }
+}
+
 function openEditService(service: ServiceRelation) {
   editingService.value = service;
   showEditServiceModal.value = true;
@@ -389,6 +413,19 @@ async function handleEditInfra(data: LinkInfra) {
   } catch (e: unknown) {
     error.value =
       e instanceof Error ? e.message : 'Failed to update infra link';
+  }
+}
+
+async function handleEditHealth(data: UpdateHealthcheck) {
+  if (!editingHealth.value) return;
+  try {
+    await healthchecksApi.update(editingHealth.value.id, data);
+    showEditHealthModal.value = false;
+    editingHealth.value = null;
+    loadData();
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : 'Failed to update healthcheck';
   }
 }
 
@@ -522,6 +559,9 @@ async function handleUnlink() {
         break;
       case 'stack':
         await applicationsApi.unlinkStack(id, unlinkId.value);
+        break;
+      case 'health':
+        await healthchecksApi.delete(unlinkId.value);
         break;
     }
     showUnlinkDialog.value = false;
@@ -902,6 +942,20 @@ onMounted(loadData);
                           :status="h.is_enabled ? 'active' : 'inactive'"
                         />
                       </td>
+                      <td class="flex justify-end">
+                        <button
+                          class="btn btn-ghost btn-xs"
+                          @click.stop="openEditHealth(h)"
+                        >
+                          <Edit class="w-4 h-4" />
+                        </button>
+                        <button
+                          class="btn btn-ghost btn-xs text-error"
+                          @click.stop="confirmUnlink('health', h.id, h.name)"
+                        >
+                          <Link2Off class="w-4 h-4" />
+                        </button>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -1281,7 +1335,7 @@ onMounted(loadData);
     <ConfirmDialog
       :open="showUnlinkDialog"
       title="Unlink Entity"
-      :message="`Are you sure you want to unlink '${unlinkName}' from this application?`"
+      :message="unlinkMessage"
       confirm-label="Unlink"
       danger
       @confirm="handleUnlink"
@@ -1298,6 +1352,20 @@ onMounted(loadData);
         v-if="editingInfra"
         @submit="handleEditInfra"
         @cancel="showEditInfraModal = false"
+      />
+    </Modal>
+
+    <!-- Edit Health Modal -->
+    <Modal
+      title="Edit Healthcheck"
+      :open="showEditHealthModal"
+      @close="showEditHealthModal = false"
+    >
+      <HealthcheckForm
+        v-if="editingHealth"
+        :healthcheck="editingHealth"
+        @submit="(data) => handleEditHealth(data as UpdateHealthcheck)"
+        @cancel="showEditHealthModal = false"
       />
     </Modal>
 

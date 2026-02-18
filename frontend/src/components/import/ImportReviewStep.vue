@@ -15,12 +15,10 @@ const emit = defineEmits<{
   editMapping: [index: number];
 }>();
 
-const activeImports = computed(() =>
-  props.mappings.filter((m) => !m.skip)
-);
+const activeImports = computed(() => props.mappings.filter((m) => !m.skip));
 
-const skippedCount = computed(() =>
-  props.mappings.filter((m) => m.skip).length
+const skippedCount = computed(
+  () => props.mappings.filter((m) => m.skip).length
 );
 
 const newDomainsToCreate = computed(() => {
@@ -35,7 +33,10 @@ const newDomainsToCreate = computed(() => {
 
 // Check for duplicates against existing healthchecks
 const duplicates = computed(() => {
-  const dupes: Array<{ mapping: ImportMapping; existing: HealthcheckWithRelations }> = [];
+  const dupes: Array<{
+    mapping: ImportMapping;
+    existing: HealthcheckWithRelations;
+  }> = [];
 
   for (const mapping of activeImports.value) {
     const monitor = mapping.monitor;
@@ -76,7 +77,9 @@ const duplicates = computed(() => {
       </div>
       <div v-if="skippedDuplicateCount > 0" class="stat">
         <div class="stat-title">Already Exist</div>
-        <div class="stat-value text-base-content/50">{{ skippedDuplicateCount }}</div>
+        <div class="stat-value text-base-content/50">
+          {{ skippedDuplicateCount }}
+        </div>
       </div>
       <div v-if="duplicates.length > 0" class="stat">
         <div class="stat-title">Duplicates</div>
@@ -106,9 +109,7 @@ const duplicates = computed(() => {
 
     <div v-if="duplicates.length > 0" class="alert alert-warning text-sm">
       <span>
-        {{ duplicates.length }} monitor{{
-          duplicates.length !== 1 ? 's' : ''
-        }}
+        {{ duplicates.length }} monitor{{ duplicates.length !== 1 ? 's' : '' }}
         may be duplicates of existing healthchecks. They will still be imported.
       </span>
     </div>
@@ -203,7 +204,11 @@ const duplicates = computed(() => {
         @click="emit('import')"
       >
         <span v-if="importing" class="loading loading-spinner loading-sm" />
-        {{ importing ? 'Importing...' : `Import ${activeImports.length} Healthcheck${activeImports.length !== 1 ? 's' : ''}` }}
+        {{
+          importing
+            ? 'Importing...'
+            : `Import ${activeImports.length} Healthcheck${activeImports.length !== 1 ? 's' : ''}`
+        }}
       </button>
     </div>
   </div>

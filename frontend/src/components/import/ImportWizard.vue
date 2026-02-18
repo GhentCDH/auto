@@ -46,7 +46,8 @@ function handleParsed(parsed: KumaMonitorImport[]) {
   // protocol + domain_fqdn + path + method + expected_status
   const existingKeys = new Set(
     existingHealthchecks.value.map(
-      (hc) => `${hc.protocol}://${hc.domain_fqdn}${hc.path}::${hc.method}::${hc.expected_status}`
+      (hc) =>
+        `${hc.protocol}://${hc.domain_fqdn}${hc.path}::${hc.method}::${hc.expected_status}`
     )
   );
 
@@ -226,12 +227,13 @@ onMounted(() => {
   <div class="p-4 max-h-[80vh] overflow-y-auto">
     <!-- Step indicators -->
     <ul class="steps steps-horizontal w-full mb-6">
-      <li class="step step-primary">
-        Upload
-      </li>
+      <li class="step step-primary">Upload</li>
       <li
         class="step"
-        :class="{ 'step-primary': step === 'map' || step === 'review' || step === 'complete' }"
+        :class="{
+          'step-primary':
+            step === 'map' || step === 'review' || step === 'complete',
+        }"
       >
         Map
       </li>
@@ -258,7 +260,9 @@ onMounted(() => {
       @mapped="handleMapped"
       @skip="handleSkipped"
       @back="handleMapBack"
-      @panel-change="(isOpen, widthRem) => emit('panelChange', isOpen, widthRem)"
+      @panel-change="
+        (isOpen, widthRem) => emit('panelChange', isOpen, widthRem)
+      "
     />
 
     <!-- Review step -->
