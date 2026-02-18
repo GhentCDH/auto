@@ -18,7 +18,7 @@ pub async fn list(
 
     let services = sqlx::query_as::<_, Service>(
         r#"
-        SELECT id, name, description, repository_url, environment, status, created_at, updated_at, created_by
+        SELECT id, name, description, repository_url, environment, status, image_refs, created_at, updated_at, created_by
         FROM service
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR status = ?2)
@@ -56,7 +56,7 @@ pub async fn list(
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Service> {
     sqlx::query_as::<_, Service>(
         r#"
-        SELECT id, name, description, repository_url, environment, status, created_at, updated_at, created_by
+        SELECT id, name, description, repository_url, environment, status, image_refs, created_at, updated_at, created_by
         FROM service
         WHERE id = ?1
         "#,
@@ -111,8 +111,8 @@ pub async fn create(pool: &SqlitePool, input: CreateService) -> Result<Service> 
 
     sqlx::query(
         r#"
-        INSERT INTO service (id, name, description, repository_url, environment, status)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+        INSERT INTO service (id, name, description, repository_url, environment, status, image_refs)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
         "#,
     )
     .bind(&id)
@@ -121,6 +121,7 @@ pub async fn create(pool: &SqlitePool, input: CreateService) -> Result<Service> 
     .bind(&input.repository_url)
     .bind(&input.environment)
     .bind(&input.status)
+    .bind(&input.image_refs)
     .execute(pool)
     .await?;
 
@@ -135,12 +136,13 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateService) -> Result
     let repository_url = input.repository_url.or(existing.repository_url);
     let environment = input.environment.unwrap_or(existing.environment);
     let status = input.status.unwrap_or(existing.status);
+    let image_refs = input.image_refs.or(existing.image_refs);
 
     sqlx::query(
         r#"
         UPDATE service
-        SET name = ?1, description = ?2, repository_url = ?3, environment = ?4, status = ?5, updated_at = datetime('now')
-        WHERE id = ?6
+        SET name = ?1, description = ?2, repository_url = ?3, environment = ?4, status = ?5, image_refs = ?6, updated_at = datetime('now')
+        WHERE id = ?7
         "#,
     )
     .bind(&name)
@@ -148,6 +150,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateService) -> Result
     .bind(&repository_url)
     .bind(&environment)
     .bind(&status)
+    .bind(&image_refs)
     .bind(id)
     .execute(pool)
     .await?;

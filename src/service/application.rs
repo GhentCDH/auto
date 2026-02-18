@@ -20,7 +20,7 @@ pub async fn list(
 
     let applications = sqlx::query_as::<_, Application>(
         r#"
-        SELECT id, name, description, repository_url, environment, url, status, created_at, updated_at, created_by
+        SELECT id, name, description, repository_url, environment, url, status, image_refs, created_at, updated_at, created_by
         FROM application
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR status = ?2)
@@ -58,7 +58,7 @@ pub async fn list(
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Application> {
     sqlx::query_as::<_, Application>(
         r#"
-        SELECT id, name, description, repository_url, environment, url, status, created_at, updated_at, created_by
+        SELECT id, name, description, repository_url, environment, url, status, image_refs, created_at, updated_at, created_by
         FROM application
         WHERE id = ?1
         "#,
@@ -192,8 +192,8 @@ pub async fn create(pool: &SqlitePool, input: CreateApplication) -> Result<Appli
 
     sqlx::query(
         r#"
-        INSERT INTO application (id, name, description, repository_url, environment, url, status)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        INSERT INTO application (id, name, description, repository_url, environment, url, status, image_refs)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
         "#,
     )
     .bind(&id)
@@ -203,6 +203,7 @@ pub async fn create(pool: &SqlitePool, input: CreateApplication) -> Result<Appli
     .bind(&input.environment)
     .bind(&input.url)
     .bind(&input.status)
+    .bind(&input.image_refs)
     .execute(pool)
     .await?;
 
@@ -218,12 +219,13 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateApplication) -> Re
     let environment = input.environment.unwrap_or(existing.environment);
     let url = input.url.or(existing.url);
     let status = input.status.unwrap_or(existing.status);
+    let image_refs = input.image_refs.or(existing.image_refs);
 
     sqlx::query(
         r#"
         UPDATE application
-        SET name = ?1, description = ?2, repository_url = ?3, environment = ?4, url = ?5, status = ?6, updated_at = datetime('now')
-        WHERE id = ?7
+        SET name = ?1, description = ?2, repository_url = ?3, environment = ?4, url = ?5, status = ?6, image_refs = ?7, updated_at = datetime('now')
+        WHERE id = ?8
         "#,
     )
     .bind(&name)
@@ -232,6 +234,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateApplication) -> Re
     .bind(&environment)
     .bind(&url)
     .bind(&status)
+    .bind(&image_refs)
     .bind(id)
     .execute(pool)
     .await?;
