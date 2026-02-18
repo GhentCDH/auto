@@ -51,7 +51,18 @@ const form = ref<CreateHealthcheck>({
   timeout_seconds: 30,
   is_enabled: true,
   notes: '',
+  retry: 0,
+  retry_interval: 60,
+  request_body_encoding: 'JSON',
+  request_body: '',
+  http_auth_user: '',
+  http_auth_pass: '',
 });
+
+// Section expansion state
+const showAdvanced = ref(false);
+const showAuth = ref(false);
+const showRequestBody = ref(false);
 
 // Parse headers from JSON string for editing
 const headersArray = ref<Array<{ key: string; value: string }>>([]);
@@ -99,9 +110,19 @@ watch(
         timeout_seconds: hc.timeout_seconds,
         is_enabled: hc.is_enabled,
         notes: hc.notes || '',
+        retry: hc.retry,
+        retry_interval: hc.retry_interval,
+        request_body_encoding: hc.request_body_encoding,
+        request_body: hc.request_body || '',
+        http_auth_user: hc.http_auth_user || '',
+        http_auth_pass: hc.http_auth_pass || '',
       };
       target_type.value = hc.application_id ? 'application' : 'service';
       headersArray.value = parseHeaders(hc.headers);
+      // Expand sections if they have values
+      showAdvanced.value = hc.retry > 0;
+      showAuth.value = !!hc.http_auth_user;
+      showRequestBody.value = !!hc.request_body;
     }
   },
   { immediate: true }
@@ -137,6 +158,9 @@ function handleSubmit() {
     headers,
     expected_body: form.value.expected_body || undefined,
     notes: form.value.notes || undefined,
+    request_body: form.value.request_body || undefined,
+    http_auth_user: form.value.http_auth_user || undefined,
+    http_auth_pass: form.value.http_auth_pass || undefined,
   });
 }
 
@@ -370,6 +394,149 @@ function removeHeader(index: number) {
           <button type="button" class="btn btn-ghost btn-sm" @click="addHeader">
             + Add Header
           </button>
+        </div>
+      </fieldset>
+
+      <!-- HTTP Basic Authentication Section -->
+      <fieldset class="fieldset md:col-span-2">
+        <legend class="fieldset-legend">
+          <button
+            type="button"
+            class="flex items-center gap-2"
+            @click="showAuth = !showAuth"
+          >
+            <span
+              class="transform transition-transform"
+              :class="{ 'rotate-90': showAuth }"
+              >▸</span
+            >
+            HTTP Basic Authentication
+            <span v-if="form.http_auth_user" class="badge badge-sm badge-info"
+              >Configured</span
+            >
+          </button>
+        </legend>
+        <div v-if="showAuth" class="grid grid-cols-2 gap-4 mt-2">
+          <div>
+            <label class="label text-sm">Username</label>
+            <input
+              v-model="form.http_auth_user"
+              type="text"
+              class="input w-full"
+              placeholder="Username"
+              autocomplete="off"
+            />
+          </div>
+          <div>
+            <label class="label text-sm">Password</label>
+            <input
+              v-model="form.http_auth_pass"
+              type="password"
+              class="input w-full"
+              placeholder="Password"
+              autocomplete="new-password"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Request Body Section (for POST/PUT/PATCH) -->
+      <fieldset
+        v-if="['POST', 'PUT', 'PATCH'].includes(form.method)"
+        class="fieldset md:col-span-2"
+      >
+        <legend class="fieldset-legend">
+          <button
+            type="button"
+            class="flex items-center gap-2"
+            @click="showRequestBody = !showRequestBody"
+          >
+            <span
+              class="transform transition-transform"
+              :class="{ 'rotate-90': showRequestBody }"
+              >▸</span
+            >
+            Request Body
+            <span v-if="form.request_body" class="badge badge-sm badge-info"
+              >Has content</span
+            >
+          </button>
+        </legend>
+        <div v-if="showRequestBody" class="space-y-3 mt-2">
+          <div>
+            <label class="label text-sm">Content Type</label>
+            <select v-model="form.request_body_encoding" class="select w-full">
+              <option value="JSON">JSON (application/json)</option>
+              <option value="x-www-form-urlencoded">
+                Form (application/x-www-form-urlencoded)
+              </option>
+              <option value="XML">XML (application/xml)</option>
+            </select>
+          </div>
+          <div>
+            <label class="label text-sm">Body Content</label>
+            <textarea
+              v-model="form.request_body"
+              class="textarea w-full font-mono text-sm"
+              rows="4"
+              :placeholder="
+                form.request_body_encoding === 'JSON'
+                  ? '{&quot;key&quot;: &quot;value&quot;}'
+                  : form.request_body_encoding === 'XML'
+                    ? '<root><key>value</key></root>'
+                    : 'key=value&other=data'
+              "
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Retry Configuration Section -->
+      <fieldset class="fieldset md:col-span-2">
+        <legend class="fieldset-legend">
+          <button
+            type="button"
+            class="flex items-center gap-2"
+            @click="showAdvanced = !showAdvanced"
+          >
+            <span
+              class="transform transition-transform"
+              :class="{ 'rotate-90': showAdvanced }"
+              >▸</span
+            >
+            Retry Configuration
+            <span v-if="form.retry > 0" class="badge badge-sm badge-info"
+              >{{ form.retry }} retries</span
+            >
+          </button>
+        </legend>
+        <div v-if="showAdvanced" class="grid grid-cols-2 gap-4 mt-2">
+          <div>
+            <label class="label text-sm">Retry Count</label>
+            <input
+              v-model.number="form.retry"
+              type="number"
+              class="input w-full"
+              min="0"
+              max="10"
+            />
+            <span class="text-xs text-base-content/50"
+              >Number of retries on failure (0-10)</span
+            >
+          </div>
+          <div>
+            <label class="label text-sm">Retry Interval (seconds)</label>
+            <input
+              v-model.number="form.retry_interval"
+              type="number"
+              class="input w-full"
+              min="1"
+              max="300"
+            />
+            <span class="text-xs text-base-content/50"
+              >Delay between retries (1-300)</span
+            >
+          </div>
         </div>
       </fieldset>
 

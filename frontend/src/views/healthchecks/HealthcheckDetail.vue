@@ -133,6 +133,53 @@ function formatHeaders(
         </div>
       </div>
 
+      <!-- Retry Configuration -->
+      <div
+        v-if="(entity as HealthcheckWithRelations).retry > 0"
+        class="mt-4 grid grid-cols-2 gap-4"
+      >
+        <div>
+          <div class="text-sm text-base-content/70">Retry Count</div>
+          <div>{{ (entity as HealthcheckWithRelations).retry }}</div>
+        </div>
+        <div>
+          <div class="text-sm text-base-content/70">Retry Interval</div>
+          <div>
+            {{ (entity as HealthcheckWithRelations).retry_interval }} seconds
+          </div>
+        </div>
+      </div>
+
+      <!-- HTTP Basic Auth -->
+      <div
+        v-if="(entity as HealthcheckWithRelations).http_auth_user"
+        class="mt-4"
+      >
+        <div class="text-sm text-base-content/70">HTTP Basic Auth</div>
+        <div class="flex items-center gap-2">
+          <span class="badge badge-outline badge-sm">Configured</span>
+          <span class="text-sm text-base-content/70"
+            >User: {{ (entity as HealthcheckWithRelations).http_auth_user }}</span
+          >
+        </div>
+      </div>
+
+      <!-- Request Body -->
+      <div
+        v-if="(entity as HealthcheckWithRelations).request_body"
+        class="mt-4"
+      >
+        <div class="text-sm text-base-content/70 mb-1">
+          Request Body ({{
+            (entity as HealthcheckWithRelations).request_body_encoding
+          }})
+        </div>
+        <pre
+          class="bg-base-200 rounded-box p-3 text-xs font-mono overflow-x-auto max-h-40"
+          >{{ (entity as HealthcheckWithRelations).request_body }}</pre
+        >
+      </div>
+
       <!-- Custom Headers -->
       <div
         v-if="

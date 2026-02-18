@@ -197,6 +197,12 @@ async function handleImport() {
       headers: monitor.headers || undefined,
       expected_body: monitor.keyword || undefined,
       is_enabled: true,
+      retry: monitor.retry,
+      retry_interval: monitor.retry_interval,
+      request_body: monitor.request_body || undefined,
+      request_body_encoding: monitor.request_body_encoding,
+      http_auth_user: monitor.http_auth_user || undefined,
+      http_auth_pass: monitor.http_auth_pass || undefined,
     };
 
     try {

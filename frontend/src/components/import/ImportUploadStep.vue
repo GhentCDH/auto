@@ -106,6 +106,25 @@ def export_monitors(kuma_url: str, username: str, password: str, output: str) ->
                 except json.JSONDecodeError:
                     headers = None
 
+            # Parse retry settings from Kuma (maxretries field)
+            max_retries = m.get("maxretries") or 0
+            retry_interval = m.get("retryInterval") or 60
+
+            # Parse HTTP body for POST requests
+            request_body = m.get("body")
+            # Kuma uses "json" for JSON bodies
+            body_encoding = "JSON"
+            if m.get("httpBodyEncoding"):
+                encoding = m.get("httpBodyEncoding").lower()
+                if encoding == "form":
+                    body_encoding = "x-www-form-urlencoded"
+                elif encoding == "xml":
+                    body_encoding = "XML"
+
+            # Parse HTTP Basic Auth
+            http_auth_user = m.get("basic_auth_user")
+            http_auth_pass = m.get("basic_auth_pass")
+
             export_data.append(
                 {
                     "kuma_id": m.get("id"),
@@ -119,6 +138,12 @@ def export_monitors(kuma_url: str, username: str, password: str, output: str) ->
                     "timeout_seconds": timeout_seconds,
                     "headers": headers,
                     "keyword": m.get("keyword"),  # For body match (keyword monitors)
+                    "retry": max_retries,
+                    "retry_interval": retry_interval,
+                    "request_body": request_body,
+                    "request_body_encoding": body_encoding,
+                    "http_auth_user": http_auth_user,
+                    "http_auth_pass": http_auth_pass,
                 }
             )
 
@@ -243,6 +268,19 @@ function validateMonitor(m: unknown, index: number): KumaMonitorImport {
         : 30,
     headers: typeof monitor.headers === 'string' ? monitor.headers : null,
     keyword: typeof monitor.keyword === 'string' ? monitor.keyword : null,
+    retry: typeof monitor.retry === 'number' ? monitor.retry : 0,
+    retry_interval:
+      typeof monitor.retry_interval === 'number' ? monitor.retry_interval : 60,
+    request_body:
+      typeof monitor.request_body === 'string' ? monitor.request_body : null,
+    request_body_encoding:
+      typeof monitor.request_body_encoding === 'string'
+        ? monitor.request_body_encoding
+        : 'JSON',
+    http_auth_user:
+      typeof monitor.http_auth_user === 'string' ? monitor.http_auth_user : null,
+    http_auth_pass:
+      typeof monitor.http_auth_pass === 'string' ? monitor.http_auth_pass : null,
   };
 }
 

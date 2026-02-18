@@ -514,6 +514,12 @@ export interface Healthcheck {
   timeout_seconds: number;
   is_enabled: boolean;
   notes: string | null;
+  retry: number;
+  retry_interval: number;
+  request_body_encoding: string;
+  request_body: string | null;
+  http_auth_user: string | null;
+  http_auth_pass: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -533,6 +539,12 @@ export interface CreateHealthcheck {
   timeout_seconds?: number;
   is_enabled?: boolean;
   notes?: string;
+  retry?: number;
+  retry_interval?: number;
+  request_body_encoding?: string;
+  request_body?: string;
+  http_auth_user?: string;
+  http_auth_pass?: string;
 }
 
 export interface UpdateHealthcheck {
@@ -549,6 +561,12 @@ export interface UpdateHealthcheck {
   timeout_seconds?: number;
   is_enabled?: boolean;
   notes?: string;
+  retry?: number;
+  retry_interval?: number;
+  request_body_encoding?: string;
+  request_body?: string;
+  http_auth_user?: string;
+  http_auth_pass?: string;
 }
 
 export interface HealthcheckWithRelations extends Healthcheck {
@@ -609,6 +627,13 @@ export interface KumaMonitorImport {
   timeout_seconds: number;
   headers: string | null;
   keyword: string | null;
+  // New fields for retry and body
+  retry: number;
+  retry_interval: number;
+  request_body: string | null;
+  request_body_encoding: string;
+  http_auth_user: string | null;
+  http_auth_pass: string | null;
 }
 
 export interface ImportMapping {
