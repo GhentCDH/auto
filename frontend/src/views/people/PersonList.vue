@@ -2,12 +2,12 @@
 import { ref } from 'vue';
 import { peopleApi } from '@/api';
 import type { Person } from '@/types';
-import EntityList, { type EntityListExposed } from '@/components/common/EntityList.vue';
+import EntityList from '@/components/common/EntityList.vue';
 import PersonForm from '@/components/forms/PersonForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { personActiveFilterOptions } from '@/values';
 
-const entityListRef = ref<EntityListExposed | null>(null);
+const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
 const filters = ref<Record<string, string | null>>({
   is_active: null,
 });

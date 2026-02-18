@@ -2,14 +2,14 @@
 import { ref } from 'vue';
 import { servicesApi } from '@/api';
 import type { Service } from '@/types';
-import EntityList, { type EntityListExposed } from '@/components/common/EntityList.vue';
+import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
 import ServiceForm from '@/components/forms/ServiceForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { statusFilterOptions, environmentFilterOptions } from '@/values';
 
-const entityListRef = ref<EntityListExposed | null>(null);
+const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
 const filters = ref<Record<string, string | null>>({
   status: null,
   environment: null,

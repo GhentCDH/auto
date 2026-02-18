@@ -2,13 +2,13 @@
 import { ref } from 'vue';
 import { sharesApi } from '@/api';
 import type { NetworkShare } from '@/types';
-import EntityList, { type EntityListExposed } from '@/components/common/EntityList.vue';
+import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import ShareForm from '@/components/forms/ShareForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { statusFilterOptions, shareTypeFilterOptions } from '@/values';
 
-const entityListRef = ref<EntityListExposed | null>(null);
+const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
 const filters = ref<Record<string, string | null>>({
   status: null,
   share_type: null,

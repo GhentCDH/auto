@@ -1,12 +1,3 @@
-<script lang="ts">
-/** Type for the exposed methods of EntityList. Use with ref<EntityListExposed | null>() */
-export interface EntityListExposed {
-  loadData: () => Promise<void>;
-  updateFilter: (key: string, value: string | null) => void;
-  localFilters: Record<string, string | null>;
-}
-</script>
-
 <script setup lang="ts" generic="T extends { id: string }, C = unknown">
 import { ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';

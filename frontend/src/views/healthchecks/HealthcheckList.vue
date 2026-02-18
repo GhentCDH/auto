@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { healthchecksApi } from '@/api';
 import type { Healthcheck, HealthcheckWithRelations } from '@/types';
-import EntityList, { type EntityListExposed } from '@/components/common/EntityList.vue';
+import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 import ImportWizard from '@/components/import/ImportWizard.vue';
@@ -52,14 +52,14 @@ function buildUrl(hc: HealthcheckWithRelations): string {
 }
 
 // optional: refresh list after import
-const entityListRef = ref<EntityListExposed | null>(null);
+const entityListRef = ref<InstanceType<typeof EntityList>>();
 
 function handleImported(count: number) {
   showImport.value = false;
   importPanelOpen.value = false;
   importPanelWidthRem.value = 0;
   if (count > 0) {
-    entityListRef.value?.loadData();
+    entityListRef.value?.reload?.();
   }
 }
 
