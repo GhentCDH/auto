@@ -231,7 +231,48 @@ fn build_monitor_json(hc_with_relations: &HealthcheckWithRelations) -> Value {
     monitor
 }
 
-// ── Public sync function ────────────────────────────────────────────
+pub async fn sync_healthcheck_to_kuma(state: AppState, id: &str) -> Result<()> {
+    debug!("Connecting to Kuma at {}", state.config.kuma_url);
+    let client = KumaClient::connect(
+        &state.config.kuma_url,
+        &state.config.kuma_username,
+        &state.config.kuma_password,
+    )
+    .await?;
+
+    let hc = service::healthcheck::get_with_relations(&state.pool, id).await?;
+
+    let name = hc.healthcheck.name.clone();
+    let kuma_id = hc.healthcheck.kuma_id;
+    let mut monitor = build_monitor_json(&hc);
+
+    if let Some(kuma_id) = kuma_id {
+        monitor
+            .as_object_mut()
+            .unwrap()
+            .insert("id".into(), json!(kuma_id));
+        debug!("Editing monitor '{name}' (kuma_id: {kuma_id})");
+        client.edit_monitor(monitor).await?;
+    } else {
+        debug!("Adding monitor '{name}'");
+        let new_id = client.add_monitor(monitor).await?;
+        debug!("Created monitor '{name}' with kuma_id: {new_id}");
+        service::healthcheck::update(
+            &state.pool,
+            &hc.healthcheck.id,
+            UpdateHealthcheck {
+                kuma_id: Some(new_id),
+                ..Default::default()
+            },
+        )
+        .await?;
+        debug!("Updated Auto healthcheck's kuma_id");
+    }
+
+    client.disconnect().await?;
+    debug!("Kuma sync complete");
+    Ok(())
+}
 
 pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
     debug!("Connecting to Kuma at {}", state.config.kuma_url);

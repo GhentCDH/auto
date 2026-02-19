@@ -25,7 +25,8 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list).post(create))
         .route("/export/kuma", get(export_kuma))
-        .route("/sync/kuma", post(sync_kuma))
+        .route("/sync/kuma", post(sync_kuma_all))
+        .route("/sync/kuma/{id}", post(sync_kuma_one))
         .route("/uptime/stream", get(uptime_stream))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
         .route("/{id}/execute", get(execute))
@@ -97,7 +98,26 @@ async fn export_kuma(State(state): State<AppState>) -> Result<impl axum::respons
     Ok(Json(result))
 }
 
-async fn sync_kuma(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
+async fn sync_kuma_one(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl axum::response::IntoResponse> {
+    // rust_socketio::Client is !Send, so we run the sync on a dedicated
+    // blocking thread that owns its own async context.
+    let handle = tokio::runtime::Handle::current();
+    let state_clone = state.clone();
+    tokio::task::spawn_blocking(move || {
+        handle.block_on(kuma::sync_healthcheck_to_kuma(state_clone, &id))
+    })
+    .await
+    .map_err(|e| crate::Error::InternalError(e.to_string()))??;
+
+    // Notify the persistent poller to reconnect and pick up new kuma_ids
+    let _ = state.kuma_refresh_tx.send(());
+
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+async fn sync_kuma_all(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
     // rust_socketio::Client is !Send, so we run the sync on a dedicated
     // blocking thread that owns its own async context.
     let handle = tokio::runtime::Handle::current();
@@ -132,8 +152,7 @@ async fn uptime_stream(
 
     let snapshot_json = serde_json::to_string(&snapshot)
         .unwrap_or_else(|_| r#"{"type":"snapshot","monitors":{}}"#.to_string());
-    let snapshot_event =
-        Ok::<Event, axum::Error>(Event::default().data(snapshot_json));
+    let snapshot_event = Ok::<Event, axum::Error>(Event::default().data(snapshot_json));
 
     // Chain: one snapshot event, then the live broadcast stream
     let initial = stream::once(async move { snapshot_event });
