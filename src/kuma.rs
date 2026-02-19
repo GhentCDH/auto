@@ -20,7 +20,11 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc;
 use tracing::{debug, info};
 
-use crate::{AppState, Error, Result, models::HealthcheckWithRelations, service};
+use crate::{
+    AppState, Error, Result,
+    models::{HealthcheckWithRelations, UpdateHealthcheck},
+    service,
+};
 
 // ── KumaClient ──────────────────────────────────────────────────────
 
@@ -216,7 +220,7 @@ fn build_monitor_json(hc_with_relations: &HealthcheckWithRelations) -> Value {
 // ── Public sync function ────────────────────────────────────────────
 
 pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
-    info!("Connecting to Kuma at {}", state.config.kuma_url);
+    debug!("Connecting to Kuma at {}", state.config.kuma_url);
     let client = KumaClient::connect(
         &state.config.kuma_url,
         &state.config.kuma_username,
@@ -236,17 +240,26 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
                 .as_object_mut()
                 .unwrap()
                 .insert("id".into(), json!(kuma_id));
-            info!("Editing monitor '{name}' (kuma_id: {kuma_id})");
+            debug!("Editing monitor '{name}' (kuma_id: {kuma_id})");
             client.edit_monitor(monitor).await?;
         } else {
-            info!("Adding monitor '{name}'");
-            info!("JUST KIDDING");
-            // let new_id = client.add_monitor(monitor).await?;
-            // info!("Created monitor '{name}' with kuma_id: {new_id}");
+            debug!("Adding monitor '{name}'");
+            let new_id = client.add_monitor(monitor).await?;
+            debug!("Created monitor '{name}' with kuma_id: {new_id}");
+            service::healthcheck::update(
+                &state.pool,
+                &hc.healthcheck.id,
+                UpdateHealthcheck {
+                    kuma_id: Some(new_id),
+                    ..Default::default()
+                },
+            )
+            .await?;
+            debug!("Updated Auto healthcheck's kuma_id");
         }
     }
 
     client.disconnect().await?;
-    info!("Kuma sync complete");
+    debug!("Kuma sync complete");
     Ok(())
 }

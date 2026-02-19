@@ -69,7 +69,7 @@ pub struct CreateHealthcheck {
 }
 
 /// DTO for updating a healthcheck
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct UpdateHealthcheck {
     pub name: Option<String>,
     pub application_id: Option<String>,
