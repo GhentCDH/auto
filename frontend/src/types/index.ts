@@ -516,6 +516,7 @@ export interface Healthcheck {
   name: string;
   application_id: string | null;
   service_id: string | null;
+  kuma_id: number | null;
   domain_id: string;
   protocol: string;
   path: string;
@@ -524,6 +525,7 @@ export interface Healthcheck {
   expected_status: number;
   expected_body: string | null;
   timeout_seconds: number;
+  interval: number;
   is_enabled: boolean;
   notes: string | null;
   retry: number;
@@ -541,6 +543,7 @@ export interface CreateHealthcheck {
   name: string;
   application_id?: string;
   service_id?: string;
+  kuma_id?: number;
   domain_id: string;
   protocol?: string;
   path?: string;
@@ -549,6 +552,7 @@ export interface CreateHealthcheck {
   expected_status?: number;
   expected_body?: string;
   timeout_seconds?: number;
+  interval?: number;
   is_enabled?: boolean;
   notes?: string;
   retry?: number;
@@ -563,6 +567,7 @@ export interface UpdateHealthcheck {
   name?: string;
   application_id?: string;
   service_id?: string;
+  kuma_id?: number;
   domain_id?: string;
   protocol?: string;
   path?: string;
@@ -571,6 +576,7 @@ export interface UpdateHealthcheck {
   expected_status?: number;
   expected_body?: string;
   timeout_seconds?: number;
+  interval?: number;
   is_enabled?: boolean;
   notes?: string;
   retry?: number;
@@ -596,6 +602,7 @@ export interface HealthcheckRelation {
   path: string;
   expected_status: number;
   is_enabled: boolean;
+  kuma_id: number | null;
 }
 
 export interface HealthcheckExecuteResult {
@@ -637,6 +644,7 @@ export interface KumaMonitorImport {
   method: string;
   expected_status: number;
   timeout_seconds: number;
+  interval: number;
   headers: string | null;
   keyword: string | null;
   // New fields for retry and body

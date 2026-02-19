@@ -41,6 +41,7 @@ const form = ref<CreateHealthcheck>({
   name: props.initialName || '',
   application_id: props.initialApplicationId,
   service_id: props.initialServiceId,
+  kuma_id: undefined,
   domain_id: '',
   protocol: 'https',
   path: '/',
@@ -49,6 +50,7 @@ const form = ref<CreateHealthcheck>({
   expected_status: 200,
   expected_body: '',
   timeout_seconds: 30,
+  interval: 60,
   is_enabled: true,
   notes: '',
   retry: 0,
@@ -99,6 +101,7 @@ watch(
         name: hc.name,
         application_id: hc.application_id || undefined,
         service_id: hc.service_id || undefined,
+        kuma_id: hc.kuma_id || undefined,
         domain_id: hc.domain_id,
         protocol: hc.protocol,
         path: hc.path,
@@ -107,6 +110,7 @@ watch(
         expected_status: hc.expected_status,
         expected_body: hc.expected_body || '',
         timeout_seconds: hc.timeout_seconds,
+        interval: hc.interval,
         is_enabled: hc.is_enabled,
         notes: hc.notes || '',
         retry: hc.retry,
@@ -155,6 +159,7 @@ function handleSubmit() {
   emit('submit', {
     ...form.value,
     headers,
+    kuma_id: form.value.kuma_id || undefined,
     expected_body: form.value.expected_body || undefined,
     notes: form.value.notes || undefined,
     request_body: form.value.request_body || undefined,
@@ -535,6 +540,39 @@ function removeHeader(index: number) {
             <span class="text-xs text-base-content/50"
               >Delay between retries (1-300)</span
             >
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Kuma Sync Configuration -->
+      <fieldset class="fieldset md:col-span-2">
+        <legend class="fieldset-legend">Kuma Sync</legend>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="label text-sm">Kuma Monitor ID</label>
+            <input
+              v-model.number="form.kuma_id"
+              type="number"
+              class="input w-full"
+              placeholder="Leave empty for new monitor"
+              min="1"
+            />
+            <span class="text-xs text-base-content/50">
+              Links this healthcheck to an existing Kuma monitor
+            </span>
+          </div>
+          <div>
+            <label class="label text-sm">Check Interval (seconds)</label>
+            <input
+              v-model.number="form.interval"
+              type="number"
+              class="input w-full"
+              min="20"
+              max="3600"
+            />
+            <span class="text-xs text-base-content/50">
+              How often Kuma polls this endpoint (20-3600)
+            </span>
           </div>
         </div>
       </fieldset>

@@ -7,8 +7,9 @@ import StatusBadge from '@/components/common/StatusBadge.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 import ImportWizard from '@/components/import/ImportWizard.vue';
 
-const exportLoading = ref(false);
-const exportError = ref('');
+const syncLoading = ref(false);
+const syncError = ref('');
+const syncSuccess = ref(false);
 
 // import modal state
 const showImport = ref(false);
@@ -26,24 +27,18 @@ const modalWidthStyle = computed(() => {
   return { width: `${width}rem` };
 });
 
-async function exportKuma() {
-  exportLoading.value = true;
-  exportError.value = '';
+async function syncKuma() {
+  syncLoading.value = true;
+  syncError.value = '';
+  syncSuccess.value = false;
   try {
-    const monitors = await healthchecksApi.exportKuma();
-    const blob = new Blob([JSON.stringify(monitors, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'kuma-monitors.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    await healthchecksApi.syncKuma();
+    syncSuccess.value = true;
+    setTimeout(() => (syncSuccess.value = false), 3000);
   } catch (e) {
-    exportError.value = e instanceof Error ? e.message : 'Export failed';
+    syncError.value = e instanceof Error ? e.message : 'Sync failed';
   } finally {
-    exportLoading.value = false;
+    syncLoading.value = false;
   }
 }
 
@@ -128,6 +123,22 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
       </td>
     </template>
 
+    <template #toolbar>
+      <div class="flex gap-2 mb-4">
+        <button
+          class="btn btn-primary"
+          :disabled="syncLoading"
+          @click="syncKuma"
+        >
+          <span v-if="syncLoading" class="loading loading-spinner loading-sm" />
+          {{ syncLoading ? 'Syncing...' : 'Sync Kuma' }}
+        </button>
+        <button class="btn btn-outline" @click="showImport = true">
+          Import Kuma
+        </button>
+      </div>
+    </template>
+
     <template #form="{ onSubmit, onCancel }">
       <HealthcheckForm @submit="onSubmit" @cancel="onCancel" />
     </template>
@@ -150,25 +161,16 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
     </form>
   </dialog>
 
-  <div class="fixed bottom-6 right-6 flex flex-col gap-2">
-    <button class="btn btn-primary shadow-lg" @click="showImport = true">
-      Import Kuma
-    </button>
-
-    <button
-      class="btn btn-secondary shadow-lg"
-      :disabled="exportLoading"
-      @click="exportKuma"
-    >
-      <span v-if="exportLoading" class="loading loading-spinner loading-sm" />
-      Export Kuma
-    </button>
+  <!-- Sync feedback toasts -->
+  <div v-if="syncSuccess" class="toast toast-end">
+    <div class="alert alert-success">
+      <span>Kuma sync completed successfully.</span>
+    </div>
   </div>
-  <!-- Export error toast -->
-  <div v-if="exportError" class="toast toast-end">
+  <div v-if="syncError" class="toast toast-end">
     <div class="alert alert-error">
-      <span>{{ exportError }}</span>
-      <button class="btn btn-ghost btn-xs" @click="exportError = ''">
+      <span>{{ syncError }}</span>
+      <button class="btn btn-ghost btn-xs" @click="syncError = ''">
         &times;
       </button>
     </div>

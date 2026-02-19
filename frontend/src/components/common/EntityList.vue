@@ -177,6 +177,9 @@ defineExpose({ loadData, updateFilter, localFilters });
       </button>
     </div>
 
+    <!-- Optional toolbar (extra actions above search) -->
+    <slot name="toolbar" />
+
     <!-- Search -->
     <div class="mb-4">
       <form @submit.prevent="handleSearch" class="join">

@@ -99,6 +99,18 @@ function formatHeaders(
             {{ (entity as HealthcheckWithRelations).timeout_seconds }} seconds
           </div>
         </div>
+        <div>
+          <div class="text-sm text-base-content/70">Kuma Interval</div>
+          <div>{{ (entity as HealthcheckWithRelations).interval }} seconds</div>
+        </div>
+        <div v-if="(entity as HealthcheckWithRelations).kuma_id">
+          <div class="text-sm text-base-content/70">Kuma Monitor ID</div>
+          <div class="font-mono">
+            <span class="badge badge-outline">
+              #{{ (entity as HealthcheckWithRelations).kuma_id }}
+            </span>
+          </div>
+        </div>
         <div v-if="(entity as HealthcheckWithRelations).expected_body">
           <div class="text-sm text-base-content/70">Expected Body</div>
           <div class="font-mono text-sm">
