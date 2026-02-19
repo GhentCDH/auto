@@ -6,6 +6,7 @@ import EntityList from '@/components/common/EntityList.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 import ImportWizard from '@/components/import/ImportWizard.vue';
+import HealthStats from '@/components/common/HealthStats.vue';
 
 const syncLoading = ref(false);
 const syncError = ref('');
@@ -88,6 +89,7 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
       <th>Target</th>
       <th>Method</th>
       <th>Expected</th>
+      <th>Uptime</th>
       <th>Status</th>
     </template>
 
@@ -118,6 +120,10 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
         <span class="badge badge-outline badge-sm">{{ item.method }}</span>
       </td>
       <td>{{ item.expected_status }}</td>
+      <td>
+        <HealthStats v-if="item.kuma_id" :kuma-id="item.kuma_id" />
+        <span v-else class="text-base-content/30">&mdash;</span>
+      </td>
       <td>
         <StatusBadge :status="item.is_enabled ? 'active' : 'inactive'" />
       </td>

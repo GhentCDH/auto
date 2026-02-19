@@ -22,6 +22,7 @@ import LinkInfraForm from '@/components/forms/LinkInfraForm.vue';
 import { infraTypes } from '@/values';
 import { Plus, Edit, Link2Off, Package } from 'lucide-vue-next';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
+import HealthPlot from '@/components/common/HealthPlot.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -364,11 +365,17 @@ onMounted(loadData);
                   class="flex items-center justify-between cursor-pointer hover:bg-base-300 rounded p-1 -m-1"
                   @click="router.push(`/healthchecks/${h.id}`)"
                 >
-                  <div>
+                  <div class="flex-1 min-w-0">
                     <span class="font-medium">{{ h.name }}</span>
                     <div class="text-xs text-base-content/70 font-mono">
                       {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
                     </div>
+                    <HealthPlot
+                      v-if="h.kuma_id"
+                      :kuma-id="h.kuma_id"
+                      :count="30"
+                      class="mt-1"
+                    />
                   </div>
                   <StatusBadge :status="h.is_enabled ? 'active' : 'inactive'" />
                 </li>

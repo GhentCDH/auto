@@ -61,8 +61,16 @@ import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
 import { infraTypes } from '@/values';
 import type { ImageRef } from '@/types';
-import { Pin, ExternalLink, Plus, Edit, Link2Off, Package } from 'lucide-vue-next';
+import {
+  Pin,
+  ExternalLink,
+  Plus,
+  Edit,
+  Link2Off,
+  Package,
+} from 'lucide-vue-next';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
+import HealthPlot from '@/components/common/HealthPlot.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -951,6 +959,7 @@ onMounted(loadData);
                       <th>Name</th>
                       <th>URL</th>
                       <th>Expected</th>
+                      <th class="w-32">Uptime</th>
                       <th class="w-10">Status</th>
                       <th class="w-20"></th>
                     </tr>
@@ -967,6 +976,13 @@ onMounted(loadData);
                         {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
                       </td>
                       <td>{{ h.expected_status }}</td>
+                      <td class="w-48 h-8">
+                        <HealthPlot
+                          v-if="h.kuma_id"
+                          :kuma-id="h.kuma_id"
+                          :count="30"
+                        />
+                      </td>
                       <td>
                         <StatusBadge
                           :status="h.is_enabled ? 'active' : 'inactive'"

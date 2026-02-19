@@ -8,9 +8,8 @@ import type {
 } from '@/types';
 import EntityDetail from '@/components/common/EntityDetail.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
+import HealthPlot from '@/components/common/HealthPlot.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
-
-const router = useRouter();
 
 const executeLoading = ref(false);
 const executeResult = ref<HealthcheckExecuteResult | null>(null);
@@ -111,6 +110,20 @@ function formatHeaders(
             </span>
           </div>
         </div>
+        <div
+          v-if="(entity as HealthcheckWithRelations).kuma_id"
+          class="col-span-2"
+        >
+          <div class="text-sm text-base-content/70 mb-1">
+            Uptime (last hour)
+          </div>
+          <div class="h-6">
+            <HealthPlot
+              :kuma-id="(entity as HealthcheckWithRelations).kuma_id!"
+              :count="80"
+            />
+          </div>
+        </div>
         <div v-if="(entity as HealthcheckWithRelations).expected_body">
           <div class="text-sm text-base-content/70">Expected Body</div>
           <div class="font-mono text-sm">
@@ -171,7 +184,8 @@ function formatHeaders(
         <div class="flex items-center gap-2">
           <span class="badge badge-outline badge-sm">Configured</span>
           <span class="text-sm text-base-content/70"
-            >User: {{ (entity as HealthcheckWithRelations).http_auth_user }}</span
+            >User:
+            {{ (entity as HealthcheckWithRelations).http_auth_user }}</span
           >
         </div>
       </div>
