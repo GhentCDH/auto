@@ -78,7 +78,7 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Healthcheck> {
         r#"
         SELECT id, name, application_id, service_id, domain_id,
                protocol, path, method, headers, expected_status,
-               expected_body, timeout_seconds, is_enabled, notes,
+               expected_body, timeout_seconds, interval, is_enabled, notes,
                retry, retry_interval, request_body_encoding, request_body,
                http_auth_user, http_auth_pass, kuma_id,
                created_at, updated_at, created_by
@@ -90,6 +90,23 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Healthcheck> {
     .fetch_optional(pool)
     .await?
     .ok_or_else(|| Error::NotFound(format!("Healthcheck with id '{}' not found", id)))
+}
+
+pub async fn get_all(pool: &SqlitePool) -> Result<Vec<Healthcheck>> {
+    sqlx::query_as::<_, Healthcheck>(
+        r#"
+        SELECT id, name, application_id, service_id, domain_id,
+               protocol, path, method, headers, expected_status,
+               expected_body, timeout_seconds, interval, is_enabled, notes,
+               retry, retry_interval, request_body_encoding, request_body,
+               http_auth_user, http_auth_pass, kuma_id,
+               created_at, updated_at, created_by
+        FROM healthcheck
+        "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(Error::from)
 }
 
 async fn extend_relations(
@@ -182,10 +199,10 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
         r#"
         INSERT INTO healthcheck (id, name, application_id, service_id, kuma_id, domain_id,
                                  protocol, path, method, headers, expected_status,
-                                 expected_body, timeout_seconds, is_enabled, notes,
+                                 expected_body, timeout_seconds, interval, is_enabled, notes,
                                  retry, retry_interval, request_body_encoding, request_body,
                                  http_auth_user, http_auth_pass)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)
         "#,
     )
     .bind(&id)
@@ -201,6 +218,7 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
     .bind(input.expected_status)
     .bind(&input.expected_body)
     .bind(input.timeout_seconds)
+    .bind(input.interval)
     .bind(input.is_enabled)
     .bind(&input.notes)
     .bind(input.retry)
@@ -257,6 +275,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     let expected_status = input.expected_status.unwrap_or(existing.expected_status);
     let expected_body = input.expected_body.or(existing.expected_body);
     let timeout_seconds = input.timeout_seconds.unwrap_or(existing.timeout_seconds);
+    let interval = input.interval.unwrap_or(existing.interval);
     let is_enabled = input.is_enabled.unwrap_or(existing.is_enabled);
     let notes = input.notes.or(existing.notes);
     let retry = input.retry.unwrap_or(existing.retry);
@@ -276,7 +295,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
             protocol = ?5, path = ?6, method = ?7, headers = ?8,
             expected_status = ?9, expected_body = ?10, timeout_seconds = ?11,
             is_enabled = ?12, notes = ?13, retry = ?14, retry_interval = ?15,
-            request_body_encoding = ?16, request_body = ?17,
+            request_body_encoding = ?16, request_body = ?17, interval = ?22,
             http_auth_user = ?18, http_auth_pass = ?19, kuma_id = ?21
             updated_at = datetime('now')
         WHERE id = ?20
@@ -303,6 +322,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     .bind(&http_auth_pass)
     .bind(id)
     .bind(kuma_id)
+    .bind(interval)
     .execute(pool)
     .await?;
 

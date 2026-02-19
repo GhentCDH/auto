@@ -20,6 +20,7 @@ pub struct Healthcheck {
     pub expected_status: i32,
     pub expected_body: Option<String>,
     pub timeout_seconds: i32,
+    pub interval: i32,
     pub is_enabled: bool,
     pub notes: Option<String>,
     pub retry: i32,
@@ -53,6 +54,8 @@ pub struct CreateHealthcheck {
     pub expected_body: Option<String>,
     #[serde(default = "default_timeout")]
     pub timeout_seconds: i32,
+    #[serde(default = "default_interval")]
+    pub interval: i32,
     #[serde(default = "default_enabled")]
     pub is_enabled: bool,
     pub notes: Option<String>,
@@ -82,6 +85,7 @@ pub struct UpdateHealthcheck {
     pub expected_status: Option<i32>,
     pub expected_body: Option<String>,
     pub timeout_seconds: Option<i32>,
+    pub interval: Option<i32>,
     pub is_enabled: Option<bool>,
     pub notes: Option<String>,
     pub retry: Option<i32>,
@@ -110,6 +114,10 @@ fn default_expected_status() -> i32 {
 
 fn default_timeout() -> i32 {
     30
+}
+
+fn default_interval() -> i32 {
+    60
 }
 
 fn default_enabled() -> bool {
