@@ -1,3 +1,5 @@
+use crate::error::Error as AutoError;
+
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::collections::HashMap;
@@ -9,6 +11,7 @@ pub struct Healthcheck {
     pub name: String,
     pub application_id: Option<String>,
     pub service_id: Option<String>,
+    pub kuma_id: Option<i32>,
     pub domain_id: String,
     pub protocol: String,
     pub path: String,
@@ -36,6 +39,7 @@ pub struct CreateHealthcheck {
     pub name: String,
     pub application_id: Option<String>,
     pub service_id: Option<String>,
+    pub kuma_id: Option<i32>,
     pub domain_id: String,
     #[serde(default = "default_protocol")]
     pub protocol: String,
@@ -69,6 +73,7 @@ pub struct UpdateHealthcheck {
     pub name: Option<String>,
     pub application_id: Option<String>,
     pub service_id: Option<String>,
+    pub kuma_id: Option<i32>,
     pub domain_id: Option<String>,
     pub protocol: Option<String>,
     pub path: Option<String>,
@@ -140,6 +145,7 @@ pub struct HealthcheckRelation {
     pub path: String,
     pub expected_status: i32,
     pub is_enabled: bool,
+    pub kuma_id: Option<i32>,
 }
 
 /// Result of executing a healthcheck

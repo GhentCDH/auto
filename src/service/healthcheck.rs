@@ -28,7 +28,7 @@ pub async fn list(
                h.protocol, h.path, h.method, h.headers, h.expected_status,
                h.expected_body, h.timeout_seconds, h.is_enabled, h.notes,
                h.retry, h.retry_interval, h.request_body_encoding, h.request_body,
-               h.http_auth_user, h.http_auth_pass,
+               h.http_auth_user, h.http_auth_pass, h.kuma_id,
                h.created_at, h.updated_at, h.created_by
         FROM healthcheck h
         WHERE (?1 IS NULL OR h.name LIKE ?1)
@@ -80,7 +80,7 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Healthcheck> {
                protocol, path, method, headers, expected_status,
                expected_body, timeout_seconds, is_enabled, notes,
                retry, retry_interval, request_body_encoding, request_body,
-               http_auth_user, http_auth_pass,
+               http_auth_user, http_auth_pass, kuma_id,
                created_at, updated_at, created_by
         FROM healthcheck
         WHERE id = ?1
@@ -148,12 +148,12 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
         (Some(_), Some(_)) => {
             return Err(Error::ValidationError(
                 "Cannot set both application_id and service_id".into(),
-            ))
+            ));
         }
         (None, None) => {
             return Err(Error::ValidationError(
                 "Must set either application_id or service_id".into(),
-            ))
+            ));
         }
         _ => {}
     }
@@ -180,18 +180,19 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
 
     sqlx::query(
         r#"
-        INSERT INTO healthcheck (id, name, application_id, service_id, domain_id,
+        INSERT INTO healthcheck (id, name, application_id, service_id, kuma_id, domain_id,
                                  protocol, path, method, headers, expected_status,
                                  expected_body, timeout_seconds, is_enabled, notes,
                                  retry, retry_interval, request_body_encoding, request_body,
                                  http_auth_user, http_auth_pass)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)
         "#,
     )
     .bind(&id)
     .bind(&input.name)
     .bind(&input.application_id)
     .bind(&input.service_id)
+    .bind(input.kuma_id)
     .bind(&input.domain_id)
     .bind(&input.protocol)
     .bind(&input.path)
@@ -218,15 +219,16 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     let existing = get(pool, id).await?;
 
     // Determine new target values
-    let (application_id, service_id) =
-        match (&input.application_id, &input.service_id) {
-            (Some(app_id), None) => (Some(app_id.clone()), None),
-            (None, Some(svc_id)) => (None, Some(svc_id.clone())),
-            (Some(_), Some(_)) => return Err(Error::ValidationError(
+    let (application_id, service_id) = match (&input.application_id, &input.service_id) {
+        (Some(app_id), None) => (Some(app_id.clone()), None),
+        (None, Some(svc_id)) => (None, Some(svc_id.clone())),
+        (Some(_), Some(_)) => {
+            return Err(Error::ValidationError(
                 "Cannot set both application_id and service_id".into(),
-            )),
-            (None, None) => (existing.application_id, existing.service_id),
-        };
+            ));
+        }
+        (None, None) => (existing.application_id, existing.service_id),
+    };
 
     // Validate target exists if changed
     if let Some(app_id) = &application_id {
@@ -265,6 +267,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     let request_body = input.request_body.or(existing.request_body);
     let http_auth_user = input.http_auth_user.or(existing.http_auth_user);
     let http_auth_pass = input.http_auth_pass.or(existing.http_auth_pass);
+    let kuma_id = input.kuma_id.or(existing.kuma_id);
 
     sqlx::query(
         r#"
@@ -274,7 +277,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
             expected_status = ?9, expected_body = ?10, timeout_seconds = ?11,
             is_enabled = ?12, notes = ?13, retry = ?14, retry_interval = ?15,
             request_body_encoding = ?16, request_body = ?17,
-            http_auth_user = ?18, http_auth_pass = ?19,
+            http_auth_user = ?18, http_auth_pass = ?19, kuma_id = ?21
             updated_at = datetime('now')
         WHERE id = ?20
         "#,
@@ -299,6 +302,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     .bind(&http_auth_user)
     .bind(&http_auth_pass)
     .bind(id)
+    .bind(kuma_id)
     .execute(pool)
     .await?;
 
@@ -328,9 +332,7 @@ pub async fn execute(pool: &SqlitePool, id: &str) -> Result<HealthcheckExecuteRe
     // Build URL
     let url = format!(
         "{}://{}{}",
-        healthcheck.healthcheck.protocol,
-        healthcheck.domain_fqdn,
-        healthcheck.healthcheck.path
+        healthcheck.healthcheck.protocol, healthcheck.domain_fqdn, healthcheck.healthcheck.path
     );
 
     let client = Client::builder()
@@ -409,10 +411,10 @@ pub async fn execute(pool: &SqlitePool, id: &str) -> Result<HealthcheckExecuteRe
         last_result = Some(request.send().await);
 
         // Check if successful to potentially skip remaining retries
-        if let Some(Ok(ref response)) = last_result {
-            if response.status().as_u16() == healthcheck.healthcheck.expected_status as u16 {
-                break;
-            }
+        if let Some(Ok(ref response)) = last_result
+            && response.status().as_u16() == healthcheck.healthcheck.expected_status as u16
+        {
+            break;
         }
     }
 
@@ -526,10 +528,14 @@ pub async fn export_kuma(pool: &SqlitePool) -> Result<Vec<KumaMonitor>> {
 }
 
 /// Get healthcheck relations for an application
-pub async fn get_for_application(pool: &SqlitePool, app_id: &str) -> Result<Vec<HealthcheckRelation>> {
+pub async fn get_for_application(
+    pool: &SqlitePool,
+    app_id: &str,
+) -> Result<Vec<HealthcheckRelation>> {
     sqlx::query_as::<_, HealthcheckRelation>(
         r#"
-        SELECT h.id, h.name, h.protocol, d.fqdn as domain_fqdn, h.path, h.expected_status, h.is_enabled
+        SELECT h.id, h.name, h.protocol, h.kuma_id, d.fqdn as domain_fqdn, 
+               h.path, h.expected_status, h.is_enabled
         FROM healthcheck h
         JOIN domain d ON h.domain_id = d.id
         WHERE h.application_id = ?1
@@ -543,10 +549,14 @@ pub async fn get_for_application(pool: &SqlitePool, app_id: &str) -> Result<Vec<
 }
 
 /// Get healthcheck relations for a service
-pub async fn get_for_service(pool: &SqlitePool, service_id: &str) -> Result<Vec<HealthcheckRelation>> {
+pub async fn get_for_service(
+    pool: &SqlitePool,
+    service_id: &str,
+) -> Result<Vec<HealthcheckRelation>> {
     sqlx::query_as::<_, HealthcheckRelation>(
         r#"
-        SELECT h.id, h.name, h.protocol, d.fqdn as domain_fqdn, h.path, h.expected_status, h.is_enabled
+        SELECT h.id, h.name, h.protocol, d.fqdn as domain_fqdn, 
+               h.path, h.expected_status, h.is_enabled, h.kuma_id
         FROM healthcheck h
         JOIN domain d ON h.domain_id = d.id
         WHERE h.service_id = ?1
