@@ -27,7 +27,7 @@ pub async fn list(
         r#"
         SELECT h.id, h.name, h.application_id, h.service_id, h.domain_id,
                h.protocol, h.path, h.method, h.headers, h.expected_status,
-               h.expected_body, h.timeout_seconds, h.is_enabled, h.notes,
+               h.expected_body, h.timeout_seconds, h.interval, h.is_enabled, h.notes,
                h.retry, h.retry_interval, h.request_body_encoding, h.request_body,
                h.http_auth_user, h.http_auth_pass, h.kuma_id,
                h.created_at, h.updated_at, h.created_by
@@ -505,9 +505,9 @@ pub async fn export_kuma(pool: &SqlitePool) -> Result<Vec<KumaMonitor>> {
         r#"
         SELECT id, name, application_id, service_id, domain_id,
                protocol, path, method, headers, expected_status,
-               expected_body, timeout_seconds, is_enabled, notes,
+               expected_body, timeout_seconds, interval, is_enabled, notes,
                retry, retry_interval, request_body_encoding, request_body,
-               http_auth_user, http_auth_pass,
+               http_auth_user, http_auth_pass, kuma_id,
                created_at, updated_at, created_by
         FROM healthcheck
         WHERE is_enabled = 1

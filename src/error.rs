@@ -10,8 +10,8 @@ use serde::Serialize;
 pub enum Error {
     #[error("AxumError: {0}")]
     AxumError(#[from] axum::Error),
-    #[error("KumaClientError: {0}")]
-    KumaClientError(#[from] kuma_client::error::Error),
+    #[error("KumaError: {0}")]
+    KumaError(String),
     #[error("IOError: {0}")]
     IOError(#[from] std::io::Error),
     #[error("SqlxError: {0}")]

@@ -1,5 +1,3 @@
-use crate::error::Error as AutoError;
-
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::collections::HashMap;

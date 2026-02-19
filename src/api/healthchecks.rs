@@ -1,13 +1,13 @@
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    routing::get,
+    routing::{get, post},
 };
 use serde::Deserialize;
 
 use crate::models::{CreateHealthcheck, PaginationParams, UpdateHealthcheck};
 use crate::service::healthcheck;
-use crate::{AppState, Result};
+use crate::{AppState, Result, kuma};
 
 #[derive(Debug, Deserialize, Default)]
 pub struct HealthcheckFilters {
@@ -23,6 +23,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list).post(create))
         .route("/export/kuma", get(export_kuma))
+        .route("/sync/kuma", post(sync_kuma))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
         .route("/{id}/execute", get(execute))
 }
@@ -91,4 +92,14 @@ async fn execute(
 async fn export_kuma(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
     let result = healthcheck::export_kuma(&state.pool).await?;
     Ok(Json(result))
+}
+
+async fn sync_kuma(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
+    // rust_socketio::Client is !Send, so we run the sync on a dedicated
+    // blocking thread that owns its own async context.
+    let handle = tokio::runtime::Handle::current();
+    tokio::task::spawn_blocking(move || handle.block_on(kuma::sync_healthchecks_to_kuma(state)))
+        .await
+        .map_err(|e| crate::Error::InternalError(e.to_string()))??;
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }

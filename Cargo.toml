@@ -35,4 +35,5 @@ mime_guess = "2.0.5"
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 futures = "0.3.31"
 reqwest = { version = "0.12", features = ["json"] }
-kuma-client = "2.0.0"
+rust_socketio = { version = "0.6", features = ["async"] }
+url = "2"

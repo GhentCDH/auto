@@ -45,6 +45,21 @@ reset-db: _require-sqlx
 prepare: _require-sqlx _require-db
     cargo sqlx prepare
 
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    # Kill all background jobs when the script exits (Ctrl+C or error)
+    trap 'echo "Stopping..."; kill $(jobs -p) 2>/dev/null; wait' EXIT
+    
+    echo "→ Starting Rust backend (cargo run)..."
+    cargo run &
+    
+    echo "→ Starting Vite dev server (bun run dev)..."
+    (cd frontend && bun run dev) &
+    
+    wait
+
 watch: _require-watch
     @cargo watch -x run
 
