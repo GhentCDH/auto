@@ -84,7 +84,6 @@ function headersToJson(
   headers: Array<{ key: string; value: string }>
 ): string | undefined {
   const filtered = headers.filter((h) => h.key.trim());
-  if (filtered.length === 0) return undefined;
   const obj: Record<string, string> = {};
   for (const h of filtered) {
     obj[h.key] = h.value;
