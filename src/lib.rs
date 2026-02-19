@@ -4,6 +4,7 @@ use tracing::info;
 mod api;
 mod config;
 mod error;
+mod kuma;
 pub mod models;
 mod routes;
 mod service;

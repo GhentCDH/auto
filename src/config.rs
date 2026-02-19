@@ -6,6 +6,9 @@ use crate::error::Error;
 pub struct Config {
     pub domain: String,
     pub database_url: String,
+    pub kuma_url: kuma_client::Url,
+    pub kuma_username: String,
+    pub kuma_password: String,
 }
 
 /// # Panics
@@ -29,6 +32,10 @@ impl Config {
         Ok(Self {
             domain: var("DOMAIN"),
             database_url: var("DATABASE_URL"),
+            kuma_url: kuma_client::Url::parse(&var("KUMA_URL"))
+                .expect("KUMA_URL should be a valid kuma URL"),
+            kuma_username: var("KUMA_USERNAME"),
+            kuma_password: var("KUMA_PASSWORD"),
         })
     }
 }

@@ -10,6 +10,8 @@ use serde::Serialize;
 pub enum Error {
     #[error("AxumError: {0}")]
     AxumError(#[from] axum::Error),
+    #[error("KumaClientError: {0}")]
+    KumaClientError(#[from] kuma_client::error::Error),
     #[error("IOError: {0}")]
     IOError(#[from] std::io::Error),
     #[error("SqlxError: {0}")]
@@ -24,6 +26,8 @@ pub enum Error {
     Conflict(String),
     #[error("{0}")]
     InternalError(String),
+    #[error("Kuma convert error")]
+    KumaConvertError,
 }
 
 /// Error response body for API endpoints
@@ -41,9 +45,11 @@ impl IntoResponse for Error {
                 (StatusCode::BAD_REQUEST, "validation_error", msg.clone())
             }
             Error::Conflict(msg) => (StatusCode::CONFLICT, "conflict", msg.clone()),
-            Error::InternalError(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal_error", msg.clone())
-            }
+            Error::InternalError(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                msg.clone(),
+            ),
             Error::SqlxError(sqlx::Error::RowNotFound) => (
                 StatusCode::NOT_FOUND,
                 "not_found",
@@ -65,6 +71,11 @@ impl IntoResponse for Error {
                     )
                 }
             }
+            Error::KumaConvertError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                "couldn't convert Kuma monitor to Auto healthcheck".to_string(),
+            ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
