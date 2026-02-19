@@ -7,6 +7,7 @@ mod note;
 mod person;
 mod service;
 mod stack;
+mod uptime;
 
 pub use application::*;
 pub use domain::*;
@@ -17,6 +18,7 @@ pub use note::*;
 pub use person::*;
 pub use service::*;
 pub use stack::*;
+pub use uptime::*;
 
 use serde::{Deserialize, Serialize};
 

@@ -14,6 +14,14 @@ async fn main() -> auto::Result<()> {
 
     let state = auto::AppState::new().await?;
 
+    info!("Starting Kuma uptime poller");
+    auto::kuma::spawn_kuma_poller(
+        state.config.clone(),
+        state.uptime_state.clone(),
+        state.uptime_tx.clone(),
+        state.kuma_refresh_tx.subscribe(),
+    );
+
     info!("Starting server");
 
     let listener = tokio::net::TcpListener::bind(&state.config.domain).await?;
