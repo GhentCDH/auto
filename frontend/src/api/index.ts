@@ -408,8 +408,11 @@ export const healthchecksApi = {
 
   exportKuma: () => request<KumaMonitor[]>('/healthchecks/export/kuma'),
 
-  syncKuma: () =>
+  syncKumaAll: () =>
     request<void>('/healthchecks/sync/kuma', { method: 'POST' }),
+
+  syncKumaOne: (id: string) =>
+    request<void>(`/healthchecks/sync/kuma/${id}`, { method: 'POST' }),
 };
 
 // Version API
