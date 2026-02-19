@@ -14,6 +14,7 @@ pub struct SearchResults {
     pub people: Vec<SearchResult>,
     pub network_shares: Vec<SearchResult>,
     pub stacks: Vec<SearchResult>,
+    pub healthchecks: Vec<SearchResult>,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
@@ -29,15 +30,17 @@ pub async fn global_search(pool: &SqlitePool, query: &str) -> Result<SearchResul
     let prefix = format!("{}%", query);
 
     // Run search queries concurrently!
-    let (applications, services, infra, domains, people, network_shares, stacks) = try_join!(
-        search_applications(pool, &pattern, &prefix),
-        search_services(pool, &pattern, &prefix),
-        search_infra(pool, &pattern, &prefix),
-        search_domains(pool, &pattern, &prefix),
-        search_people(pool, &pattern, &prefix),
-        search_network_shares(pool, &pattern, &prefix),
-        search_stacks(pool, &pattern, &prefix),
-    )?;
+    let (applications, services, infra, domains, people, network_shares, stacks, healthchecks) =
+        try_join!(
+            search_applications(pool, &pattern, &prefix),
+            search_services(pool, &pattern, &prefix),
+            search_infra(pool, &pattern, &prefix),
+            search_domains(pool, &pattern, &prefix),
+            search_people(pool, &pattern, &prefix),
+            search_network_shares(pool, &pattern, &prefix),
+            search_stacks(pool, &pattern, &prefix),
+            search_healthchecks(pool, &pattern, &prefix),
+        )?;
 
     Ok(SearchResults {
         applications,
@@ -47,6 +50,7 @@ pub async fn global_search(pool: &SqlitePool, query: &str) -> Result<SearchResul
         people,
         network_shares,
         stacks,
+        healthchecks,
     })
 }
 
@@ -106,6 +110,9 @@ async fn search_infra(pool: &SqlitePool, pattern: &str, prefix: &str) -> Result<
     .await?)
 }
 
+/// Search domains directly AND via linked applications/services.
+/// When a search term matches an application or service name, domains
+/// targeting that application/service are included in results.
 async fn search_domains(
     pool: &SqlitePool,
     pattern: &str,
@@ -113,10 +120,17 @@ async fn search_domains(
 ) -> Result<Vec<SearchResult>> {
     Ok(sqlx::query_as::<_, SearchResult>(
         r#"
-        SELECT id, fqdn as name, registrar as description, 'domain' as entity_type
-        FROM domain
-        WHERE fqdn LIKE ?1 OR registrar LIKE ?1
-        ORDER BY CASE WHEN fqdn LIKE ?2 THEN 0 ELSE 1 END, fqdn ASC
+        SELECT DISTINCT d.id, d.fqdn as name, d.registrar as description, 'domain' as entity_type
+        FROM domain d
+        LEFT JOIN application a ON d.target_application_id = a.id
+        LEFT JOIN service s ON d.target_service_id = s.id
+        WHERE d.fqdn LIKE ?1
+           OR d.registrar LIKE ?1
+           OR d.dns_provider LIKE ?1
+           OR d.notes LIKE ?1
+           OR a.name LIKE ?1
+           OR s.name LIKE ?1
+        ORDER BY CASE WHEN d.fqdn LIKE ?2 THEN 0 ELSE 1 END, d.fqdn ASC
         LIMIT 20
         "#,
     )
@@ -177,6 +191,36 @@ async fn search_stacks(
         FROM stack
         WHERE name LIKE ?1 OR notes LIKE ?1
         ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name ASC
+        LIMIT 20
+        "#,
+    )
+    .bind(pattern)
+    .bind(prefix)
+    .fetch_all(pool)
+    .await?)
+}
+
+async fn search_healthchecks(
+    pool: &SqlitePool,
+    pattern: &str,
+    prefix: &str,
+) -> Result<Vec<SearchResult>> {
+    Ok(sqlx::query_as::<_, SearchResult>(
+        r#"
+        SELECT h.id, h.name,
+               h.protocol || '://' || d.fqdn || h.path as description,
+               'healthcheck' as entity_type
+        FROM healthcheck h
+        JOIN domain d ON h.domain_id = d.id
+        LEFT JOIN application a ON h.application_id = a.id
+        LEFT JOIN service s ON h.service_id = s.id
+        WHERE h.name LIKE ?1
+           OR d.fqdn LIKE ?1
+           OR h.path LIKE ?1
+           OR h.notes LIKE ?1
+           OR a.name LIKE ?1
+           OR s.name LIKE ?1
+        ORDER BY CASE WHEN h.name LIKE ?2 THEN 0 ELSE 1 END, h.name ASC
         LIMIT 20
         "#,
     )

@@ -21,6 +21,7 @@ const routes: Record<string, string> = {
   person: 'people',
   network_share: 'shares',
   stack: 'stack',
+  healthcheck: 'healthchecks',
 };
 
 const totalResults = computed(() => {
@@ -32,7 +33,8 @@ const totalResults = computed(() => {
     results.value.domains.length +
     results.value.people.length +
     results.value.network_shares.length +
-    results.value.stacks.length
+    results.value.stacks.length +
+    results.value.healthchecks.length
   );
 });
 
@@ -232,6 +234,30 @@ onMounted(search);
           <ul class="space-y-2">
             <li
               v-for="r in results.stacks"
+              :key="r.id"
+              class="cursor-pointer hover:bg-base-300 p-2 rounded"
+              @click="navigateTo(r)"
+            >
+              <div class="font-medium">{{ r.name }}</div>
+              <div
+                v-if="r.description"
+                class="text-sm text-base-content/70 font-mono"
+              >
+                {{ r.description }}
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div v-if="results.healthchecks.length" class="card bg-base-200">
+        <div class="card-body">
+          <h2 class="card-title">
+            Healthchecks ({{ results.healthchecks.length }})
+          </h2>
+          <ul class="space-y-2">
+            <li
+              v-for="r in results.healthchecks"
               :key="r.id"
               class="cursor-pointer hover:bg-base-300 p-2 rounded"
               @click="navigateTo(r)"

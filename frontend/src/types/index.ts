@@ -467,6 +467,7 @@ export interface SearchResults {
   people: SearchResult[];
   network_shares: SearchResult[];
   stacks: SearchResult[];
+  healthchecks: SearchResult[];
 }
 
 export interface SearchResult {
