@@ -36,6 +36,8 @@ async function syncKuma() {
     await healthchecksApi.syncKumaAll();
     syncSuccess.value = true;
     setTimeout(() => (syncSuccess.value = false), 3000);
+    // Reload list to clear dirty flags
+    entityListRef.value?.loadData?.();
   } catch (e) {
     syncError.value = e instanceof Error ? e.message : 'Sync failed';
   } finally {
@@ -94,7 +96,16 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
     </template>
 
     <template #row="{ item }: { item: Healthcheck }">
-      <td class="font-medium">{{ item.name }}</td>
+      <td class="font-medium">
+        <span class="flex items-center gap-1.5">
+          {{ item.name }}
+          <span
+            v-if="item.kuma_dirty"
+            class="inline-block w-2 h-2 rounded-full bg-warning shrink-0"
+            title="Not synced to Kuma"
+          />
+        </span>
+      </td>
       <td class="text-sm font-mono truncate max-w-xs">
         {{ buildUrl(item as HealthcheckWithRelations) }}
       </td>

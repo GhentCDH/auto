@@ -58,6 +58,8 @@ async function syncKuma() {
     await healthchecksApi.syncKumaOne(healthcheck.value.id);
     syncSuccess.value = true;
     setTimeout(() => (syncSuccess.value = false), 3000);
+    // Reload entity to clear dirty flag
+    entityDetailRef.value?.loadData?.();
   } catch (e) {
     syncError.value = e instanceof Error ? e.message : 'Sync failed';
   } finally {
@@ -186,7 +188,17 @@ async function syncKuma() {
               v-if="syncLoading"
               class="loading loading-spinner loading-sm"
             />
-            {{ syncLoading ? 'Syncing...' : 'Sync Kuma' }}
+            <span class="relative">
+              Sync Kuma
+              <span
+                v-if="
+                  !syncLoading &&
+                  (entity as HealthcheckWithRelations).kuma_dirty
+                "
+                class="absolute -top-1 -right-3 w-2.5 h-2.5 rounded-full bg-warning"
+                title="Local changes not synced to Kuma"
+              />
+            </span>
           </button>
         </div>
       </div>
