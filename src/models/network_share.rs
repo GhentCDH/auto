@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 /// NetworkShare entity - SMB/NFS shares
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct NetworkShare {
     pub id: String,
     pub name: String,
@@ -18,7 +19,7 @@ pub struct NetworkShare {
 }
 
 /// DTO for creating a new network share
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateNetworkShare {
     pub name: String,
     pub path: String,
@@ -32,7 +33,7 @@ pub struct CreateNetworkShare {
 }
 
 /// DTO for updating a network share
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateNetworkShare {
     pub name: Option<String>,
     pub path: Option<String>,
@@ -52,7 +53,7 @@ fn default_status() -> String {
 }
 
 /// NetworkShare relation for application detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct NetworkShareRelation {
     pub id: String,
     pub name: String,
@@ -67,7 +68,7 @@ pub struct NetworkShareRelation {
 }
 
 /// DTO for linking a network share to an application
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkNetworkShare {
     pub usage: Option<String>,
     pub mount_point: Option<String>,
@@ -76,7 +77,7 @@ pub struct LinkNetworkShare {
 }
 
 /// NetworkShare with related applications
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct NetworkShareWithRelations {
     #[serde(flatten)]
     pub network_share: NetworkShare,
@@ -84,7 +85,7 @@ pub struct NetworkShareWithRelations {
 }
 
 /// Application relation for network share detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ApplicationNetworkShareRelation {
     pub id: String,
     pub name: String,

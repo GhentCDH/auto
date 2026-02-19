@@ -10,11 +10,13 @@ mod config;
 mod error;
 pub mod kuma;
 pub mod models;
+mod openapi;
 mod routes;
 mod service;
 
 pub use config::Config;
 pub use error::Error;
+pub use openapi::ApiDoc;
 pub use routes::router;
 
 pub type Result<T> = std::result::Result<T, Error>;

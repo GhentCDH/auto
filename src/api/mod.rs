@@ -6,17 +6,17 @@ use axum::{Form, Json, Router};
 
 use crate::AppState;
 
-mod applications;
-mod dashboard;
-mod domains;
-mod healthchecks;
-mod infra;
-mod notes;
-mod people;
-mod search;
-mod services;
-mod shares;
-mod stacks;
+pub mod applications;
+pub mod dashboard;
+pub mod domains;
+pub mod healthchecks;
+pub mod infra;
+pub mod notes;
+pub mod people;
+pub mod search;
+pub mod services;
+pub mod shares;
+pub mod stacks;
 
 pub fn api_routes(state: AppState) -> Router<AppState> {
     Router::new()
@@ -36,10 +36,26 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .with_state(state)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/health",
+    tag = "health",
+    responses(
+        (status = 200, description = "Service is healthy", body = String)
+    )
+)]
 async fn healthcheck() -> &'static str {
     "ok"
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/version",
+    tag = "health",
+    responses(
+        (status = 200, description = "API version information", body = serde_json::Value)
+    )
+)]
 async fn version() -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "version": env!("CARGO_PKG_VERSION")

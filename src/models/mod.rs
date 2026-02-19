@@ -21,9 +21,10 @@ pub use stack::*;
 pub use uptime::*;
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Common pagination parameters
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, ToSchema)]
 pub struct PaginationParams {
     pub page: Option<u32>,
     pub per_page: Option<u32>,
@@ -42,7 +43,7 @@ impl PaginationParams {
 }
 
 /// Paginated response wrapper
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PaginatedResponse<T> {
     pub data: Vec<T>,
     pub total: i64,

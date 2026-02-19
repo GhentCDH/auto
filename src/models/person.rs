@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 /// Person entity - developers, maintainers, support contacts
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Person {
     pub id: String,
     pub name: String,
@@ -18,7 +19,7 @@ pub struct Person {
 }
 
 /// DTO for creating a new person
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreatePerson {
     pub name: String,
     pub email: Option<String>,
@@ -31,7 +32,7 @@ pub struct CreatePerson {
 }
 
 /// DTO for updating a person
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdatePerson {
     pub name: Option<String>,
     pub email: Option<String>,
@@ -47,7 +48,7 @@ fn default_active() -> bool {
 }
 
 /// Person relation for application detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct PersonRelation {
     pub id: String,
     pub name: String,
@@ -61,7 +62,7 @@ pub struct PersonRelation {
 }
 
 /// DTO for linking a person to an application
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkPerson {
     #[serde(default = "default_contribution")]
     pub contribution_type: String,
@@ -75,7 +76,7 @@ fn default_contribution() -> String {
 }
 
 /// Person with related applications
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PersonWithRelations {
     #[serde(flatten)]
     pub person: Person,
@@ -83,7 +84,7 @@ pub struct PersonWithRelations {
 }
 
 /// Application relation for person detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ApplicationPersonRelation {
     pub id: String,
     pub name: String,

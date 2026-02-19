@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 /// Stack entity - programming languages, frameworks, technologies
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Stack {
     pub id: String,
     pub name: String,
@@ -12,28 +13,28 @@ pub struct Stack {
 }
 
 /// DTO for creating a new stack
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateStack {
     pub name: String,
     pub notes: Option<String>,
 }
 
 /// DTO for updating a stack
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateStack {
     pub name: Option<String>,
     pub notes: Option<String>,
 }
 
 /// Stack relation for application detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct StackRelation {
     pub id: String,
     pub name: String,
 }
 
 /// Stack with related applications
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct StackWithRelations {
     #[serde(flatten)]
     pub stack: Stack,
@@ -41,7 +42,7 @@ pub struct StackWithRelations {
 }
 
 /// Application relation for stack detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ApplicationStackRelation {
     pub id: String,
     pub name: String,

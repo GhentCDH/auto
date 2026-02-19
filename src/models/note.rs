@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 /// Note entity - documentation links, changelog, issues
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Note {
     pub id: String,
     pub entity_type: String,
@@ -18,7 +19,7 @@ pub struct Note {
 }
 
 /// DTO for creating a new note
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateNote {
     pub entity_type: String,
     pub entity_id: String,
@@ -32,7 +33,7 @@ pub struct CreateNote {
 }
 
 /// DTO for updating a note
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateNote {
     pub title: Option<String>,
     pub content: Option<String>,

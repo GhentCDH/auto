@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 /// Domain entity - DNS records
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Domain {
     pub id: String,
     pub fqdn: String,
@@ -18,7 +19,7 @@ pub struct Domain {
 }
 
 /// DTO for creating a new domain
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateDomain {
     pub fqdn: String,
     pub registrar: Option<String>,
@@ -30,7 +31,7 @@ pub struct CreateDomain {
 }
 
 /// DTO for updating a domain
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateDomain {
     pub fqdn: Option<String>,
     pub registrar: Option<String>,
@@ -42,7 +43,7 @@ pub struct UpdateDomain {
 }
 
 /// Domain relation for application detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct DomainRelation {
     pub id: String,
     pub fqdn: String,
@@ -54,12 +55,12 @@ pub struct DomainRelation {
 }
 
 /// DTO for linking a domain to an application
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkDomain {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub enum DomainTarget {
     #[serde(rename = "application")]
     Application { id: String, name: String },
@@ -67,13 +68,13 @@ pub enum DomainTarget {
     Service { id: String, name: String },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct TargetName {
     pub name: String,
 }
 
 /// Domain with related applications
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DomainWithRelations {
     #[serde(flatten)]
     pub domain: Domain,
@@ -83,7 +84,7 @@ pub struct DomainWithRelations {
 }
 
 /// Application relation for domain detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ApplicationDomainRelation {
     pub id: String,
     pub name: String,

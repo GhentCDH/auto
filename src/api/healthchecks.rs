@@ -7,7 +7,7 @@ use axum::{
 use futures::stream::{self, Stream, StreamExt};
 use serde::Deserialize;
 
-use crate::models::{CreateHealthcheck, PaginationParams, UpdateHealthcheck, UptimeEvent};
+use crate::models::{CreateHealthcheck, PaginationParams, UpdateHealthcheck, UptimeEvent, HealthcheckWithRelations, Healthcheck, HealthcheckExecuteResult, KumaMonitor};
 use crate::service::healthcheck;
 use crate::{AppState, Result, kuma};
 
@@ -32,6 +32,23 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}/execute", get(execute))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/healthchecks",
+    tag = "healthchecks",
+    params(
+        ("page" = Option<u32>, Query, description = "Page number"),
+        ("per_page" = Option<u32>, Query, description = "Items per page (max 100)"),
+        ("search" = Option<String>, Query, description = "Search query"),
+        ("application_id" = Option<String>, Query, description = "Filter by application ID"),
+        ("service_id" = Option<String>, Query, description = "Filter by service ID"),
+        ("is_enabled" = Option<bool>, Query, description = "Filter by enabled status"),
+    ),
+    responses(
+        (status = 200, description = "List of healthchecks", body = inline(crate::models::PaginatedResponse<HealthcheckWithRelations>)),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn list(
     State(state): State<AppState>,
     Query(filters): Query<HealthcheckFilters>,
@@ -52,6 +69,19 @@ async fn list(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/healthchecks/{id}",
+    tag = "healthchecks",
+    params(
+        ("id" = String, Path, description = "Healthcheck ID")
+    ),
+    responses(
+        (status = 200, description = "Healthcheck found", body = HealthcheckWithRelations),
+        (status = 404, description = "Healthcheck not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn get_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -60,6 +90,17 @@ async fn get_one(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/healthchecks",
+    tag = "healthchecks",
+    request_body = CreateHealthcheck,
+    responses(
+        (status = 201, description = "Healthcheck created", body = Healthcheck),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn create(
     State(state): State<AppState>,
     Json(input): Json<CreateHealthcheck>,
@@ -68,6 +109,21 @@ async fn create(
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/healthchecks/{id}",
+    tag = "healthchecks",
+    params(
+        ("id" = String, Path, description = "Healthcheck ID")
+    ),
+    request_body = UpdateHealthcheck,
+    responses(
+        (status = 200, description = "Healthcheck updated", body = Healthcheck),
+        (status = 404, description = "Healthcheck not found"),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn update(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -77,6 +133,19 @@ async fn update(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/healthchecks/{id}",
+    tag = "healthchecks",
+    params(
+        ("id" = String, Path, description = "Healthcheck ID")
+    ),
+    responses(
+        (status = 204, description = "Healthcheck deleted"),
+        (status = 404, description = "Healthcheck not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn delete_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -85,6 +154,19 @@ async fn delete_one(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/healthchecks/{id}/execute",
+    tag = "healthchecks",
+    params(
+        ("id" = String, Path, description = "Healthcheck ID")
+    ),
+    responses(
+        (status = 200, description = "Healthcheck execution result", body = HealthcheckExecuteResult),
+        (status = 404, description = "Healthcheck not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn execute(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -93,11 +175,33 @@ async fn execute(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/healthchecks/export/kuma",
+    tag = "healthchecks",
+    responses(
+        (status = 200, description = "Export healthchecks for Kuma Uptime", body = Vec<KumaMonitor>),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn export_kuma(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
     let result = healthcheck::export_kuma(&state.pool).await?;
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/healthchecks/sync/kuma/{id}",
+    tag = "healthchecks",
+    params(
+        ("id" = String, Path, description = "Healthcheck ID to sync")
+    ),
+    responses(
+        (status = 204, description = "Healthcheck synced to Kuma"),
+        (status = 404, description = "Healthcheck not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn sync_kuma_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -117,6 +221,16 @@ async fn sync_kuma_one(
 
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
+
+#[utoipa::path(
+    post,
+    path = "/api/healthchecks/sync/kuma",
+    tag = "healthchecks",
+    responses(
+        (status = 204, description = "All healthchecks synced to Kuma"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn sync_kuma_all(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
     // rust_socketio::Client is !Send, so we run the sync on a dedicated
     // blocking thread that owns its own async context.
@@ -135,6 +249,7 @@ async fn sync_kuma_all(State(state): State<AppState>) -> Result<impl axum::respo
 }
 
 // ── SSE uptime stream ───────────────────────────────────────────────
+// Note: SSE endpoint not documented in OpenAPI as it's a streaming endpoint
 
 async fn uptime_stream(
     State(state): State<AppState>,

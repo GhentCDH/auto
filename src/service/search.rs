@@ -1,10 +1,11 @@
 use serde::Serialize;
 use sqlx::SqlitePool;
 use tokio::try_join;
+use utoipa::ToSchema;
 
 use crate::Result;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SearchResults {
     pub applications: Vec<SearchResult>,
     pub services: Vec<SearchResult>,
@@ -15,7 +16,7 @@ pub struct SearchResults {
     pub stacks: Vec<SearchResult>,
 }
 
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
 pub struct SearchResult {
     pub id: String,
     pub name: String,

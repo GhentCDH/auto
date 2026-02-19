@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreateInfra, PaginationParams, UpdateInfra};
+use crate::models::{CreateInfra, PaginationParams, UpdateInfra, InfraWithRelations, Infra};
 use crate::service::infra;
 use crate::{AppState, Result};
 
@@ -24,6 +24,21 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}", get(get_one).put(update).delete(delete_one))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/infra",
+    tag = "infra",
+    params(
+        ("page" = Option<u32>, Query, description = "Page number"),
+        ("per_page" = Option<u32>, Query, description = "Items per page (max 100)"),
+        ("search" = Option<String>, Query, description = "Search query"),
+        ("type" = Option<String>, Query, description = "Filter by infrastructure type"),
+    ),
+    responses(
+        (status = 200, description = "List of infrastructure", body = inline(crate::models::PaginatedResponse<InfraWithRelations>)),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn list(
     State(state): State<AppState>,
     Query(filters): Query<InfraFilters>,
@@ -37,6 +52,19 @@ async fn list(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/infra/{id}",
+    tag = "infra",
+    params(
+        ("id" = String, Path, description = "Infrastructure ID")
+    ),
+    responses(
+        (status = 200, description = "Infrastructure found", body = InfraWithRelations),
+        (status = 404, description = "Infrastructure not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn get_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -45,6 +73,17 @@ async fn get_one(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/infra",
+    tag = "infra",
+    request_body = CreateInfra,
+    responses(
+        (status = 201, description = "Infrastructure created", body = Infra),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn create(
     State(state): State<AppState>,
     Json(input): Json<CreateInfra>,
@@ -53,6 +92,21 @@ async fn create(
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/infra/{id}",
+    tag = "infra",
+    params(
+        ("id" = String, Path, description = "Infrastructure ID")
+    ),
+    request_body = UpdateInfra,
+    responses(
+        (status = 200, description = "Infrastructure updated", body = Infra),
+        (status = 404, description = "Infrastructure not found"),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn update(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -62,6 +116,19 @@ async fn update(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/infra/{id}",
+    tag = "infra",
+    params(
+        ("id" = String, Path, description = "Infrastructure ID")
+    ),
+    responses(
+        (status = 204, description = "Infrastructure deleted"),
+        (status = 404, description = "Infrastructure not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn delete_one(
     State(state): State<AppState>,
     Path(id): Path<String>,

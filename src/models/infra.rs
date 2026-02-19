@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 /// Infra entity - infrastructure like nomad clusters, servers, k8s clusters, etc.
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Infra {
     pub id: String,
     pub name: String,
@@ -16,7 +17,7 @@ pub struct Infra {
 }
 
 /// DTO for creating a new infra
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateInfra {
     pub name: String,
     pub description: Option<String>,
@@ -25,7 +26,7 @@ pub struct CreateInfra {
 }
 
 /// DTO for updating an infra
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateInfra {
     pub name: Option<String>,
     pub description: Option<String>,
@@ -34,7 +35,7 @@ pub struct UpdateInfra {
 }
 
 /// Infra relation for embedding in Application/Service detail views
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct InfraRelation {
     pub id: String,
     pub name: String,
@@ -45,13 +46,13 @@ pub struct InfraRelation {
 }
 
 /// DTO for linking infra to an application or service
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkInfra {
     pub notes: Option<String>,
 }
 
 /// Infra with related entities
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct InfraWithRelations {
     #[serde(flatten)]
     pub infra: Infra,
@@ -60,7 +61,7 @@ pub struct InfraWithRelations {
 }
 
 /// Application relation for infra detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ApplicationInfraRelation {
     pub id: String,
     pub name: String,
@@ -69,7 +70,7 @@ pub struct ApplicationInfraRelation {
 }
 
 /// Service relation for infra detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ServiceInfraRelation {
     pub id: String,
     pub name: String,

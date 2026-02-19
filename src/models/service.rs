@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 /// Service entity - shared services like elasticsearch, load balancers, etc.
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Service {
     pub id: String,
     pub name: String,
@@ -17,7 +18,7 @@ pub struct Service {
 }
 
 /// DTO for creating a new service
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateService {
     pub name: String,
     pub description: Option<String>,
@@ -30,7 +31,7 @@ pub struct CreateService {
 }
 
 /// DTO for updating a service
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateService {
     pub name: Option<String>,
     pub description: Option<String>,
@@ -49,7 +50,7 @@ fn default_status() -> String {
 }
 
 /// Service relation for embedding in Application/Infra detail views
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ServiceRelation {
     pub id: String,
     pub name: String,
@@ -59,13 +60,13 @@ pub struct ServiceRelation {
 }
 
 /// DTO for linking a service to an application
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkService {
     pub notes: Option<String>,
 }
 
 /// Service with related entities
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ServiceWithRelations {
     #[serde(flatten)]
     pub service: Service,
@@ -75,7 +76,7 @@ pub struct ServiceWithRelations {
 }
 
 /// Application relation for service detail view
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct ApplicationServiceRelation {
     pub id: String,
     pub name: String,

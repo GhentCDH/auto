@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 /// Application entity - the central entity in the system
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Application {
     pub id: String,
     pub name: String,
@@ -18,7 +19,7 @@ pub struct Application {
 }
 
 /// DTO for creating a new application
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateApplication {
     pub name: String,
     pub description: Option<String>,
@@ -32,7 +33,7 @@ pub struct CreateApplication {
 }
 
 /// DTO for updating an application
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateApplication {
     pub name: Option<String>,
     pub description: Option<String>,
@@ -52,7 +53,7 @@ fn default_status() -> String {
 }
 
 /// Application with all related entities
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ApplicationWithRelations {
     #[serde(flatten)]
     pub application: Application,

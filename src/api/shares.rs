@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreateNetworkShare, PaginationParams, UpdateNetworkShare};
+use crate::models::{CreateNetworkShare, PaginationParams, UpdateNetworkShare, NetworkShareWithRelations, NetworkShare};
 use crate::service::network_share;
 use crate::{AppState, Result};
 
@@ -24,6 +24,22 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}", get(get_one).put(update).delete(delete_one))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/shares",
+    tag = "shares",
+    params(
+        ("page" = Option<u32>, Query, description = "Page number"),
+        ("per_page" = Option<u32>, Query, description = "Items per page (max 100)"),
+        ("search" = Option<String>, Query, description = "Search query"),
+        ("status" = Option<String>, Query, description = "Filter by status"),
+        ("share_type" = Option<String>, Query, description = "Filter by share type (smb, nfs)"),
+    ),
+    responses(
+        (status = 200, description = "List of network shares", body = inline(crate::models::PaginatedResponse<NetworkShareWithRelations>)),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn list(
     State(state): State<AppState>,
     Query(filters): Query<ShareFilters>,
@@ -43,6 +59,19 @@ async fn list(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/shares/{id}",
+    tag = "shares",
+    params(
+        ("id" = String, Path, description = "Network share ID")
+    ),
+    responses(
+        (status = 200, description = "Network share found", body = NetworkShareWithRelations),
+        (status = 404, description = "Network share not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn get_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -51,6 +80,17 @@ async fn get_one(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/shares",
+    tag = "shares",
+    request_body = CreateNetworkShare,
+    responses(
+        (status = 201, description = "Network share created", body = NetworkShare),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn create(
     State(state): State<AppState>,
     Json(input): Json<CreateNetworkShare>,
@@ -59,6 +99,21 @@ async fn create(
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/shares/{id}",
+    tag = "shares",
+    params(
+        ("id" = String, Path, description = "Network share ID")
+    ),
+    request_body = UpdateNetworkShare,
+    responses(
+        (status = 200, description = "Network share updated", body = NetworkShare),
+        (status = 404, description = "Network share not found"),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn update(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -68,6 +123,19 @@ async fn update(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/shares/{id}",
+    tag = "shares",
+    params(
+        ("id" = String, Path, description = "Network share ID")
+    ),
+    responses(
+        (status = 204, description = "Network share deleted"),
+        (status = 404, description = "Network share not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn delete_one(
     State(state): State<AppState>,
     Path(id): Path<String>,

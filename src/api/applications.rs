@@ -8,7 +8,7 @@ use tracing::instrument;
 
 use crate::models::{
     CreateApplication, LinkDomain, LinkInfra, LinkNetworkShare, LinkPerson, LinkService,
-    PaginationParams, UpdateApplication,
+    PaginationParams, UpdateApplication, ApplicationWithRelations, Application,
 };
 use crate::service::application;
 use crate::{AppState, Result};
@@ -53,6 +53,22 @@ pub fn routes() -> Router<AppState> {
         )
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/applications",
+    tag = "applications",
+    params(
+        ("page" = Option<u32>, Query, description = "Page number"),
+        ("per_page" = Option<u32>, Query, description = "Items per page (max 100)"),
+        ("search" = Option<String>, Query, description = "Search query"),
+        ("status" = Option<String>, Query, description = "Filter by status"),
+        ("environment" = Option<String>, Query, description = "Filter by environment"),
+    ),
+    responses(
+        (status = 200, description = "List of applications", body = inline(crate::models::PaginatedResponse<ApplicationWithRelations>)),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn list(
     State(state): State<AppState>,
     Query(filters): Query<ApplicationFilters>,
@@ -72,6 +88,19 @@ async fn list(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/applications/{id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID")
+    ),
+    responses(
+        (status = 200, description = "Application found", body = ApplicationWithRelations),
+        (status = 404, description = "Application not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn get_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -80,6 +109,17 @@ async fn get_one(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/applications",
+    tag = "applications",
+    request_body = CreateApplication,
+    responses(
+        (status = 201, description = "Application created", body = Application),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn create(
     State(state): State<AppState>,
     Json(input): Json<CreateApplication>,
@@ -88,6 +128,21 @@ async fn create(
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/applications/{id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID")
+    ),
+    request_body = UpdateApplication,
+    responses(
+        (status = 200, description = "Application updated", body = Application),
+        (status = 404, description = "Application not found"),
+        (status = 400, description = "Invalid input"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn update(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -97,6 +152,19 @@ async fn update(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/applications/{id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID")
+    ),
+    responses(
+        (status = 204, description = "Application deleted"),
+        (status = 404, description = "Application not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn delete_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -107,6 +175,21 @@ async fn delete_one(
 
 // Relationship handlers
 
+#[utoipa::path(
+    post,
+    path = "/api/applications/{id}/infra/{infra_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("infra_id" = String, Path, description = "Infrastructure ID")
+    ),
+    request_body = LinkInfra,
+    responses(
+        (status = 204, description = "Infrastructure linked successfully"),
+        (status = 404, description = "Application or infrastructure not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn link_infra(
     State(state): State<AppState>,
     Path((app_id, infra_id)): Path<(String, String)>,
@@ -116,6 +199,20 @@ async fn link_infra(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/applications/{id}/infra/{infra_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("infra_id" = String, Path, description = "Infrastructure ID")
+    ),
+    responses(
+        (status = 204, description = "Infrastructure unlinked successfully"),
+        (status = 404, description = "Application or infrastructure not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn unlink_infra(
     State(state): State<AppState>,
     Path((app_id, infra_id)): Path<(String, String)>,
@@ -124,6 +221,21 @@ async fn unlink_infra(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/applications/{id}/services/{service_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("service_id" = String, Path, description = "Service ID")
+    ),
+    request_body = LinkService,
+    responses(
+        (status = 204, description = "Service linked successfully"),
+        (status = 404, description = "Application or service not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn link_service(
     State(state): State<AppState>,
     Path((app_id, service_id)): Path<(String, String)>,
@@ -133,6 +245,20 @@ async fn link_service(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/applications/{id}/services/{service_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("service_id" = String, Path, description = "Service ID")
+    ),
+    responses(
+        (status = 204, description = "Service unlinked successfully"),
+        (status = 404, description = "Application or service not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn unlink_service(
     State(state): State<AppState>,
     Path((app_id, service_id)): Path<(String, String)>,
@@ -141,6 +267,21 @@ async fn unlink_service(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/applications/{id}/domains/{domain_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("domain_id" = String, Path, description = "Domain ID")
+    ),
+    request_body = LinkDomain,
+    responses(
+        (status = 204, description = "Domain linked successfully"),
+        (status = 404, description = "Application or domain not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 #[instrument(skip(state))]
 async fn link_domain(
     State(state): State<AppState>,
@@ -151,6 +292,20 @@ async fn link_domain(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/applications/{id}/domains/{domain_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("domain_id" = String, Path, description = "Domain ID")
+    ),
+    responses(
+        (status = 204, description = "Domain unlinked successfully"),
+        (status = 404, description = "Application or domain not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn unlink_domain(
     State(state): State<AppState>,
     Path((app_id, domain_id)): Path<(String, String)>,
@@ -159,6 +314,21 @@ async fn unlink_domain(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/applications/{id}/people/{person_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("person_id" = String, Path, description = "Person ID")
+    ),
+    request_body = LinkPerson,
+    responses(
+        (status = 204, description = "Person linked successfully"),
+        (status = 404, description = "Application or person not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn link_person(
     State(state): State<AppState>,
     Path((app_id, person_id)): Path<(String, String)>,
@@ -177,6 +347,20 @@ async fn link_person(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/applications/{id}/people/{person_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("person_id" = String, Path, description = "Person ID")
+    ),
+    responses(
+        (status = 204, description = "Person unlinked successfully"),
+        (status = 404, description = "Application or person not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn unlink_person(
     State(state): State<AppState>,
     Path((app_id, person_id)): Path<(String, String)>,
@@ -185,6 +369,21 @@ async fn unlink_person(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/applications/{id}/shares/{share_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("share_id" = String, Path, description = "Network share ID")
+    ),
+    request_body = LinkNetworkShare,
+    responses(
+        (status = 204, description = "Network share linked successfully"),
+        (status = 404, description = "Application or network share not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn link_share(
     State(state): State<AppState>,
     Path((app_id, share_id)): Path<(String, String)>,
@@ -203,6 +402,20 @@ async fn link_share(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/applications/{id}/shares/{share_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("share_id" = String, Path, description = "Network share ID")
+    ),
+    responses(
+        (status = 204, description = "Network share unlinked successfully"),
+        (status = 404, description = "Application or network share not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn unlink_share(
     State(state): State<AppState>,
     Path((app_id, share_id)): Path<(String, String)>,
@@ -211,6 +424,20 @@ async fn unlink_share(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/applications/{id}/stacks/{stack_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("stack_id" = String, Path, description = "Stack ID")
+    ),
+    responses(
+        (status = 204, description = "Stack linked successfully"),
+        (status = 404, description = "Application or stack not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn link_stack(
     State(state): State<AppState>,
     Path((app_id, stack_id)): Path<(String, String)>,
@@ -219,6 +446,20 @@ async fn link_stack(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/applications/{id}/stacks/{stack_id}",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID"),
+        ("stack_id" = String, Path, description = "Stack ID")
+    ),
+    responses(
+        (status = 204, description = "Stack unlinked successfully"),
+        (status = 404, description = "Application or stack not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn unlink_stack(
     State(state): State<AppState>,
     Path((app_id, stack_id)): Path<(String, String)>,

@@ -7,11 +7,14 @@ use axum::{
 };
 use rust_embed::Embed;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
-use crate::{AppState, api};
+use crate::{ApiDoc, AppState, api};
 
 pub fn router(state: AppState) -> Router {
     axum::Router::new()
+        .merge(SwaggerUi::new("/api/docs").url("/api/openapi.json", ApiDoc::openapi()))
         .nest("/api", api::api_routes(state.clone()))
         .route("/", get(serve_frontend))
         .route("/{*path}", get(serve_frontend))

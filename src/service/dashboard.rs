@@ -1,10 +1,11 @@
 use serde::Serialize;
 use sqlx::SqlitePool;
 use tracing::info;
+use utoipa::ToSchema;
 
 use crate::Result;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DashboardStats {
     pub applications: EntityStats,
     pub services: EntityStats,
@@ -16,13 +17,13 @@ pub struct DashboardStats {
     pub expiring_domains: Vec<ExpiringDomain>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct EntityStats {
     pub total: i64,
     pub active: i64,
 }
 
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
 pub struct ExpiringDomain {
     pub id: String,
     pub fqdn: String,

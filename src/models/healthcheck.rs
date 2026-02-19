@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::collections::HashMap;
+use utoipa::ToSchema;
 
 /// Healthcheck entity - HTTP checks for monitoring endpoints
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct Healthcheck {
     pub id: String,
     pub name: String,
@@ -33,7 +34,7 @@ pub struct Healthcheck {
 }
 
 /// DTO for creating a new healthcheck
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateHealthcheck {
     pub name: String,
     pub application_id: Option<String>,
@@ -69,7 +70,7 @@ pub struct CreateHealthcheck {
 }
 
 /// DTO for updating a healthcheck
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, ToSchema)]
 pub struct UpdateHealthcheck {
     pub name: Option<String>,
     pub application_id: Option<String>,
@@ -131,7 +132,7 @@ fn default_request_body_encoding() -> String {
 }
 
 /// Healthcheck with resolved relations
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct HealthcheckWithRelations {
     #[serde(flatten)]
     pub healthcheck: Healthcheck,
@@ -142,7 +143,7 @@ pub struct HealthcheckWithRelations {
 }
 
 /// Lightweight healthcheck relation for embedding in Application/Service detail views
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct HealthcheckRelation {
     pub id: String,
     pub name: String,
@@ -155,7 +156,7 @@ pub struct HealthcheckRelation {
 }
 
 /// Result of executing a healthcheck
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct HealthcheckExecuteResult {
     pub healthcheck_id: String,
     pub url: String,
@@ -168,7 +169,7 @@ pub struct HealthcheckExecuteResult {
 }
 
 /// Kuma monitor export format
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct KumaMonitor {
     pub name: String,
     pub url: String,
