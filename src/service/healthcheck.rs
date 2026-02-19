@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
+use futures::{StreamExt as _, stream};
 use reqwest::Client;
 use sqlx::SqlitePool;
 
@@ -159,6 +160,17 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Healthche
     extend_relations(pool, healthcheck).await
 }
 
+pub async fn get_all_with_relations(pool: &SqlitePool) -> Result<Vec<HealthcheckWithRelations>> {
+    let healthchecks = get_all(pool).await?;
+    stream::iter(healthchecks)
+        .map(|h| extend_relations(pool, h))
+        .buffer_unordered(10)
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .collect()
+}
+
 pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healthcheck> {
     // Validate XOR constraint
     match (&input.application_id, &input.service_id) {
@@ -296,7 +308,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
             expected_status = ?9, expected_body = ?10, timeout_seconds = ?11,
             is_enabled = ?12, notes = ?13, retry = ?14, retry_interval = ?15,
             request_body_encoding = ?16, request_body = ?17, interval = ?22,
-            http_auth_user = ?18, http_auth_pass = ?19, kuma_id = ?21
+            http_auth_user = ?18, http_auth_pass = ?19, kuma_id = ?21,
             updated_at = datetime('now')
         WHERE id = ?20
         "#,
@@ -350,10 +362,7 @@ pub async fn execute(pool: &SqlitePool, id: &str) -> Result<HealthcheckExecuteRe
     let healthcheck = get_with_relations(pool, id).await?;
 
     // Build URL
-    let url = format!(
-        "{}://{}{}",
-        healthcheck.healthcheck.protocol, healthcheck.domain_fqdn, healthcheck.healthcheck.path
-    );
+    let url = healthcheck.url();
 
     let client = Client::builder()
         .timeout(std::time::Duration::from_secs(

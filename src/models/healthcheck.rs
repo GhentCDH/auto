@@ -181,3 +181,12 @@ pub struct KumaMonitor {
     pub target_type: String,
     pub target_name: String,
 }
+
+impl HealthcheckWithRelations {
+    pub fn url(&self) -> String {
+        format!(
+            "{}://{}{}",
+            self.healthcheck.protocol, self.domain_fqdn, self.healthcheck.path
+        )
+    }
+}
