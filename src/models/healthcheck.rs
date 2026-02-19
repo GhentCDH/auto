@@ -28,6 +28,7 @@ pub struct Healthcheck {
     pub request_body: Option<String>,
     pub http_auth_user: Option<String>,
     pub http_auth_pass: Option<String>,
+    pub kuma_dirty: bool,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -153,6 +154,7 @@ pub struct HealthcheckRelation {
     pub expected_status: i32,
     pub is_enabled: bool,
     pub kuma_id: Option<i32>,
+    pub kuma_dirty: bool,
 }
 
 /// Result of executing a healthcheck

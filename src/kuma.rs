@@ -269,6 +269,9 @@ pub async fn sync_healthcheck_to_kuma(state: AppState, id: &str) -> Result<()> {
         debug!("Updated Auto healthcheck's kuma_id");
     }
 
+    // Clear dirty flag — this healthcheck is now in sync with Kuma
+    service::healthcheck::clear_kuma_dirty(&state.pool, &hc.healthcheck.id).await?;
+
     client.disconnect().await?;
     debug!("Kuma sync complete");
     Ok(())
@@ -287,6 +290,7 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
 
     for hc in healthchecks {
         let name = hc.healthcheck.name.clone();
+        let hc_id = hc.healthcheck.id.clone();
         let kuma_id = hc.healthcheck.kuma_id;
         let mut monitor = build_monitor_json(&hc);
 
@@ -303,7 +307,7 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
             debug!("Created monitor '{name}' with kuma_id: {new_id}");
             service::healthcheck::update(
                 &state.pool,
-                &hc.healthcheck.id,
+                &hc_id,
                 UpdateHealthcheck {
                     kuma_id: Some(new_id),
                     ..Default::default()
@@ -312,6 +316,9 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
             .await?;
             debug!("Updated Auto healthcheck's kuma_id");
         }
+
+        // Clear dirty flag — this healthcheck is now in sync with Kuma
+        service::healthcheck::clear_kuma_dirty(&state.pool, &hc_id).await?;
     }
 
     client.disconnect().await?;
