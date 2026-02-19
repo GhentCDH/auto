@@ -87,9 +87,10 @@ def export_monitors(kuma_url: str, username: str, password: str, output: str) ->
                 except json.JSONDecodeError:
                     headers = None
 
-            # Parse retry settings from Kuma (maxretries field)
+            # Parse retry settings and check interval from Kuma
             max_retries = m.get("maxretries") or 0
             retry_interval = m.get("retryInterval") or 60
+            interval = m.get("interval") or 60
 
             # Parse HTTP body for POST requests
             request_body = m.get("body")
@@ -117,6 +118,7 @@ def export_monitors(kuma_url: str, username: str, password: str, output: str) ->
                     "method": (m.get("method") or "GET").upper(),
                     "expected_status": expected_status,
                     "timeout_seconds": timeout_seconds,
+                    "interval": interval,
                     "headers": headers,
                     "keyword": m.get("keyword"),  # For body match (keyword monitors)
                     "retry": max_retries,
