@@ -33,7 +33,7 @@ async function syncKuma() {
   syncError.value = '';
   syncSuccess.value = false;
   try {
-    await healthchecksApi.syncKuma();
+    await healthchecksApi.syncKumaAll();
     syncSuccess.value = true;
     setTimeout(() => (syncSuccess.value = false), 3000);
   } catch (e) {

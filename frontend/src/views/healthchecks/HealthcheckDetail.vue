@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
 import { healthchecksApi } from '@/api';
 import type {
   HealthcheckWithRelations,
@@ -10,6 +9,10 @@ import EntityDetail from '@/components/common/EntityDetail.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
+
+const syncLoading = ref(false);
+const syncError = ref('');
+const syncSuccess = ref(false);
 
 const executeLoading = ref(false);
 const executeResult = ref<HealthcheckExecuteResult | null>(null);
@@ -44,6 +47,22 @@ function formatHeaders(
 ): Array<{ key: string; value: string }> {
   if (!headers) return [];
   return Object.entries(headers).map(([key, value]) => ({ key, value }));
+}
+
+async function syncKuma() {
+  if (healthcheck.value === null) return;
+  syncLoading.value = true;
+  syncError.value = '';
+  syncSuccess.value = false;
+  try {
+    await healthchecksApi.syncKumaOne(healthcheck.value.id);
+    syncSuccess.value = true;
+    setTimeout(() => (syncSuccess.value = false), 3000);
+  } catch (e) {
+    syncError.value = e instanceof Error ? e.message : 'Sync failed';
+  } finally {
+    syncLoading.value = false;
+  }
 }
 </script>
 
@@ -155,6 +174,20 @@ function formatHeaders(
           >
             {{ (entity as HealthcheckWithRelations).domain_fqdn }}
           </router-link>
+        </div>
+        <div>
+          <div class="text-sm text-base-content/70">Kuma Uptime Syncing</div>
+          <button
+            class="btn btn-outline btn-primary mt-2"
+            :disabled="syncLoading"
+            @click="syncKuma"
+          >
+            <span
+              v-if="syncLoading"
+              class="loading loading-spinner loading-sm"
+            />
+            {{ syncLoading ? 'Syncing...' : 'Sync Kuma' }}
+          </button>
         </div>
       </div>
 
@@ -329,4 +362,19 @@ function formatHeaders(
       />
     </template>
   </EntityDetail>
+
+  <!-- Sync feedback toasts -->
+  <div v-if="syncSuccess" class="toast toast-end">
+    <div class="alert alert-success">
+      <span>Kuma sync completed successfully.</span>
+    </div>
+  </div>
+  <div v-if="syncError" class="toast toast-end">
+    <div class="alert alert-error">
+      <span>{{ syncError }}</span>
+      <button class="btn btn-ghost btn-xs" @click="syncError = ''">
+        &times;
+      </button>
+    </div>
+  </div>
 </template>
