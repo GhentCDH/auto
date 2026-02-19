@@ -1,3 +1,96 @@
+## [1.1.0] - 2026-02-19
+
+### 🚀 Features
+
+- *(frontend)* Reorder the application detail cards
+- *(frontend)* Remove max width for container, just use tailwindcss .container
+- *(frontend)* Custom container class for wider container
+- *(frontend)* Allow creating healthchecks from application page
+- *(backend)* Clean up application/service healthcheck link
+- *(frontend)* Allow creating healthchecks from service details page
+- *(frontend)* Add edit and unlink healthcheck buttons
+- *(frontend)* Status badges second to last
+- *(frontend)* Env badges align vertically above eachother
+- *(frontend)* Reusable composable useRelationManager
+- *(database)* Add retry, request_body and http_auth columns to healthcheck table
+- *(backend)* Use new healthcheck columns
+- *(backend)* Update kuma_export.py script
+- *(frontend)* Show and edit new healthcheck columns
+- *(database)* Image references
+- *(backend)* Image references
+- *(frontend)* Image references
+- *(database)* Store kuma_id in healthcheck
+- *(backend)* Handle kuma_id in healthcheck service
+- *(database)* Store interval between healthchecks
+- *(backend)* Handle interval in healthcheck service
+- *(backend)* Healthcheck service and model updates
+- *(backend)* Kuma sync functions, errors, and config
+- *(frontend)* Sync kuma button
+- *(backend)* Script reads interval
+- *(backend)* SSE endpoint for kuma polled uptime information
+- *(frontend)* Handle uptime SSE and plot results
+- *(backend)* Sync one healthcheck to kuma endpoint
+- *(frontend)* Update healthchecksApi for single kuma sync
+- *(frontend)* Update component for single healthcheck kuma sync
+- *(backend)* Openapi documentation at /api/docs
+- *(database)* Add kuma_dirty column to healthcheck table
+- *(backend)* Track kuma sync dirty state on healthchecks
+- *(frontend)* Show kuma sync dirty state indicators
+- *(frontend)* Auto-expand request body editor for POST methods
+- Improve global search with healthchecks and cross-entity matching
+
+### 🐛 Bug Fixes
+
+- *(frontend)* Actually remove headers when removing all
+- *(backend)* Custom kuma-api implementation that _works_
+- *(backend)* Actually set the Kuma-created monitor id in local table
+
+### ◀️ Revert
+
+- *(frontend)* Reusable composable didn't save many loc
+## [1.0.1] - 2026-02-05
+
+### 🚀 Features
+
+- Add push_to_kuma.py script
+
+### 🐛 Bug Fixes
+
+- *(backend)* Global search uses fqdn, not name
+## [1.0.0] - 2026-02-05
+
+### 🚀 Features
+
+- *(database)* Add healthcheck table
+- *(backend)* Add healthcheck logic
+- *(frontend)* Add healthcheck UIs
+- *(frontend)* Add kuma import wizard
+## [0.1.2] - 2026-02-03
+
+### 🚀 Features
+
+- *(frontend)* Make EntitySelector tab-navigatable
+- *(frontend)* Relocate 'Reset filters' button to top
+- *(database)* New domain table and application relation
+- *(backend)* Handle new domain table columns
+- *(frontend)* Update domain-related pages to new format
+
+### 🐛 Bug Fixes
+
+- Workflow release body from git-cliff
+- *(frontend)* Start_date <= end_date validation
+
+### 📚 Documentation
+
+- Write CHANGELOG.md
+
+### 🎨 Styling
+
+- *(backend, frontend)* Refactor
+
+### ⚙️ Miscellaneous Tasks
+
+- Update cliff.toml config to include build-related commits
 ## [0.1.1] - 2026-01-29
 
 ### 🐛 Bug Fixes
@@ -28,13 +121,13 @@
 - *(frontend)* Show infrastructure target as clickable entity in domain list
 - *(frontend)* Autofill ghent email only when name not empty
 
-### 💼 Other
-
-- Update release workflow
-
 ### 📚 Documentation
 
 - README
+
+### 🔨 Build
+
+- Update release workflow
 
 ### ⚙️ Miscellaneous Tasks
 
@@ -60,7 +153,7 @@
 - *(frontend)* Fix EntitySelector view for many items
 - *(frontend)* Unused table headers
 
-### 💼 Other
+### 🔨 Build
 
 - *(frontend)* Split large js libraries in separately built chunks
 
@@ -104,7 +197,7 @@
 - Version update to v0.0.3
 ## [0.0.2] - 2026-01-27
 
-### 💼 Other
+### 🔨 Build
 
 - Add github workflow docker buildx caching
 ## [0.0.1] - 2026-01-27
@@ -121,14 +214,14 @@
 - *(frontend)* Add and edit notes
 - Get rid of 'client'
 
-### 💼 Other
+### ◀️ Revert
 
-- Dockerize application and create github workflow
+- No target_host_id in application_domain junction table
 
 ### 🎨 Styling
 
 - *(backend)* Format code
 
-### ◀️ Revert
+### 🔨 Build
 
-- No target_host_id in application_domain junction table
+- Dockerize application and create github workflow
