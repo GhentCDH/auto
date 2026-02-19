@@ -197,6 +197,16 @@ function addHeader() {
 function removeHeader(index: number) {
   headersArray.value.splice(index, 1);
 }
+
+// Auto-expand request body section when switching to a method that supports it
+watch(
+  () => form.value.method,
+  (method) => {
+    if (['POST', 'PUT', 'PATCH'].includes(method)) {
+      showRequestBody.value = true;
+    }
+  }
+);
 </script>
 
 <template>
