@@ -318,9 +318,13 @@ async function handleCreateStack(data: CreateStack) {
   }
 }
 
-async function handleStackSelect(entity: { id: string; name: string }) {
+async function handleStacksConfirm(
+  entities: Array<{ id: string; name: string }>
+) {
   try {
-    await applicationsApi.linkStack(id, entity.id);
+    for (const entity of entities) {
+      await applicationsApi.linkStack(id, entity.id);
+    }
     showLinkStackModal.value = false;
     loadData();
   } catch (e: unknown) {
@@ -1360,9 +1364,10 @@ onMounted(loadData);
         v-if="linkStep === 'select'"
         title="Technology"
         allow-create
+        multiselect
         :fetch-fn="stacksApi.list"
         :exclude-ids="app?.stacks.map((s) => s.id)"
-        @select="handleStackSelect"
+        @confirm="handleStacksConfirm"
         @create="handleCreateRequest"
         @cancel="closeLinkModal('stack')"
       />

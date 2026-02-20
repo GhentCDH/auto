@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import LoadingSpinner from './LoadingSpinner.vue';
 import EnvironmentBadge from './EnvironmentBadge.vue';
-import { SearchX } from 'lucide-vue-next';
+import { SearchX, Check } from 'lucide-vue-next';
 
 const props = defineProps<{
   title: string;
@@ -11,13 +11,42 @@ const props = defineProps<{
   }>;
   excludeIds?: string[];
   allowCreate?: boolean;
+  multiselect?: boolean;
 }>();
 
 const emit = defineEmits<{
   select: [entity: { id: string; name: string }];
+  confirm: [entities: Array<{ id: string; name: string }>];
   create: [searchTerm: string];
   cancel: [];
 }>();
+
+const selectedIds = ref(new Set<string>());
+const selectedEntities = ref(new Map<string, { id: string; name: string }>());
+
+function toggleSelection(entity: { id: string; name: string }) {
+  if (selectedIds.value.has(entity.id)) {
+    selectedIds.value.delete(entity.id);
+    selectedEntities.value.delete(entity.id);
+  } else {
+    selectedIds.value.add(entity.id);
+    selectedEntities.value.set(entity.id, { id: entity.id, name: entity.name });
+  }
+  // Trigger reactivity
+  selectedIds.value = new Set(selectedIds.value);
+}
+
+function handleConfirm() {
+  emit('confirm', Array.from(selectedEntities.value.values()));
+}
+
+function handleItemClick(entity: { id: string; name: string }) {
+  if (props.multiselect) {
+    toggleSelection(entity);
+  } else {
+    emit('select', entity);
+  }
+}
 
 const loading = ref(true);
 const showSpinner = ref(false);
@@ -113,8 +142,9 @@ onMounted(() => {
           <li v-for="entity in filteredEntities" :key="entity.id">
             <button
               type="button"
-              @click="emit('select', entity)"
+              @click="handleItemClick(entity)"
               class="justify-between"
+              :class="{ active: multiselect && selectedIds.has(entity.id) }"
             >
               <span class="flex gap-2">
                 {{ entity.name }}
@@ -123,7 +153,13 @@ onMounted(() => {
                   :environment="entity.environment"
                 />
               </span>
-              <span class="badge badge-ghost badge-sm">Select</span>
+              <Check
+                v-if="multiselect && selectedIds.has(entity.id)"
+                class="w-4 h-4 text-success"
+              />
+              <span v-else-if="!multiselect" class="badge badge-ghost badge-sm"
+                >Select</span
+              >
             </button>
           </li>
         </ul>
@@ -152,6 +188,14 @@ onMounted(() => {
         @click="handleCreate"
       >
         + Create {{ singularTitle }}{{ search ? `: "${search}"` : '' }}
+      </button>
+      <button
+        v-if="multiselect && selectedIds.size > 0"
+        type="button"
+        class="btn btn-success btn-sm w-full"
+        @click="handleConfirm"
+      >
+        Confirm ({{ selectedIds.size }})
       </button>
       <button
         type="button"
