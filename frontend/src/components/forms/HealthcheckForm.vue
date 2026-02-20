@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue';
 import type {
-  Healthcheck,
+  HealthcheckWithRelations,
   CreateHealthcheck,
   UpdateHealthcheck,
 } from '@/types';
@@ -15,7 +15,7 @@ const selectedTargetName = ref<string | null>(null);
 const selectedDomainName = ref<string | null>(null);
 
 const props = defineProps<{
-  healthcheck?: Healthcheck;
+  healthcheck?: HealthcheckWithRelations;
   initialName?: string;
   initialApplicationId?: string;
   initialServiceId?: string;
@@ -121,6 +121,9 @@ watch(
         http_auth_pass: hc.http_auth_pass || '',
       };
       target_type.value = hc.application_id ? 'application' : 'service';
+      selectedTargetName.value =
+        hc.application_name || hc.service_name || null;
+      selectedDomainName.value = hc.domain_fqdn || null;
       headersArray.value = parseHeaders(hc.headers);
       // Expand sections if they have values
       showAdvanced.value = hc.retry > 0;
@@ -275,11 +278,19 @@ watch(
             @cancel="showTargetSelector = false"
           />
         </div>
-        <div v-else-if="selectedTargetName" class="text-sm text-right">
-          Selected: <span class="font-medium">{{ selectedTargetName }}</span>
+        <div
+          v-else-if="selectedTargetName"
+          class="flex items-center justify-between bg-base-200 rounded-box px-4 py-2"
+        >
+          <div class="flex items-center gap-2">
+            <span class="badge badge-primary badge-sm">{{
+              target_type === 'application' ? 'App' : 'Service'
+            }}</span>
+            <span class="font-medium">{{ selectedTargetName }}</span>
+          </div>
           <button
             type="button"
-            class="btn btn-ghost btn-xs ml-2"
+            class="btn btn-ghost btn-xs"
             @click="showTargetSelector = true"
           >
             Change
@@ -306,11 +317,17 @@ watch(
             @cancel="showDomainSelector = false"
           />
         </div>
-        <div v-else class="text-sm text-right">
-          Selected: <span class="font-medium">{{ selectedDomainName }}</span>
+        <div
+          v-else
+          class="flex items-center justify-between bg-base-200 rounded-box px-4 py-2"
+        >
+          <div class="flex items-center gap-2">
+            <span class="badge badge-secondary badge-sm">Domain</span>
+            <span class="font-medium">{{ selectedDomainName }}</span>
+          </div>
           <button
             type="button"
-            class="btn btn-ghost btn-xs ml-2"
+            class="btn btn-ghost btn-xs"
             @click="showDomainSelector = true"
           >
             Change

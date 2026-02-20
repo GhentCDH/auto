@@ -23,7 +23,7 @@ import type {
   CreateNote,
   CreateStack,
   DomainRelation,
-  Healthcheck,
+  HealthcheckWithRelations,
   InfraRelation,
   LinkInfra,
   LinkService,
@@ -104,7 +104,7 @@ const showEditDomainModal = ref(false);
 const showEditPersonModal = ref(false);
 const showEditShareModal = ref(false);
 const editingInfra = ref<InfraRelation | null>(null);
-const editingHealth = ref<Healthcheck | null>(null);
+const editingHealth = ref<HealthcheckWithRelations | null>(null);
 const editingService = ref<ServiceRelation | null>(null);
 const editingDomain = ref<DomainRelation | null>(null);
 const editingPerson = ref<PersonRelation | null>(null);
