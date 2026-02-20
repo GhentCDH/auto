@@ -91,6 +91,7 @@ use utoipa::{Modify, OpenApi};
         crate::api::healthchecks::delete_one,
         crate::api::healthchecks::execute,
         crate::api::healthchecks::export_kuma,
+        crate::api::healthchecks::kuma_endpoint,
         crate::api::healthchecks::sync_kuma_one,
         crate::api::healthchecks::sync_kuma_all,
         
@@ -189,6 +190,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::HealthcheckRelation,
             crate::models::HealthcheckExecuteResult,
             crate::models::KumaMonitor,
+            crate::models::KumaEndpoint,
             
             // Uptime
             crate::models::HeartbeatEntry,
@@ -199,6 +201,8 @@ use utoipa::{Modify, OpenApi};
             crate::service::dashboard::DashboardStats,
             crate::service::dashboard::EntityStats,
             crate::service::dashboard::ExpiringDomain,
+            crate::service::dashboard::HealthcheckStats,
+            crate::service::dashboard::RecentActivity,
             crate::service::search::SearchResults,
             crate::service::search::SearchResult,
         )

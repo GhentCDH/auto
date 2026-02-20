@@ -15,6 +15,23 @@ pub struct DashboardStats {
     pub network_shares: EntityStats,
     pub notes: i64,
     pub expiring_domains: Vec<ExpiringDomain>,
+    pub healthchecks: HealthcheckStats,
+    pub recent_activity: Vec<RecentActivity>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct HealthcheckStats {
+    pub total: i64,
+    pub enabled: i64,
+    pub kuma_dirty: i64,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
+pub struct RecentActivity {
+    pub id: String,
+    pub name: String,
+    pub entity_type: String,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -88,6 +105,44 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         .fetch_one(pool)
         .await?;
 
+    // Get healthcheck stats
+    info!("Healthcheck stats");
+    let hc_total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM healthcheck")
+        .fetch_one(pool)
+        .await?;
+    let hc_enabled: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM healthcheck WHERE is_enabled = 1")
+            .fetch_one(pool)
+            .await?;
+    let hc_dirty: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM healthcheck WHERE kuma_dirty = 1")
+            .fetch_one(pool)
+            .await?;
+
+    // Get recent activity across all entity types
+    info!("Recent activity");
+    let recent_activity = sqlx::query_as::<_, RecentActivity>(
+        r#"
+        SELECT id, name, 'application' as entity_type, updated_at FROM application
+        UNION ALL
+        SELECT id, name, 'service' as entity_type, updated_at FROM service
+        UNION ALL
+        SELECT id, name, 'infra' as entity_type, updated_at FROM infra
+        UNION ALL
+        SELECT id, fqdn as name, 'domain' as entity_type, updated_at FROM domain
+        UNION ALL
+        SELECT id, name, 'person' as entity_type, updated_at FROM person
+        UNION ALL
+        SELECT id, name, 'network_share' as entity_type, updated_at FROM network_share
+        UNION ALL
+        SELECT id, name, 'healthcheck' as entity_type, updated_at FROM healthcheck
+        ORDER BY updated_at DESC
+        LIMIT 15
+        "#,
+    )
+    .fetch_all(pool)
+    .await?;
+
     // Get expiring domains (within 90 days)
     let expiring_domains = sqlx::query_as::<_, ExpiringDomain>(
         r#"
@@ -130,5 +185,11 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         },
         notes: note_count.0,
         expiring_domains,
+        healthchecks: HealthcheckStats {
+            total: hc_total.0,
+            enabled: hc_enabled.0,
+            kuma_dirty: hc_dirty.0,
+        },
+        recent_activity,
     })
 }
