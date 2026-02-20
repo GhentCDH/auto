@@ -384,23 +384,21 @@ async fn run_poller_loop(
     let mut policy = ReconnectPolicy::new();
 
     loop {
-        tokio::select! {
-            result = connect_and_poll(&config, uptime_state.clone(), uptime_tx.clone()) => {
-                match result {
-                    Ok(()) => policy.reset(),
-                    Err(e) => {
-                        error!("Kuma poller error: {e}");
-                        let delay = policy.next_delay();
-                        warn!("Reconnecting to Kuma in {delay:?}");
-                        tokio::time::sleep(delay).await;
-                    }
-                }
-            }
-            _ = refresh_rx.changed() => {
+        match connect_and_poll(&config, uptime_state.clone(), uptime_tx.clone(), &mut refresh_rx)
+            .await
+        {
+            Ok(()) => {
+                // Clean disconnect triggered by refresh signal
                 info!("Kuma refresh triggered: reconnecting poller");
+                policy.reset();
                 // Brief pause to let the sync finish writing new kuma_ids to DB
                 tokio::time::sleep(Duration::from_secs(2)).await;
-                policy.reset();
+            }
+            Err(e) => {
+                error!("Kuma poller error: {e}");
+                let delay = policy.next_delay();
+                warn!("Reconnecting to Kuma in {delay:?}");
+                tokio::time::sleep(delay).await;
             }
         }
     }
@@ -410,6 +408,7 @@ async fn connect_and_poll(
     config: &crate::Config,
     uptime_state: UptimeState,
     uptime_tx: UptimeTx,
+    refresh_rx: &mut watch::Receiver<()>,
 ) -> Result<()> {
     info!("Kuma poller: connecting to {}", config.kuma_url);
 
@@ -510,12 +509,14 @@ async fn connect_and_poll(
 
     info!("Kuma poller: authenticated, listening for heartbeats");
 
-    // Keep the socket alive. The on("heartbeatList") and on("heartbeat")
-    // handlers fire asynchronously. We block here indefinitely; the caller's
-    // loop handles reconnect on drop/error.
-    futures::future::pending::<()>().await;
+    // Wait for refresh signal. Previously we used `futures::future::pending()`
+    // inside a `select!`, but dropping the future doesn't run async cleanup on
+    // the socket — the old connection's handlers keep firing as zombies,
+    // causing duplicate heartbeats in uptime_state. By awaiting the refresh
+    // signal here, we can explicitly disconnect before returning.
+    let _ = refresh_rx.changed().await;
 
-    // Unreachable, but satisfies the return type
+    info!("Kuma poller: disconnecting for refresh");
     let _ = socket.disconnect().await;
     Ok(())
 }
@@ -551,7 +552,7 @@ async fn handle_heartbeat_list(values: Vec<Value>, state: UptimeState, tx: Uptim
 
         let mut heartbeats: Vec<HeartbeatEntry> = beats_arr
             .iter()
-            .filter_map(|v| parse_heartbeat_entry(v))
+            .filter_map(parse_heartbeat_entry)
             .filter(|h| {
                 DateTime::parse_from_rfc3339(&h.time)
                     .map(|t| t.with_timezone(&Utc) > cutoff)
@@ -605,13 +606,20 @@ async fn handle_heartbeat(values: Vec<Value>, state: UptimeState, tx: UptimeTx) 
 
     let cutoff = Utc::now() - chrono::Duration::seconds(HEARTBEAT_WINDOW_SECS);
 
-    {
+    let is_new = {
         let mut write = state.write().await;
         let monitor = write.entry(kuma_id).or_insert(MonitorUptime {
             kuma_id,
             heartbeats: Vec::new(),
         });
-        monitor.heartbeats.push(entry.clone());
+
+        // Deduplicate: skip if we already have an entry with this timestamp.
+        // Zombie connections from incomplete disconnects can deliver the same
+        // heartbeat multiple times.
+        let is_new = !monitor.heartbeats.iter().any(|h| h.time == entry.time);
+        if is_new {
+            monitor.heartbeats.push(entry.clone());
+        }
 
         // Prune entries older than the window
         monitor.heartbeats.retain(|h| {
@@ -619,9 +627,13 @@ async fn handle_heartbeat(values: Vec<Value>, state: UptimeState, tx: UptimeTx) 
                 .map(|t| t.with_timezone(&Utc) > cutoff)
                 .unwrap_or(true)
         });
-    }
 
-    let _ = tx.send(UptimeEvent::Update { kuma_id, entry });
+        is_new
+    };
+
+    if is_new {
+        let _ = tx.send(UptimeEvent::Update { kuma_id, entry });
+    }
 }
 
 /// Parses a JSON value into a HeartbeatEntry.

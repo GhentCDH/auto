@@ -6,8 +6,12 @@ use axum::{
 };
 use futures::stream::{self, Stream, StreamExt};
 use serde::Deserialize;
+use tracing::debug;
 
-use crate::models::{CreateHealthcheck, PaginationParams, UpdateHealthcheck, UptimeEvent, HealthcheckWithRelations, Healthcheck, HealthcheckExecuteResult, KumaMonitor};
+use crate::models::{
+    CreateHealthcheck, Healthcheck, HealthcheckExecuteResult, HealthcheckWithRelations,
+    KumaMonitor, PaginationParams, UpdateHealthcheck, UptimeEvent,
+};
 use crate::service::healthcheck;
 use crate::{AppState, Result, kuma};
 
@@ -248,9 +252,6 @@ async fn sync_kuma_all(State(state): State<AppState>) -> Result<impl axum::respo
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
-// ── SSE uptime stream ───────────────────────────────────────────────
-// Note: SSE endpoint not documented in OpenAPI as it's a streaming endpoint
-
 async fn uptime_stream(
     State(state): State<AppState>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, axum::Error>>> {
@@ -258,6 +259,9 @@ async fn uptime_stream(
     let rx = state.uptime_tx.subscribe();
 
     // Build the initial snapshot
+    // NOTE: this snapshot is too large. It is about 1.8MB of data and seems to take quite a while
+    // to get to the client
+    debug!("Getting uptime state snapshot");
     let snapshot = {
         let read = state.uptime_state.read().await;
         UptimeEvent::Snapshot {
@@ -273,6 +277,8 @@ async fn uptime_stream(
     let initial = stream::once(async move { snapshot_event });
     let live = broadcast_to_stream(rx);
     let combined = initial.chain(live);
+
+    debug!("Start sending stream");
 
     Sse::new(combined).keep_alive(KeepAlive::default())
 }
