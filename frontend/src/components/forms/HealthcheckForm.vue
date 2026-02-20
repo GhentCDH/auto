@@ -37,11 +37,11 @@ if (props.initialTargetName) {
   selectedTargetName.value = props.initialTargetName;
 }
 
-const form = ref<CreateHealthcheck>({
+const form = ref<Required<CreateHealthcheck>>({
   name: props.initialName || '',
-  application_id: props.initialApplicationId,
-  service_id: props.initialServiceId,
-  kuma_id: undefined,
+  application_id: props.initialApplicationId || '',
+  service_id: props.initialServiceId || '',
+  kuma_id: 0,
   domain_id: '',
   protocol: 'https',
   path: '/',
@@ -99,9 +99,9 @@ watch(
     if (hc) {
       form.value = {
         name: hc.name,
-        application_id: hc.application_id || undefined,
-        service_id: hc.service_id || undefined,
-        kuma_id: hc.kuma_id || undefined,
+        application_id: hc.application_id || '',
+        service_id: hc.service_id || '',
+        kuma_id: hc.kuma_id || 0,
         domain_id: hc.domain_id,
         protocol: hc.protocol,
         path: hc.path,
@@ -139,11 +139,11 @@ onMounted(() => {
   if (props.initialServiceId) {
     target_type.value = 'service';
     form.value.service_id = props.initialServiceId;
-    form.value.application_id = undefined;
+    form.value.application_id = '';
   } else if (props.initialApplicationId) {
     target_type.value = 'application';
     form.value.application_id = props.initialApplicationId;
-    form.value.service_id = undefined;
+    form.value.service_id = '';
   }
   nameInput.value?.focus();
 });
@@ -162,6 +162,8 @@ function handleSubmit() {
   emit('submit', {
     ...form.value,
     headers,
+    application_id: form.value.application_id || undefined,
+    service_id: form.value.service_id || undefined,
     kuma_id: form.value.kuma_id || undefined,
     expected_body: form.value.expected_body || undefined,
     notes: form.value.notes || undefined,
@@ -174,7 +176,7 @@ function handleSubmit() {
 const nameInput = ref<HTMLInputElement>();
 
 function handleApplicationSelect(application: { id: string; name: string }) {
-  form.value.service_id = undefined;
+  form.value.service_id = '';
   form.value.application_id = application.id;
   showTargetSelector.value = false;
   selectedTargetName.value = application.name;
@@ -182,7 +184,7 @@ function handleApplicationSelect(application: { id: string; name: string }) {
 
 function handleServiceSelect(service: { id: string; name: string }) {
   form.value.service_id = service.id;
-  form.value.application_id = undefined;
+  form.value.application_id = '';
   showTargetSelector.value = false;
   selectedTargetName.value = service.name;
 }
@@ -239,7 +241,7 @@ watch(
               class="radio radio-primary"
               @change="
                 showTargetSelector = true;
-                form.service_id = undefined;
+                form.service_id = '';
               "
             />
             <span>Application</span>
@@ -253,7 +255,7 @@ watch(
               class="radio radio-primary"
               @change="
                 showTargetSelector = true;
-                form.application_id = undefined;
+                form.application_id = '';
               "
             />
             <span>Service</span>

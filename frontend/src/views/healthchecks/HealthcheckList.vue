@@ -50,7 +50,7 @@ function buildUrl(hc: HealthcheckWithRelations): string {
 }
 
 // optional: refresh list after import
-const entityListRef = ref<InstanceType<typeof EntityList>>();
+const entityListRef = ref<{ loadData: () => void; reload: () => void }>();
 
 function handleImported(count: number) {
   showImport.value = false;

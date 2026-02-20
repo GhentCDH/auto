@@ -9,7 +9,7 @@ import ServiceForm from '@/components/forms/ServiceForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { statusFilterOptions, environmentFilterOptions } from '@/values';
 
-const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
+const entityListRef = ref<{ updateFilter: (key: string, value: string | null) => void } | null>(null);
 const filters = ref<Record<string, string | null>>({
   status: null,
   environment: null,

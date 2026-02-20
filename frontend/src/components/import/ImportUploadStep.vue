@@ -266,6 +266,8 @@ function validateMonitor(m: unknown, index: number): KumaMonitorImport {
       typeof monitor.timeout_seconds === 'number'
         ? monitor.timeout_seconds
         : 30,
+    interval:
+      typeof monitor.interval === 'number' ? monitor.interval : 60,
     headers: typeof monitor.headers === 'string' ? monitor.headers : null,
     keyword: typeof monitor.keyword === 'string' ? monitor.keyword : null,
     retry: typeof monitor.retry === 'number' ? monitor.retry : 0,

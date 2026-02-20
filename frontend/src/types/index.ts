@@ -636,6 +636,10 @@ export interface KumaMonitor {
   target_name: string;
 }
 
+export interface KumaEndpoint {
+  url: string;
+}
+
 // Kuma import types (for importing from Uptime Kuma export)
 export interface KumaMonitorImport {
   kuma_id: number;

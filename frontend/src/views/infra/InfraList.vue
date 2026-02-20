@@ -7,7 +7,7 @@ import InfraForm from '@/components/forms/InfraForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { infraTypes, infraTypeFilterOptions } from '@/values';
 
-const entityListRef = ref<InstanceType<typeof EntityList> | null>(null);
+const entityListRef = ref<{ updateFilter: (key: string, value: string | null) => void } | null>(null);
 const filters = ref<Record<string, string | null>>({
   type: null,
 });
