@@ -445,6 +445,21 @@ export interface DashboardStats {
   network_shares: EntityStats;
   notes: number;
   expiring_domains: ExpiringDomain[];
+  healthchecks: HealthcheckStats;
+  recent_activity: RecentActivity[];
+}
+
+export interface HealthcheckStats {
+  total: number;
+  enabled: number;
+  kuma_dirty: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  name: string;
+  entity_type: string;
+  updated_at: string;
 }
 
 export interface EntityStats {
