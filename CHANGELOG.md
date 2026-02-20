@@ -1,3 +1,20 @@
+## [1.2.0] - 2026-02-20
+
+### 🚀 Features
+
+- *(frontend)* Allow multi-selecting tech stack badges
+- *(backend)* Add endpoint for getting kuma url
+- *(frontend)* Clicking kuma id goes to kuma url in new tab
+- *(frontend)* Healthcheck form UX improvements
+- Update AGENTS.md
+- *(backend)* Update dashboard endpoint to return more information
+- *(frontend)* Update dashboard
+
+### 🐛 Bug Fixes
+
+- *(backend)* Close socketIO connections before reconnecting new one
+- *(frontend)* Image ref doesn't need to be a url
+- *(frontend)* Ts errors
 ## [1.1.0] - 2026-02-19
 
 ### 🚀 Features
