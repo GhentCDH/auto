@@ -66,6 +66,12 @@ async function syncKuma() {
     syncLoading.value = false;
   }
 }
+
+async function goToKuma() {
+  const url = await healthchecksApi.kumaEndpoint();
+  const kuma_id = healthcheck.value?.kuma_id;
+  if (kuma_id != null) window.open(`${url.url}dashboard/${kuma_id}`, '_blank');
+}
 </script>
 
 <template>
@@ -126,9 +132,12 @@ async function syncKuma() {
         <div v-if="(entity as HealthcheckWithRelations).kuma_id">
           <div class="text-sm text-base-content/70">Kuma Monitor ID</div>
           <div class="font-mono">
-            <span class="badge badge-outline">
+            <button
+              class="badge badge-outline cursor-pointer transition-all hover:shadow-sm hover:bg-base-content/10"
+              @click="goToKuma"
+            >
               #{{ (entity as HealthcheckWithRelations).kuma_id }}
-            </span>
+            </button>
           </div>
         </div>
         <div

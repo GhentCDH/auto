@@ -22,6 +22,7 @@ import type {
   Infra,
   InfraFilterParams,
   InfraWithRelations,
+  KumaEndpoint,
   KumaMonitor,
   LinkDomain,
   LinkInfra,
@@ -407,6 +408,8 @@ export const healthchecksApi = {
     request<HealthcheckExecuteResult>(`/healthchecks/${id}/execute`),
 
   exportKuma: () => request<KumaMonitor[]>('/healthchecks/export/kuma'),
+
+  kumaEndpoint: () => request<KumaEndpoint>('/healthchecks/kuma-endpoint'),
 
   syncKumaAll: () =>
     request<void>('/healthchecks/sync/kuma', { method: 'POST' }),
