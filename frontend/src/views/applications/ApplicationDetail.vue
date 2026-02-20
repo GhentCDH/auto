@@ -71,6 +71,7 @@ import {
 } from 'lucide-vue-next';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
+import ImageRefBadge from '@/components/common/ImageRefBadge.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -665,16 +666,12 @@ onMounted(loadData);
                 <div v-if="imageRefs.length > 0" class="md:col-span-2">
                   <div class="text-sm text-base-content/70 mb-1">Images</div>
                   <div class="flex flex-wrap gap-2">
-                    <a
+                    <ImageRefBadge
                       v-for="ref in imageRefs"
                       :key="ref.url"
-                      :href="ref.url"
-                      target="_blank"
-                      class="badge badge-outline gap-1 hover:badge-primary"
-                    >
-                      <Package class="w-3 h-3" />
-                      {{ ref.alias || ref.url }}
-                    </a>
+                      :image-ref="ref.url"
+                      :alias="ref.alias"
+                    />
                   </div>
                 </div>
               </div>

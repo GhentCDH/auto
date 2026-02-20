@@ -132,9 +132,9 @@ onMounted(() => {
         >
           <input
             v-model="imgRef.url"
-            type="url"
+            type="text"
             class="input input-sm flex-1"
-            placeholder="https://hub.docker.com/r/org/image"
+            placeholder="docker.io/owner/image"
           />
           <input
             v-model="imgRef.alias"
