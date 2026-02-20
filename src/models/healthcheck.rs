@@ -134,6 +134,12 @@ fn default_request_body_encoding() -> String {
 
 /// Healthcheck with resolved relations
 #[derive(Debug, Serialize, ToSchema)]
+pub struct KumaEndpoint {
+    pub url: String,
+}
+
+/// Healthcheck with resolved relations
+#[derive(Debug, Serialize, ToSchema)]
 pub struct HealthcheckWithRelations {
     #[serde(flatten)]
     pub healthcheck: Healthcheck,

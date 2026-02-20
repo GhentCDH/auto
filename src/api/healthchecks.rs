@@ -10,7 +10,7 @@ use tracing::debug;
 
 use crate::models::{
     CreateHealthcheck, Healthcheck, HealthcheckExecuteResult, HealthcheckWithRelations,
-    KumaMonitor, PaginationParams, UpdateHealthcheck, UptimeEvent,
+    KumaEndpoint, KumaMonitor, PaginationParams, UpdateHealthcheck, UptimeEvent,
 };
 use crate::service::healthcheck;
 use crate::{AppState, Result, kuma};
@@ -30,6 +30,7 @@ pub fn routes() -> Router<AppState> {
         .route("/", get(list).post(create))
         .route("/export/kuma", get(export_kuma))
         .route("/sync/kuma", post(sync_kuma_all))
+        .route("/kuma-endpoint", get(kuma_endpoint))
         .route("/sync/kuma/{id}", post(sync_kuma_one))
         .route("/uptime/stream", get(uptime_stream))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
@@ -177,6 +178,20 @@ async fn execute(
 ) -> Result<impl axum::response::IntoResponse> {
     let result = healthcheck::execute(&state.pool, &id).await?;
     Ok(Json(result))
+}
+
+#[utoipa::path(
+    get,
+    path = "/kuma-endpoint",
+    tag = "healthchecks",
+    responses(
+        (status = 200, description = "The base URL of the kuma endpoint this server is polling", body = inline(KumaEndpoint)),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn kuma_endpoint(State(state): State<AppState>) -> Result<Json<KumaEndpoint>> {
+    let url = state.config.kuma_url.to_string();
+    Ok(Json(KumaEndpoint { url }))
 }
 
 #[utoipa::path(
