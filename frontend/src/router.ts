@@ -82,6 +82,11 @@ const routes = [
     path: '/search',
     component: () => import('./views/search/SearchView.vue'),
   },
+  // Resolve by UUID or UUID prefix (min 8 hex chars)
+  {
+    path: '/:id([0-9a-f]{8,})',
+    component: () => import('./views/ResolveView.vue'),
+  },
 ];
 
 const router = createRouter({

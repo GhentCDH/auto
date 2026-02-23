@@ -418,6 +418,12 @@ export const healthchecksApi = {
     request<void>(`/healthchecks/sync/kuma/${id}`, { method: 'POST' }),
 };
 
+// Resolve API
+export const resolveApi = {
+  resolve: (id: string) =>
+    request<{ id: string; name: string; entity_type: string }>(`/resolve/${id}`),
+};
+
 // Version API
 export const versionApi = {
   get: () => request<{ version: string }>('/version'),
