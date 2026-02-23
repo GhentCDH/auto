@@ -21,7 +21,7 @@ pub async fn list(
         FROM infra
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR type = ?2)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
         LIMIT ?3 OFFSET ?4
         "#,
     )
@@ -71,7 +71,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<InfraWith
         FROM application a
         JOIN application_infra ai ON a.id = ai.application_id
         WHERE ai.infra_id = ?1
-        ORDER BY a.name
+        ORDER BY a.name COLLATE NOCASE
         "#,
     )
     .bind(id)
@@ -84,7 +84,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<InfraWith
         FROM service s
         JOIN service_infra si ON s.id = si.service_id
         WHERE si.infra_id = ?1
-        ORDER BY s.name
+        ORDER BY s.name COLLATE NOCASE
         "#,
     )
     .bind(id)

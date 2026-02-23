@@ -2,8 +2,8 @@ use futures::future::try_join_all;
 use sqlx::SqlitePool;
 
 use crate::models::{
-    ApplicationDomainRelation, CreateDomain, Domain, DomainWithRelations,
-    PaginatedResponse, PaginationParams, TargetName, UpdateDomain, new_id,
+    ApplicationDomainRelation, CreateDomain, Domain, DomainWithRelations, PaginatedResponse,
+    PaginationParams, TargetName, UpdateDomain, new_id,
 };
 use crate::{Error, Result, service};
 
@@ -21,7 +21,7 @@ pub async fn list(
             target_application_id, target_service_id, created_at, updated_at, created_by
         FROM domain
         WHERE (?1 IS NULL OR fqdn LIKE ?1 OR registrar LIKE ?1)
-        ORDER BY fqdn ASC
+        ORDER BY fqdn COLLATE NOCASE ASC
         LIMIT ?2 OFFSET ?3
         "#,
     )
@@ -69,7 +69,7 @@ pub async fn extend_relations(pool: &SqlitePool, domain: Domain) -> Result<Domai
         FROM application a
         JOIN application_domain ad ON a.id = ad.application_id
         WHERE ad.domain_id = ?1
-        ORDER BY a.name
+        ORDER BY a.name COLLATE NOCASE
         "#,
     )
     .bind(&domain.id)

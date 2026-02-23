@@ -20,7 +20,7 @@ pub async fn list(
             SELECT id, name, notes, created_at, updated_at
             FROM stack
             WHERE name LIKE ?1
-            ORDER BY name ASC
+            ORDER BY name COLLATE NOCASE ASC
             LIMIT ?2 OFFSET ?3
             "#,
         )
@@ -41,7 +41,7 @@ pub async fn list(
             r#"
             SELECT id, name, notes, created_at, updated_at
             FROM stack
-            ORDER BY name ASC
+            ORDER BY name COLLATE NOCASE ASC
             LIMIT ?1 OFFSET ?2
             "#,
         )
@@ -83,7 +83,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<StackWith
         FROM application a
         JOIN application_stack ast ON a.id = ast.application_id
         WHERE ast.stack_id = ?1
-        ORDER BY a.name
+        ORDER BY a.name COLLATE NOCASE
         "#,
     )
     .bind(id)

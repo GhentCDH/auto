@@ -21,7 +21,7 @@ pub async fn list(
         FROM person
         WHERE (?1 IS NULL OR name LIKE ?1 OR email LIKE ?1 OR role LIKE ?1)
           AND (?2 IS NULL OR is_active = ?2)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
         LIMIT ?3 OFFSET ?4
         "#,
     )
@@ -71,7 +71,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<PersonWit
         FROM application a
         JOIN application_person ap ON a.id = ap.application_id
         WHERE ap.person_id = ?1
-        ORDER BY a.name
+        ORDER BY a.name COLLATE NOCASE
         "#,
     )
     .bind(id)

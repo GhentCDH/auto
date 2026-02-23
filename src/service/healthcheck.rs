@@ -36,7 +36,7 @@ pub async fn list(
           AND (?2 IS NULL OR h.application_id = ?2)
           AND (?3 IS NULL OR h.service_id = ?3)
           AND (?4 IS NULL OR h.is_enabled = ?4)
-        ORDER BY h.name ASC
+        ORDER BY h.name COLLATE NOCASE ASC
         LIMIT ?5 OFFSET ?6
         "#,
     )
@@ -511,7 +511,7 @@ pub async fn export_kuma(pool: &SqlitePool) -> Result<Vec<KumaMonitor>> {
                created_at, updated_at, created_by
         FROM healthcheck
         WHERE is_enabled = 1
-        ORDER BY name
+        ORDER BY name COLLATE NOCASE
         "#,
     )
     .fetch_all(pool)
@@ -568,7 +568,7 @@ pub async fn get_for_application(
         FROM healthcheck h
         JOIN domain d ON h.domain_id = d.id
         WHERE h.application_id = ?1
-        ORDER BY h.name
+        ORDER BY h.name COLLATE NOCASE
         "#,
     )
     .bind(app_id)
@@ -589,7 +589,7 @@ pub async fn get_for_service(
         FROM healthcheck h
         JOIN domain d ON h.domain_id = d.id
         WHERE h.service_id = ?1
-        ORDER BY h.name
+        ORDER BY h.name COLLATE NOCASE
         "#,
     )
     .bind(service_id)

@@ -25,7 +25,7 @@ pub async fn list(
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR status = ?2)
           AND (?3 IS NULL OR environment = ?3)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
         LIMIT ?4 OFFSET ?5
         "#,
     )
@@ -78,7 +78,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
         FROM infra i
         JOIN application_infra ai ON i.id = ai.infra_id
         WHERE ai.application_id = ?1
-        ORDER BY i.name
+        ORDER BY i.name COLLATE NOCASE
         "#,
     )
     .bind(id)
@@ -91,7 +91,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
         FROM service s
         JOIN application_service asvc ON s.id = asvc.service_id
         WHERE asvc.application_id = ?1
-        ORDER BY s.name
+        ORDER BY s.name COLLATE NOCASE
         "#,
     )
     .bind(id)
@@ -110,7 +110,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
         LEFT JOIN application ap ON d.target_application_id = ap.id
         LEFT JOIN service s ON d.target_service_id = s.id
         WHERE ad.application_id = ?1
-        ORDER BY d.fqdn
+        ORDER BY d.fqdn COLLATE NOCASE
         "#,
     )
     .bind(id)
@@ -126,7 +126,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
         FROM person p
         JOIN application_person ap ON p.id = ap.person_id
         WHERE ap.application_id = ?1
-        ORDER BY p.name
+        ORDER BY p.name COLLATE NOCASE
         "#,
     )
     .bind(id)
@@ -140,7 +140,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
         FROM network_share ns
         JOIN application_network_share ans ON ns.id = ans.network_share_id
         WHERE ans.application_id = ?1
-        ORDER BY ns.name
+        ORDER BY ns.name COLLATE NOCASE
         "#,
     )
     .bind(id)
@@ -165,7 +165,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<Applicati
         FROM stack s
         JOIN application_stack ast ON s.id = ast.stack_id
         WHERE ast.application_id = ?1
-        ORDER BY s.name
+        ORDER BY s.name COLLATE NOCASE
         "#,
     )
     .bind(id)

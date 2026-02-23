@@ -23,7 +23,7 @@ pub async fn list(
         WHERE (?1 IS NULL OR name LIKE ?1 OR path LIKE ?1 OR server LIKE ?1)
           AND (?2 IS NULL OR status = ?2)
           AND (?3 IS NULL OR share_type = ?3)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
         LIMIT ?4 OFFSET ?5
         "#,
     )
@@ -76,7 +76,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<NetworkSh
         FROM application a
         JOIN application_network_share ans ON a.id = ans.application_id
         WHERE ans.network_share_id = ?1
-        ORDER BY a.name
+        ORDER BY a.name COLLATE NOCASE
         "#,
     )
     .bind(id)

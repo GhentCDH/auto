@@ -114,10 +114,9 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         sqlx::query_as("SELECT COUNT(*) FROM healthcheck WHERE is_enabled = 1")
             .fetch_one(pool)
             .await?;
-    let hc_dirty: (i64,) =
-        sqlx::query_as("SELECT COUNT(*) FROM healthcheck WHERE kuma_dirty = 1")
-            .fetch_one(pool)
-            .await?;
+    let hc_dirty: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM healthcheck WHERE kuma_dirty = 1")
+        .fetch_one(pool)
+        .await?;
 
     // Get recent activity across all entity types
     info!("Recent activity");
@@ -151,7 +150,7 @@ pub async fn get_stats(pool: &SqlitePool) -> Result<DashboardStats> {
         WHERE expires_at IS NOT NULL
           AND date(expires_at) <= date('now', '+90 days')
           AND date(expires_at) >= date('now')
-        ORDER BY expires_at ASC
+        ORDER BY expires_at ASC 
         LIMIT 10
         "#,
     )

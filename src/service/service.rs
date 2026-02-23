@@ -23,7 +23,7 @@ pub async fn list(
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR status = ?2)
           AND (?3 IS NULL OR environment = ?3)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
         LIMIT ?4 OFFSET ?5
         "#,
     )
@@ -76,7 +76,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<ServiceWi
         FROM application a
         JOIN application_service asvc ON a.id = asvc.application_id
         WHERE asvc.service_id = ?1
-        ORDER BY a.name
+        ORDER BY a.name COLLATE NOCASE
         "#,
     )
     .bind(id)
@@ -89,7 +89,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<ServiceWi
         FROM infra i
         JOIN service_infra si ON i.id = si.infra_id
         WHERE si.service_id = ?1
-        ORDER BY i.name
+        ORDER BY i.name COLLATE NOCASE
         "#,
     )
     .bind(id)

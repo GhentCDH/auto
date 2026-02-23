@@ -30,17 +30,16 @@ pub async fn global_search(pool: &SqlitePool, query: &str) -> Result<SearchResul
     let prefix = format!("{}%", query);
 
     // Run search queries concurrently!
-    let (applications, services, infra, domains, people, network_shares, stacks, healthchecks) =
-        try_join!(
-            search_applications(pool, &pattern, &prefix),
-            search_services(pool, &pattern, &prefix),
-            search_infra(pool, &pattern, &prefix),
-            search_domains(pool, &pattern, &prefix),
-            search_people(pool, &pattern, &prefix),
-            search_network_shares(pool, &pattern, &prefix),
-            search_stacks(pool, &pattern, &prefix),
-            search_healthchecks(pool, &pattern, &prefix),
-        )?;
+    let (applications, services, infra, domains, people, network_shares, stacks, healthchecks) = try_join!(
+        search_applications(pool, &pattern, &prefix),
+        search_services(pool, &pattern, &prefix),
+        search_infra(pool, &pattern, &prefix),
+        search_domains(pool, &pattern, &prefix),
+        search_people(pool, &pattern, &prefix),
+        search_network_shares(pool, &pattern, &prefix),
+        search_stacks(pool, &pattern, &prefix),
+        search_healthchecks(pool, &pattern, &prefix),
+    )?;
 
     Ok(SearchResults {
         applications,
@@ -64,7 +63,7 @@ async fn search_applications(
         SELECT id, name, description, 'application' as entity_type
         FROM application
         WHERE name LIKE ?1 OR description LIKE ?1
-        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name ASC
+        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
@@ -84,7 +83,7 @@ async fn search_services(
         SELECT id, name, description, 'service' as entity_type
         FROM service
         WHERE name LIKE ?1 OR description LIKE ?1
-        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name ASC
+        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
@@ -100,7 +99,7 @@ async fn search_infra(pool: &SqlitePool, pattern: &str, prefix: &str) -> Result<
         SELECT id, name, description, 'infra' as entity_type
         FROM infra
         WHERE name LIKE ?1 OR description LIKE ?1
-        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name ASC
+        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
@@ -130,7 +129,7 @@ async fn search_domains(
            OR d.notes LIKE ?1
            OR a.name LIKE ?1
            OR s.name LIKE ?1
-        ORDER BY CASE WHEN d.fqdn LIKE ?2 THEN 0 ELSE 1 END, d.fqdn ASC
+        ORDER BY CASE WHEN d.fqdn LIKE ?2 THEN 0 ELSE 1 END, d.fqdn COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
@@ -150,7 +149,7 @@ async fn search_people(
         SELECT id, name, email as description, 'person' as entity_type
         FROM person
         WHERE name LIKE ?1 OR email LIKE ?1 OR role LIKE ?1
-        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name ASC
+        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
@@ -170,7 +169,7 @@ async fn search_network_shares(
         SELECT id, name, path as description, 'network_share' as entity_type
         FROM network_share
         WHERE name LIKE ?1 OR path LIKE ?1 OR server LIKE ?1
-        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name ASC
+        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
@@ -190,7 +189,7 @@ async fn search_stacks(
         SELECT id, name, notes as description, 'stack' as entity_type
         FROM stack
         WHERE name LIKE ?1 OR notes LIKE ?1
-        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name ASC
+        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
@@ -220,7 +219,7 @@ async fn search_healthchecks(
            OR h.notes LIKE ?1
            OR a.name LIKE ?1
            OR s.name LIKE ?1
-        ORDER BY CASE WHEN h.name LIKE ?2 THEN 0 ELSE 1 END, h.name ASC
+        ORDER BY CASE WHEN h.name LIKE ?2 THEN 0 ELSE 1 END, h.name COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
