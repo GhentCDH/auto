@@ -21,9 +21,10 @@ const bars = computed(() => {
 });
 
 function barColorClass(status: number): string {
-  if (status === 1) return 'bg-success'; // green-500
-  if (status === 0) return 'bg-error'; // red-500
-  return 'bg-neutral-content'; // gray-500 (pending/maintenance)
+  if (status === 1) return 'bg-success';
+  if (status === 2) return 'bg-warning'; // green-500
+  if (status === 0) return 'bg-error';
+  return 'bg-neutral-content'; // gray-500 (maintenance)
 }
 
 function formatHumanTime(input: string): string {
