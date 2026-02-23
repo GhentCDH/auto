@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { toast } from 'vue-sonner';
 import { healthchecksApi } from '@/api';
 import type {
   HealthcheckWithRelations,
@@ -11,12 +12,9 @@ import HealthPlot from '@/components/common/HealthPlot.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 
 const syncLoading = ref(false);
-const syncError = ref('');
-const syncSuccess = ref(false);
 
 const executeLoading = ref(false);
 const executeResult = ref<HealthcheckExecuteResult | null>(null);
-const executeError = ref('');
 
 const entityDetailRef = ref<InstanceType<typeof EntityDetail> | null>(null);
 
@@ -27,12 +25,21 @@ const healthcheck = computed(
 async function executeHealthcheck() {
   if (!healthcheck.value) return;
   executeLoading.value = true;
-  executeError.value = '';
   executeResult.value = null;
   try {
-    executeResult.value = await healthchecksApi.execute(healthcheck.value.id);
-  } catch (e) {
-    executeError.value = e instanceof Error ? e.message : 'Execute failed';
+    const promise = healthchecksApi.execute(healthcheck.value.id);
+    toast.promise(promise, {
+      loading: 'Executing healthcheck...',
+      success: (result: HealthcheckExecuteResult) =>
+        result.success
+          ? `Healthcheck passed (${result.status_code})`
+          : `Healthcheck failed (${result.status_code || result.error})`,
+      error: (e: unknown) =>
+        e instanceof Error ? e.message : 'Execute failed',
+    });
+    executeResult.value = await promise;
+  } catch {
+    // Error already shown by toast.promise
   } finally {
     executeLoading.value = false;
   }
@@ -52,16 +59,17 @@ function formatHeaders(
 async function syncKuma() {
   if (healthcheck.value === null) return;
   syncLoading.value = true;
-  syncError.value = '';
-  syncSuccess.value = false;
   try {
-    await healthchecksApi.syncKumaOne(healthcheck.value.id);
-    syncSuccess.value = true;
-    setTimeout(() => (syncSuccess.value = false), 3000);
-    // Reload entity to clear dirty flag
+    const promise = healthchecksApi.syncKumaOne(healthcheck.value.id);
+    toast.promise(promise, {
+      loading: 'Syncing to Kuma...',
+      success: 'Kuma sync completed',
+      error: (e: unknown) => (e instanceof Error ? e.message : 'Sync failed'),
+    });
+    await promise;
     entityDetailRef.value?.loadData?.();
-  } catch (e) {
-    syncError.value = e instanceof Error ? e.message : 'Sync failed';
+  } catch {
+    // Error already shown by toast.promise
   } finally {
     syncLoading.value = false;
   }
@@ -368,11 +376,6 @@ async function goToKuma() {
           </div>
         </div>
       </div>
-
-      <!-- Execute Error -->
-      <div v-if="executeError" class="alert alert-error mt-4">
-        {{ executeError }}
-      </div>
     </template>
 
     <template #form="{ entity, onSubmit, onCancel }">
@@ -383,19 +386,4 @@ async function goToKuma() {
       />
     </template>
   </EntityDetail>
-
-  <!-- Sync feedback toasts -->
-  <div v-if="syncSuccess" class="toast toast-end">
-    <div class="alert alert-success">
-      <span>Kuma sync completed successfully.</span>
-    </div>
-  </div>
-  <div v-if="syncError" class="toast toast-end">
-    <div class="alert alert-error">
-      <span>{{ syncError }}</span>
-      <button class="btn btn-ghost btn-xs" @click="syncError = ''">
-        &times;
-      </button>
-    </div>
-  </div>
 </template>

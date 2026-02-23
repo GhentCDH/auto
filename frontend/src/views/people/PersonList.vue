@@ -7,7 +7,9 @@ import PersonForm from '@/components/forms/PersonForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { personActiveFilterOptions } from '@/values';
 
-const entityListRef = ref<{ updateFilter: (key: string, value: string | null) => void } | null>(null);
+const entityListRef = ref<{
+  updateFilter: (key: string, value: string | null) => void;
+} | null>(null);
 const filters = ref<Record<string, string | null>>({
   is_active: null,
 });

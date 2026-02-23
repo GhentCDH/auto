@@ -20,7 +20,7 @@ type UptimeEvent =
 const monitors = ref<Map<number, MonitorData>>(new Map());
 let eventSource: EventSource | null = null;
 let consumerCount = 0;
-const HEARTBEAT_WINDOW_SECS = 3600;
+const HEARTBEAT_WINDOW_SECS = 3600 * 2;
 
 function openConnection() {
   if (eventSource) return;
@@ -38,6 +38,7 @@ function openConnection() {
       } else if (event.type === 'update') {
         const existing = monitors.value.get(event.kuma_id);
         const cutoff = Date.now() - HEARTBEAT_WINDOW_SECS * 1000;
+
         if (existing) {
           existing.heartbeats.push(event.entry);
           existing.heartbeats = existing.heartbeats.filter((h) => {
@@ -62,6 +63,10 @@ function openConnection() {
     // EventSource handles reconnect automatically.
     // On reconnect, the backend sends a fresh snapshot.
   };
+
+  window.addEventListener('beforeunload', () => {
+    if (eventSource) eventSource.close();
+  });
 }
 
 function closeConnection() {

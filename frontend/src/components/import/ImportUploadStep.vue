@@ -266,8 +266,7 @@ function validateMonitor(m: unknown, index: number): KumaMonitorImport {
       typeof monitor.timeout_seconds === 'number'
         ? monitor.timeout_seconds
         : 30,
-    interval:
-      typeof monitor.interval === 'number' ? monitor.interval : 60,
+    interval: typeof monitor.interval === 'number' ? monitor.interval : 60,
     headers: typeof monitor.headers === 'string' ? monitor.headers : null,
     keyword: typeof monitor.keyword === 'string' ? monitor.keyword : null,
     retry: typeof monitor.retry === 'number' ? monitor.retry : 0,
@@ -280,9 +279,13 @@ function validateMonitor(m: unknown, index: number): KumaMonitorImport {
         ? monitor.request_body_encoding
         : 'JSON',
     http_auth_user:
-      typeof monitor.http_auth_user === 'string' ? monitor.http_auth_user : null,
+      typeof monitor.http_auth_user === 'string'
+        ? monitor.http_auth_user
+        : null,
     http_auth_pass:
-      typeof monitor.http_auth_pass === 'string' ? monitor.http_auth_pass : null,
+      typeof monitor.http_auth_pass === 'string'
+        ? monitor.http_auth_pass
+        : null,
   };
 }
 

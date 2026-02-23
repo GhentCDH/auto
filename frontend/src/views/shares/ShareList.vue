@@ -8,7 +8,9 @@ import ShareForm from '@/components/forms/ShareForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import { statusFilterOptions, shareTypeFilterOptions } from '@/values';
 
-const entityListRef = ref<{ updateFilter: (key: string, value: string | null) => void } | null>(null);
+const entityListRef = ref<{
+  updateFilter: (key: string, value: string | null) => void;
+} | null>(null);
 const filters = ref<Record<string, string | null>>({
   status: null,
   share_type: null,

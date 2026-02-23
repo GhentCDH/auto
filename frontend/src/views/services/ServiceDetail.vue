@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, type ComputedRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { toast } from 'vue-sonner';
 import { servicesApi, infraApi, healthchecksApi } from '@/api';
 import type {
   ServiceWithRelations,
@@ -84,18 +85,20 @@ async function handleUpdate(formData: unknown) {
       formData as Parameters<typeof servicesApi.update>[1]
     );
     showEditModal.value = false;
+    toast.success('Service updated');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update service';
+    toast.error(e instanceof Error ? e.message : 'Failed to update service');
   }
 }
 
 async function handleDelete() {
   try {
     await servicesApi.delete(id);
+    toast.success('Service deleted');
     router.push('/services');
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to delete service';
+    toast.error(e instanceof Error ? e.message : 'Failed to delete service');
   }
 }
 
@@ -124,10 +127,11 @@ function handleCreateRequest(searchTerm: string) {
 async function handleCreateInfra(data: CreateInfra) {
   try {
     const created = await infraApi.create(data);
+    toast.success('Infrastructure created');
     selectedEntity.value = { id: created.id, name: created.name };
     linkStep.value = 'form';
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create infra';
+    toast.error(e instanceof Error ? e.message : 'Failed to create infra');
   }
 }
 
@@ -135,10 +139,12 @@ async function handleCreateHealth(data: CreateHealthcheck) {
   try {
     await healthchecksApi.create(data);
     showCreateHealthModal.value = false;
+    toast.success('Healthcheck created');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to create healthcheck';
+    toast.error(
+      e instanceof Error ? e.message : 'Failed to create healthcheck'
+    );
   }
 }
 
@@ -147,9 +153,10 @@ async function handleLinkInfra(data: LinkInfra) {
   try {
     await servicesApi.linkInfra(id, selectedEntity.value.id, data);
     showLinkInfraModal.value = false;
+    toast.success('Infrastructure linked');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link infra';
+    toast.error(e instanceof Error ? e.message : 'Failed to link infra');
   }
 }
 
@@ -165,10 +172,10 @@ async function handleEditInfra(data: LinkInfra) {
     await servicesApi.linkInfra(id, editingInfra.value.id, data);
     showEditInfraModal.value = false;
     editingInfra.value = null;
+    toast.success('Infrastructure link updated');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update infra link';
+    toast.error(e instanceof Error ? e.message : 'Failed to update infra link');
   }
 }
 
@@ -186,9 +193,10 @@ async function handleUnlink() {
       await servicesApi.unlinkInfra(id, unlinkId.value);
     }
     showUnlinkDialog.value = false;
+    toast.success('Unlinked successfully');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to unlink';
+    toast.error(e instanceof Error ? e.message : 'Failed to unlink');
   }
 }
 

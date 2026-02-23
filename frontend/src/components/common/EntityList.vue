@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="T extends { id: string }, C = unknown">
 import { ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { toast } from 'vue-sonner';
 import type { PaginatedResponse } from '@/types';
 import LoadingSpinner from './LoadingSpinner.vue';
 import EmptyState from './EmptyState.vue';
@@ -69,10 +70,11 @@ async function handleCreate(formData: C) {
   try {
     await props.createFn(formData);
     showCreateModal.value = false;
+    toast.success('Created successfully');
     loadData();
     emit('created');
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create';
+    toast.error(e instanceof Error ? e.message : 'Failed to create');
   }
 }
 

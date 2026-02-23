@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { toast } from 'vue-sonner';
 import LoadingSpinner from './LoadingSpinner.vue';
 import Modal from './Modal.vue';
 import ConfirmDialog from './ConfirmDialog.vue';
@@ -48,24 +49,28 @@ async function handleUpdate(formData: unknown) {
   try {
     await props.updateFn(id, formData);
     showEditModal.value = false;
+    toast.success(`${props.entityName} updated`);
     loadData();
   } catch (e: unknown) {
-    error.value =
+    toast.error(
       e instanceof Error
         ? e.message
-        : `Failed to update ${props.entityName.toLowerCase()}`;
+        : `Failed to update ${props.entityName.toLowerCase()}`
+    );
   }
 }
 
 async function handleDelete() {
   try {
     await props.deleteFn(id);
+    toast.success(`${props.entityName} deleted`);
     router.push(props.listPath);
   } catch (e: unknown) {
-    error.value =
+    toast.error(
       e instanceof Error
         ? e.message
-        : `Failed to delete ${props.entityName.toLowerCase()}`;
+        : `Failed to delete ${props.entityName.toLowerCase()}`
+    );
   }
 }
 

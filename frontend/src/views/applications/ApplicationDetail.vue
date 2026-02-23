@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, type ComputedRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { toast } from 'vue-sonner';
 import {
   applicationsApi,
   infraApi,
@@ -162,20 +163,24 @@ async function handleUpdate(formData: unknown) {
       formData as Parameters<typeof applicationsApi.update>[1]
     );
     showEditModal.value = false;
+    toast.success('Application updated');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update application';
+    toast.error(
+      e instanceof Error ? e.message : 'Failed to update application'
+    );
   }
 }
 
 async function handleDelete() {
   try {
     await applicationsApi.delete(id);
+    toast.success('Application deleted');
     router.push('/applications');
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to delete application';
+    toast.error(
+      e instanceof Error ? e.message : 'Failed to delete application'
+    );
   }
 }
 
@@ -249,10 +254,11 @@ function handleCreateRequest(searchTerm: string) {
 async function handleCreateInfra(data: CreateInfra) {
   try {
     const created = await infraApi.create(data);
+    toast.success('Infrastructure created');
     selectedEntity.value = { id: created.id, name: created.name };
     linkStep.value = 'form';
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create infra';
+    toast.error(e instanceof Error ? e.message : 'Failed to create infra');
   }
 }
 
@@ -260,50 +266,56 @@ async function handleCreateHealth(data: CreateHealthcheck) {
   try {
     await healthchecksApi.create(data);
     showLinkHealthModal.value = false;
+    toast.success('Healthcheck created');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to create healthcheck';
+    toast.error(
+      e instanceof Error ? e.message : 'Failed to create healthcheck'
+    );
   }
 }
 
 async function handleCreateService(data: CreateService) {
   try {
     const created = await servicesApi.create(data);
+    toast.success('Service created');
     selectedEntity.value = { id: created.id, name: created.name };
     linkStep.value = 'form';
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create service';
+    toast.error(e instanceof Error ? e.message : 'Failed to create service');
   }
 }
 
 async function handleCreateDomain(data: CreateDomain) {
   try {
     const created = await domainsApi.create(data);
+    toast.success('Domain created');
     selectedEntity.value = { id: created.id, name: created.fqdn };
     linkStep.value = 'form';
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create domain';
+    toast.error(e instanceof Error ? e.message : 'Failed to create domain');
   }
 }
 
 async function handleCreatePerson(data: CreatePerson) {
   try {
     const created = await peopleApi.create(data);
+    toast.success('Person created');
     selectedEntity.value = { id: created.id, name: created.name };
     linkStep.value = 'form';
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create person';
+    toast.error(e instanceof Error ? e.message : 'Failed to create person');
   }
 }
 
 async function handleCreateShare(data: CreateNetworkShare) {
   try {
     const created = await sharesApi.create(data);
+    toast.success('Storage created');
     selectedEntity.value = { id: created.id, name: created.name };
     linkStep.value = 'form';
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create share';
+    toast.error(e instanceof Error ? e.message : 'Failed to create share');
   }
 }
 
@@ -312,9 +324,10 @@ async function handleCreateStack(data: CreateStack) {
     const created = await stacksApi.create(data);
     await applicationsApi.linkStack(id, created.id);
     showLinkStackModal.value = false;
+    toast.success('Technology created and linked');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create stack';
+    toast.error(e instanceof Error ? e.message : 'Failed to create stack');
   }
 }
 
@@ -326,9 +339,10 @@ async function handleStacksConfirm(
       await applicationsApi.linkStack(id, entity.id);
     }
     showLinkStackModal.value = false;
+    toast.success('Stack linked');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link stack';
+    toast.error(e instanceof Error ? e.message : 'Failed to link stack');
   }
 }
 
@@ -338,9 +352,10 @@ async function handleLinkInfra(data: LinkInfra) {
   try {
     await applicationsApi.linkInfra(id, selectedEntity.value.id, data);
     showLinkInfraModal.value = false;
+    toast.success('Infrastructure linked');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link infra';
+    toast.error(e instanceof Error ? e.message : 'Failed to link infra');
   }
 }
 
@@ -349,9 +364,10 @@ async function handleLinkService(data: LinkService) {
   try {
     await applicationsApi.linkService(id, selectedEntity.value.id, data);
     showLinkServiceModal.value = false;
+    toast.success('Service linked');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link service';
+    toast.error(e instanceof Error ? e.message : 'Failed to link service');
   }
 }
 
@@ -360,9 +376,10 @@ async function handleLinkDomain(data: LinkDomain) {
   try {
     await applicationsApi.linkDomain(id, selectedEntity.value.id, data);
     showLinkDomainModal.value = false;
+    toast.success('Domain linked');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link domain';
+    toast.error(e instanceof Error ? e.message : 'Failed to link domain');
   }
 }
 
@@ -371,9 +388,10 @@ async function handleLinkPerson(data: LinkPerson) {
   try {
     await applicationsApi.linkPerson(id, selectedEntity.value.id, data);
     showLinkPersonModal.value = false;
+    toast.success('Person linked');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link person';
+    toast.error(e instanceof Error ? e.message : 'Failed to link person');
   }
 }
 
@@ -382,9 +400,10 @@ async function handleLinkShare(data: LinkNetworkShare) {
   try {
     await applicationsApi.linkShare(id, selectedEntity.value.id, data);
     showLinkShareModal.value = false;
+    toast.success('Storage linked');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to link share';
+    toast.error(e instanceof Error ? e.message : 'Failed to link share');
   }
 }
 
@@ -402,7 +421,7 @@ async function openEditHealth(health: HealthcheckRelation) {
     editingHealth.value = fullHealthcheck;
     showEditHealthModal.value = true;
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load healthcheck';
+    toast.error(e instanceof Error ? e.message : 'Failed to load healthcheck');
   }
 }
 
@@ -432,10 +451,10 @@ async function handleEditInfra(data: LinkInfra) {
     await applicationsApi.linkInfra(id, editingInfra.value.id, data);
     showEditInfraModal.value = false;
     editingInfra.value = null;
+    toast.success('Infrastructure link updated');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update infra link';
+    toast.error(e instanceof Error ? e.message : 'Failed to update infra link');
   }
 }
 
@@ -445,10 +464,12 @@ async function handleEditHealth(data: UpdateHealthcheck) {
     await healthchecksApi.update(editingHealth.value.id, data);
     showEditHealthModal.value = false;
     editingHealth.value = null;
+    toast.success('Healthcheck updated');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update healthcheck';
+    toast.error(
+      e instanceof Error ? e.message : 'Failed to update healthcheck'
+    );
   }
 }
 
@@ -458,10 +479,12 @@ async function handleEditService(data: LinkService) {
     await applicationsApi.linkService(id, editingService.value.id, data);
     showEditServiceModal.value = false;
     editingService.value = null;
+    toast.success('Service link updated');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update service link';
+    toast.error(
+      e instanceof Error ? e.message : 'Failed to update service link'
+    );
   }
 }
 
@@ -471,10 +494,12 @@ async function handleEditDomain(data: LinkDomain) {
     await applicationsApi.linkDomain(id, editingDomain.value.id, data);
     showEditDomainModal.value = false;
     editingDomain.value = null;
+    toast.success('Domain link updated');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update domain link';
+    toast.error(
+      e instanceof Error ? e.message : 'Failed to update domain link'
+    );
   }
 }
 
@@ -484,10 +509,12 @@ async function handleEditPerson(data: LinkPerson) {
     await applicationsApi.linkPerson(id, editingPerson.value.id, data);
     showEditPersonModal.value = false;
     editingPerson.value = null;
+    toast.success('Person link updated');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update person link';
+    toast.error(
+      e instanceof Error ? e.message : 'Failed to update person link'
+    );
   }
 }
 
@@ -497,10 +524,10 @@ async function handleEditShare(data: LinkNetworkShare) {
     await applicationsApi.linkShare(id, editingShare.value.id, data);
     showEditShareModal.value = false;
     editingShare.value = null;
+    toast.success('Storage link updated');
     loadData();
   } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : 'Failed to update share link';
+    toast.error(e instanceof Error ? e.message : 'Failed to update share link');
   }
 }
 
@@ -524,9 +551,10 @@ async function handleCreateNote(data: CreateNote) {
   try {
     await notesApi.create(data);
     showCreateNoteModal.value = false;
+    toast.success('Note created');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to create note';
+    toast.error(e instanceof Error ? e.message : 'Failed to create note');
   }
 }
 
@@ -536,9 +564,10 @@ async function handleEditNote(data: UpdateNote) {
     await notesApi.update(editingNote.value.id, data);
     showEditNoteModal.value = false;
     editingNote.value = null;
+    toast.success('Note updated');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update note';
+    toast.error(e instanceof Error ? e.message : 'Failed to update note');
   }
 }
 
@@ -548,9 +577,10 @@ async function handleDeleteNote() {
     await notesApi.delete(deletingNote.value.id);
     showDeleteNoteDialog.value = false;
     deletingNote.value = null;
+    toast.success('Note deleted');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to delete note';
+    toast.error(e instanceof Error ? e.message : 'Failed to delete note');
   }
 }
 
@@ -588,9 +618,14 @@ async function handleUnlink() {
         break;
     }
     showUnlinkDialog.value = false;
+    toast.success(
+      unlinkType.value === 'health'
+        ? 'Healthcheck removed'
+        : 'Unlinked successfully'
+    );
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to unlink';
+    toast.error(e instanceof Error ? e.message : 'Failed to unlink');
   }
 }
 

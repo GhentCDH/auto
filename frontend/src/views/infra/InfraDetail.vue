@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { toast } from 'vue-sonner';
 import { infraApi } from '@/api';
 import type { InfraWithRelations } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
@@ -41,18 +42,20 @@ async function handleUpdate(formData: unknown) {
       formData as Parameters<typeof infraApi.update>[1]
     );
     showEditModal.value = false;
+    toast.success('Infrastructure updated');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update infra';
+    toast.error(e instanceof Error ? e.message : 'Failed to update infra');
   }
 }
 
 async function handleDelete() {
   try {
     await infraApi.delete(id);
+    toast.success('Infrastructure deleted');
     router.push('/infra');
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to delete infra';
+    toast.error(e instanceof Error ? e.message : 'Failed to delete infra');
   }
 }
 

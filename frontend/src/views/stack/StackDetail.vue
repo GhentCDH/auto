@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { toast } from 'vue-sonner';
 import { stacksApi } from '@/api';
 import type { StackWithRelations } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
@@ -39,18 +40,20 @@ async function handleUpdate(formData: unknown) {
       formData as Parameters<typeof stacksApi.update>[1]
     );
     showEditModal.value = false;
+    toast.success('Technology updated');
     loadData();
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update stack';
+    toast.error(e instanceof Error ? e.message : 'Failed to update stack');
   }
 }
 
 async function handleDelete() {
   try {
     await stacksApi.delete(id);
+    toast.success('Technology deleted');
     router.push('/stack');
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to delete stack';
+    toast.error(e instanceof Error ? e.message : 'Failed to delete stack');
   }
 }
 

@@ -121,8 +121,7 @@ watch(
         http_auth_pass: hc.http_auth_pass || '',
       };
       target_type.value = hc.application_id ? 'application' : 'service';
-      selectedTargetName.value =
-        hc.application_name || hc.service_name || null;
+      selectedTargetName.value = hc.application_name || hc.service_name || null;
       selectedDomainName.value = hc.domain_fqdn || null;
       headersArray.value = parseHeaders(hc.headers);
       // Expand sections if they have values
