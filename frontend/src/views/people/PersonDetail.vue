@@ -12,6 +12,7 @@ const router = useRouter();
 <template>
   <EntityDetail
     entity-name="Person"
+    list-label="People"
     list-path="/people"
     :fetch-fn="
       peopleApi.get as (id: string) => Promise<{ id: string; name: string }>
