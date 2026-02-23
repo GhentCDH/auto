@@ -1,3 +1,8 @@
+## [1.2.1] - 2026-02-23
+
+### 🚀 Features
+
+- *(frontend)* Add yellow for retried requests
 ## [1.2.0] - 2026-02-20
 
 ### 🚀 Features
