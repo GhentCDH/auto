@@ -3,7 +3,37 @@ use sqlx::SqlitePool;
 use tokio::try_join;
 use utoipa::ToSchema;
 
-use crate::Result;
+use crate::{Error, Result};
+
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
+pub struct ResolvedEntity {
+    pub id: String,
+    pub name: String,
+    pub entity_type: String,
+}
+
+/// Look up which entity type owns the given UUID (or UUID prefix).
+pub async fn resolve_id(pool: &SqlitePool, id: &str) -> Result<ResolvedEntity> {
+    let pattern = format!("{id}%");
+    let result = sqlx::query_as::<_, ResolvedEntity>(
+        r#"
+        SELECT id, name, 'application' as entity_type FROM application WHERE id LIKE ?1
+        UNION ALL SELECT id, name, 'service' FROM service WHERE id LIKE ?1
+        UNION ALL SELECT id, name, 'infra' FROM infra WHERE id LIKE ?1
+        UNION ALL SELECT id, fqdn as name, 'domain' FROM domain WHERE id LIKE ?1
+        UNION ALL SELECT id, name, 'person' FROM person WHERE id LIKE ?1
+        UNION ALL SELECT id, name, 'network_share' FROM network_share WHERE id LIKE ?1
+        UNION ALL SELECT id, name, 'stack' FROM stack WHERE id LIKE ?1
+        UNION ALL SELECT id, name, 'healthcheck' FROM healthcheck WHERE id LIKE ?1
+        LIMIT 1
+        "#,
+    )
+    .bind(&pattern)
+    .fetch_optional(pool)
+    .await?;
+
+    result.ok_or(Error::NotFound(format!("No entity found with id {id}")))
+}
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SearchResults {

@@ -34,7 +34,7 @@ impl Overview for ApplicationWithRelations {
         header(
             &mut md,
             "Auto",
-            &format!("{}/{}", state.config.domain, self.application.id),
+            &format!("{}/{}", state.config.domain, &self.application.id[..8]),
         );
 
         if let Some(url) = &self.application.url {
@@ -94,7 +94,7 @@ impl Overview for ServiceWithRelations {
         header(
             &mut md,
             "Auto",
-            &format!("{}/{}", state.config.domain, self.service.id),
+            &format!("{}/{}", state.config.domain, &self.service.id[..8]),
         );
 
         if let Some(repo) = &self.service.repository_url {

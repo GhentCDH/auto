@@ -1,4 +1,4 @@
-use axum::extract::{Query, Request};
+use axum::extract::{Path, Query, Request, State};
 use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
@@ -33,6 +33,7 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .nest("/healthchecks", healthchecks::routes())
         .nest("/dashboard", dashboard::routes())
         .nest("/search", search::routes())
+        .route("/resolve/{id}", get(resolve_id))
         .with_state(state)
 }
 
@@ -60,6 +61,27 @@ async fn version() -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "version": env!("CARGO_PKG_VERSION")
     }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/resolve/{id}",
+    tag = "search",
+    params(
+        ("id" = String, Path, description = "Entity UUID to resolve")
+    ),
+    responses(
+        (status = 200, description = "Resolved entity", body = crate::service::search::ResolvedEntity),
+        (status = 404, description = "No entity found with this ID"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn resolve_id(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> crate::Result<impl IntoResponse> {
+    let resolved = crate::service::search::resolve_id(&state.pool, &id).await?;
+    Ok(Json(resolved))
 }
 
 #[allow(unused)]
