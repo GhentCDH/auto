@@ -385,7 +385,7 @@ onMounted(() => {
         <!-- Recent Activity -->
         <div class="card bg-base-200">
           <div class="card-body">
-            <h2 class="card-title">Recent Activity</h2>
+            <h2 class="card-title">Recent Changes</h2>
             <div
               v-if="stats.recent_activity.length === 0"
               class="text-base-content/70"

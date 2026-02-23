@@ -3,81 +3,110 @@
 */
 
 use crate::AppState;
+use crate::models::{ApplicationWithRelations, ServiceWithRelations};
 use itertools::Itertools;
-use std::fmt::{Display, Write};
-use url::Url;
+use std::fmt::Write;
 
-#[derive(Debug, Clone)]
-pub struct Person {
-    pub name: String,
-    pub role: String,
+pub trait Overview {
+    fn to_md(&self, state: &AppState) -> String;
 }
 
-#[derive(Debug, Clone)]
-pub struct Overview {
-    /// The UUID of this component, in auto
-    pub auto_id: String,
-    /// Short description of the component
-    pub description: Option<String>,
-    /// URL where this application / service is accessible
-    pub url: Option<Url>,
-    /// URL of the repository where the source is hosted
-    pub repo: Option<Url>,
-    /// Technologies that are used in this app
-    pub stack: Vec<String>,
-    /// Infrastructure that this component relies on
-    pub infra: Vec<String>,
-    /// Storage pools used for this component
-    pub storage: Vec<String>,
-    /// People working on this project and their role
-    pub people: Vec<Person>,
+/// Helper: append a row to the markdown table only if the value is present
+fn row(md: &mut String, label: &str, value: &str) {
+    writeln!(md, "| {label} | {value} |").unwrap();
 }
 
-impl Display for Person {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ({})", self.name, self.role)
-    }
+/// Helper: append a row to the markdown table only if the value is present
+fn header(md: &mut String, label: &str, value: &str) {
+    writeln!(md, "| {label} | {value} |").unwrap();
+    writeln!(md, "|---------|---------|").unwrap();
 }
 
-impl Overview {
-    /// Create a Markdown string of this overview
-    pub fn to_md(&self, state: &AppState) -> String {
+impl Overview for ApplicationWithRelations {
+    fn to_md(&self, state: &AppState) -> String {
         let mut md = String::new();
 
-        if let Some(description) = &self.description {
+        if let Some(description) = &self.application.description {
             writeln!(md, "{description}").unwrap();
             writeln!(md).unwrap();
         }
 
-        // header: link to Auto for full information
-        writeln!(md, "| Auto | {}/{} |", state.config.domain, self.auto_id).unwrap();
+        header(
+            &mut md,
+            "Auto",
+            &format!("{}/{}", state.config.domain, self.application.id),
+        );
 
-        if let Some(url) = &self.url {
-            writeln!(md, "| URL | [{0}]({0}) |", url).unwrap();
+        if let Some(url) = &self.application.url {
+            row(&mut md, "URL", &format!("[{url}]({url})"));
         }
 
-        if let Some(repo) = &self.repo {
-            writeln!(md, "| Repo | [{0}]({0}) |", repo).unwrap();
+        if let Some(repo) = &self.application.repository_url {
+            row(&mut md, "Repo", &format!("[{repo}]({repo})"));
         }
 
-        if !self.stack.is_empty() {
-            let cs = self.stack.join(", ");
-            writeln!(md, "| Stack | {cs} |").unwrap();
+        if !self.stacks.is_empty() {
+            row(
+                &mut md,
+                "Stack",
+                &self.stacks.iter().map(|s| &*s.name).join(", "),
+            );
         }
 
         if !self.infra.is_empty() {
-            let cs = self.infra.join(", ");
-            writeln!(md, "| Infra | {cs} |").unwrap();
+            row(
+                &mut md,
+                "Infra",
+                &self.infra.iter().map(|i| &*i.name).join(", "),
+            );
         }
 
-        if !self.storage.is_empty() {
-            let cs = self.storage.join(", ");
-            writeln!(md, "| Storage | {cs} |").unwrap();
+        if !self.network_shares.is_empty() {
+            row(
+                &mut md,
+                "Storage",
+                &self.network_shares.iter().map(|s| &*s.name).join(", "),
+            );
         }
 
         if !self.people.is_empty() {
-            let cs = self.people.iter().join(", ");
-            writeln!(md, "| People | {cs} |").unwrap();
+            let people = self
+                .people
+                .iter()
+                .map(|p| format!("{} ({})", p.name, p.contribution_type))
+                .join(", ");
+            row(&mut md, "People", &people);
+        }
+
+        md
+    }
+}
+
+impl Overview for ServiceWithRelations {
+    fn to_md(&self, state: &AppState) -> String {
+        let mut md = String::new();
+
+        if let Some(description) = &self.service.description {
+            writeln!(md, "{description}").unwrap();
+            writeln!(md).unwrap();
+        }
+
+        header(
+            &mut md,
+            "Auto",
+            &format!("{}/{}", state.config.domain, self.service.id),
+        );
+
+        if let Some(repo) = &self.service.repository_url {
+            row(&mut md, "Repo", &format!("[{repo}]({repo})"));
+        }
+
+        if !self.infra.is_empty() {
+            row(
+                &mut md,
+                "Infra",
+                &self.infra.iter().map(|i| &*i.name).join(", "),
+            );
         }
 
         md

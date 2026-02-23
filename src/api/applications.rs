@@ -10,6 +10,7 @@ use crate::models::{
     CreateApplication, LinkDomain, LinkInfra, LinkNetworkShare, LinkPerson, LinkService,
     PaginationParams, UpdateApplication, ApplicationWithRelations, Application,
 };
+use crate::overview::Overview as _;
 use crate::service::application;
 use crate::{AppState, Result};
 
@@ -26,6 +27,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list).post(create))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
+        .route("/{id}/overview.md", get(get_overview_md))
         // Relationship management
         .route(
             "/{id}/infra/{infra_id}",
@@ -107,6 +109,28 @@ async fn get_one(
 ) -> Result<impl axum::response::IntoResponse> {
     let result = application::get_with_relations(&state.pool, &id).await?;
     Ok(Json(result))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/applications/{id}/overview.md",
+    tag = "applications",
+    params(
+        ("id" = String, Path, description = "Application ID")
+    ),
+    responses(
+        (status = 200, description = "Markdown overview", content_type = "text/markdown", body = String),
+        (status = 404, description = "Application not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn get_overview_md(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl axum::response::IntoResponse> {
+    let app = application::get_with_relations(&state.pool, &id).await?;
+    let md = app.to_md(&state);
+    Ok(([(axum::http::header::CONTENT_TYPE, "text/markdown")], md))
 }
 
 #[utoipa::path(

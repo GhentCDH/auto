@@ -7,6 +7,7 @@ use serde::Deserialize;
 use tracing::info;
 
 use crate::models::{CreateService, LinkInfra, PaginationParams, UpdateService, ServiceWithRelations, Service};
+use crate::overview::Overview as _;
 use crate::service::service;
 use crate::{AppState, Result};
 
@@ -23,6 +24,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list).post(create))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
+        .route("/{id}/overview.md", get(get_overview_md))
         .route(
             "/{id}/infra/{infra_id}",
             post(link_infra).delete(unlink_infra),
@@ -84,6 +86,28 @@ async fn get_one(
 ) -> Result<impl axum::response::IntoResponse> {
     let result = service::get_with_relations(&state.pool, &id).await?;
     Ok(Json(result))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/services/{id}/overview.md",
+    tag = "services",
+    params(
+        ("id" = String, Path, description = "Service ID")
+    ),
+    responses(
+        (status = 200, description = "Markdown overview", content_type = "text/markdown", body = String),
+        (status = 404, description = "Service not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn get_overview_md(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl axum::response::IntoResponse> {
+    let svc = service::get_with_relations(&state.pool, &id).await?;
+    let md = svc.to_md(&state);
+    Ok(([(axum::http::header::CONTENT_TYPE, "text/markdown")], md))
 }
 
 #[utoipa::path(
