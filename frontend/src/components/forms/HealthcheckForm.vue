@@ -37,11 +37,11 @@ if (props.initialTargetName) {
   selectedTargetName.value = props.initialTargetName;
 }
 
-const form = ref<Required<CreateHealthcheck>>({
+const form = ref<CreateHealthcheck>({
   name: props.initialName || '',
   application_id: props.initialApplicationId || '',
   service_id: props.initialServiceId || '',
-  kuma_id: 0,
+  kuma_id: undefined,
   domain_id: '',
   protocol: 'https',
   path: '/',
