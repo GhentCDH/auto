@@ -39,3 +39,4 @@ rust_socketio = { version = "0.6", features = ["async"] }
 url = "2"
 utoipa = { version = "5.3", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
+itertools = "0.14.0"
