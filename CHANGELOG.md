@@ -1,3 +1,14 @@
+## [1.2.2] - 2026-02-23
+
+### 🚀 Features
+
+- *(backend)* Sort case-insensitively
+- *(frontend)* Toast messages
+- *(frontend)* Dashboard layout improvements
+
+### 🐛 Bug Fixes
+
+- *(frontend)* Kuma_id is undefined by default for a new healthcheck
 ## [1.2.1] - 2026-02-23
 
 ### 🚀 Features
