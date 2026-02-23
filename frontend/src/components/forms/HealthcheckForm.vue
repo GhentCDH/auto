@@ -206,7 +206,7 @@ function removeHeader(index: number) {
 watch(
   () => form.value.method,
   (method) => {
-    if (['POST', 'PUT', 'PATCH'].includes(method)) {
+    if (method != null && ['POST', 'PUT', 'PATCH'].includes(method)) {
       showRequestBody.value = true;
     }
   }
@@ -474,7 +474,9 @@ watch(
 
       <!-- Request Body Section (for POST/PUT/PATCH) -->
       <fieldset
-        v-if="['POST', 'PUT', 'PATCH'].includes(form.method)"
+        v-if="
+          form.method != null && ['POST', 'PUT', 'PATCH'].includes(form.method)
+        "
         class="fieldset md:col-span-2"
       >
         <legend class="fieldset-legend">
@@ -537,7 +539,9 @@ watch(
               >▸</span
             >
             Retry Configuration
-            <span v-if="form.retry > 0" class="badge badge-sm badge-info"
+            <span
+              v-if="form.retry != null && form.retry > 0"
+              class="badge badge-sm badge-info"
               >{{ form.retry }} retries</span
             >
           </button>
