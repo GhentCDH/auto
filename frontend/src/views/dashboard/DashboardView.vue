@@ -2,10 +2,10 @@
 import { ref, computed, onMounted } from 'vue';
 import { dashboardApi, healthchecksApi } from '@/api';
 import type { DashboardStats, Healthcheck } from '@/types';
+import type { ComponentPublicInstance } from 'vue';
 import { useUptime } from '@/composables/useUptime';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
-import HealthStats from '@/components/common/HealthStats.vue';
 
 const stats = ref<DashboardStats | null>(null);
 const healthchecks = ref<Healthcheck[]>([]);
@@ -58,6 +58,10 @@ const healthcheckStatuses = computed(() => {
 
 const downHealthchecks = computed(() =>
   healthcheckStatuses.value.filter((h) => h.status === 'down')
+);
+
+const pendingHealthchecks = computed(() =>
+  healthcheckStatuses.value.filter((h) => h.status === 'pending')
 );
 
 function entityRoute(item: { entity_type: string; id: string }): string {
@@ -136,6 +140,22 @@ function healthcheckTarget(hc: Healthcheck): string {
   if (hc.service_id) return `/services/${hc.service_id}`;
   return `/healthchecks/${hc.id}`;
 }
+
+const linkRef = ref<ComponentPublicInstance | null>(null);
+const textRef = ref<HTMLSpanElement | null>(null);
+const isOverflowing = ref(false);
+
+onMounted(() => {
+  const container = (linkRef.value?.$el as HTMLElement | undefined) ?? null;
+  const text = textRef.value;
+  if (container && text) {
+    const overflow = text.scrollWidth - container.clientWidth;
+    if (overflow > 0) {
+      isOverflowing.value = true;
+      text.style.setProperty('--scroll-dist', `-${overflow}px`);
+    }
+  }
+});
 </script>
 
 <template>
@@ -172,6 +192,43 @@ function healthcheckTarget(hc: Healthcheck): string {
           <div class="flex flex-wrap gap-1 mt-1">
             <router-link
               v-for="item in downHealthchecks"
+              :key="item.healthcheck.id"
+              :to="healthcheckTarget(item.healthcheck)"
+              class="badge badge-warning gap-1"
+            >
+              {{ item.healthcheck.name }}
+            </router-link>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="pendingHealthchecks.length > 0"
+        class="alert alert-warning mb-6"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6 shrink-0 stroke-current"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        <div>
+          <span class="font-semibold"
+            >{{ pendingHealthchecks.length }} service{{
+              pendingHealthchecks.length > 1 ? 's' : ''
+            }}
+            pending:</span
+          >
+          <div class="flex flex-wrap gap-1 mt-1">
+            <router-link
+              v-for="item in pendingHealthchecks"
               :key="item.healthcheck.id"
               :to="healthcheckTarget(item.healthcheck)"
               class="badge badge-error gap-1"
@@ -266,24 +323,28 @@ function healthcheckTarget(hc: Healthcheck): string {
             <div
               v-for="item in healthcheckStatuses"
               :key="item.healthcheck.id"
-              class="flex items-center justify-end gap-2 py-2 border-b border-base-300"
+              class="grid grid-cols-3 gap-2 py-2 border-b border-base-300"
             >
               <!-- Status dot -->
-              <span
-                class="w-2.5 h-2.5 rounded-full shrink-0"
-                :class="statusDotClass(item.status)"
-              />
-              <!-- Name -->
-              <router-link
-                :to="healthcheckTarget(item.healthcheck)"
-                class="link link-hover truncate min-w-0 max-w-20 text-right"
-              >
-                {{ toTitleCase(item.healthcheck.name) }}
-              </router-link>
+              <div class="flex items-center justify-end gap-2 overflow-hidden">
+                <span
+                  class="w-2.5 h-2.5 rounded-full shrink-0"
+                  :class="statusDotClass(item.status)"
+                />
+                <router-link
+                  :to="healthcheckTarget(item.healthcheck)"
+                  class="link link-hover min-w-0 text-right marquee-container"
+                >
+                  <span class="marquee-text">{{
+                    toTitleCase(item.healthcheck.name)
+                  }}</span>
+                </router-link>
+              </div>
+
               <!-- Sparkline -->
               <div
                 v-if="item.healthcheck.kuma_id"
-                class="flex-1 max-w-100 md:max-w-50 lg:max-w-80 xl:max-w-80 ml-1 h-4 shrink-0 hidden sm:block"
+                class="col-span-2 max-w-100 md:max-w-50 lg:max-w-80 xl:max-w-80 ml-1 h-4 shrink-0 hidden sm:block"
               >
                 <HealthPlot :kuma-id="item.healthcheck.kuma_id" :count="48" />
               </div>
@@ -358,3 +419,29 @@ function healthcheckTarget(hc: Healthcheck): string {
     </div>
   </div>
 </template>
+
+<style scoped>
+.marquee-container {
+  overflow: hidden;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.marquee-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.marquee-container:hover .marquee-text {
+  animation: marquee-scroll 4s linear infinite;
+}
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+</style>
