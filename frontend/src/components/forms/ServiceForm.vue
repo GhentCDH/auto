@@ -6,6 +6,7 @@ import { Plus, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
   service?: Service;
+  duplicateService?: Service;
   initialName?: string;
 }>();
 
@@ -30,6 +31,23 @@ watch(
     if (svc) {
       form.value = {
         name: svc.name,
+        description: svc.description || '',
+        repository_url: svc.repository_url || '',
+        environment: svc.environment,
+        status: svc.status,
+      };
+      imageRefList.value = svc.image_refs ? JSON.parse(svc.image_refs) : [];
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.duplicateService,
+  (svc) => {
+    if (svc) {
+      form.value = {
+        name: `${svc.name} (copy)`,
         description: svc.description || '',
         repository_url: svc.repository_url || '',
         environment: svc.environment,

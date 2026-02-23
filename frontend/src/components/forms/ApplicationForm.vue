@@ -11,6 +11,7 @@ import { Plus, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
   application?: Application;
+  duplicateApplication?: Application;
   initialName?: string;
 }>();
 
@@ -36,6 +37,24 @@ watch(
     if (app) {
       form.value = {
         name: app.name,
+        description: app.description || '',
+        repository_url: app.repository_url || '',
+        environment: app.environment,
+        url: app.url || '',
+        status: app.status,
+      };
+      imageRefList.value = app.image_refs ? JSON.parse(app.image_refs) : [];
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.duplicateApplication,
+  (app) => {
+    if (app) {
+      form.value = {
+        name: `${app.name} (copy)`,
         description: app.description || '',
         repository_url: app.repository_url || '',
         environment: app.environment,

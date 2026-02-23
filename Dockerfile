@@ -17,7 +17,7 @@ RUN bun run build
 
 # Stage 2: Build Rust backend
 
-FROM lukemathwalker/cargo-chef:0.1.73-rust-1.93-alpine3.22 as chef
+FROM lukemathwalker/cargo-chef:0.1.73-rust-1.93-alpine3.22 AS chef
 
 WORKDIR /app
 
