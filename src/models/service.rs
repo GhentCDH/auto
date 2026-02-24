@@ -12,6 +12,7 @@ pub struct Service {
     pub environment: String,
     pub status: String,
     pub image_refs: Option<String>,
+    pub outline_url: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -28,6 +29,7 @@ pub struct CreateService {
     #[serde(default = "default_status")]
     pub status: String,
     pub image_refs: Option<String>,
+    pub outline_url: Option<String>,
 }
 
 /// DTO for updating a service
@@ -39,6 +41,7 @@ pub struct UpdateService {
     pub environment: Option<String>,
     pub status: Option<String>,
     pub image_refs: Option<String>,
+    pub outline_url: Option<String>,
 }
 
 fn default_environment() -> String {

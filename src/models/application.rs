@@ -13,6 +13,7 @@ pub struct Application {
     pub url: Option<String>,
     pub status: String,
     pub image_refs: Option<String>,
+    pub outline_url: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -30,6 +31,7 @@ pub struct CreateApplication {
     #[serde(default = "default_status")]
     pub status: String,
     pub image_refs: Option<String>,
+    pub outline_url: Option<String>,
 }
 
 /// DTO for updating an application
@@ -42,6 +44,7 @@ pub struct UpdateApplication {
     pub url: Option<String>,
     pub status: Option<String>,
     pub image_refs: Option<String>,
+    pub outline_url: Option<String>,
 }
 
 fn default_environment() -> String {

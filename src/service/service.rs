@@ -18,7 +18,7 @@ pub async fn list(
 
     let services = sqlx::query_as::<_, Service>(
         r#"
-        SELECT id, name, description, repository_url, environment, status, image_refs, created_at, updated_at, created_by
+        SELECT id, name, description, repository_url, environment, status, image_refs, outline_url, created_at, updated_at, created_by
         FROM service
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR status = ?2)
@@ -56,7 +56,7 @@ pub async fn list(
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Service> {
     sqlx::query_as::<_, Service>(
         r#"
-        SELECT id, name, description, repository_url, environment, status, image_refs, created_at, updated_at, created_by
+        SELECT id, name, description, repository_url, environment, status, image_refs, outline_url, created_at, updated_at, created_by
         FROM service
         WHERE id = ?1
         "#,
@@ -111,8 +111,8 @@ pub async fn create(pool: &SqlitePool, input: CreateService) -> Result<Service> 
 
     sqlx::query(
         r#"
-        INSERT INTO service (id, name, description, repository_url, environment, status, image_refs)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        INSERT INTO service (id, name, description, repository_url, environment, status, image_refs, outline_url)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
         "#,
     )
     .bind(&id)
@@ -122,6 +122,7 @@ pub async fn create(pool: &SqlitePool, input: CreateService) -> Result<Service> 
     .bind(&input.environment)
     .bind(&input.status)
     .bind(&input.image_refs)
+    .bind(&input.outline_url)
     .execute(pool)
     .await?;
 
@@ -137,12 +138,13 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateService) -> Result
     let environment = input.environment.unwrap_or(existing.environment);
     let status = input.status.unwrap_or(existing.status);
     let image_refs = input.image_refs.or(existing.image_refs);
+    let outline_url = input.outline_url.or(existing.outline_url);
 
     sqlx::query(
         r#"
         UPDATE service
-        SET name = ?1, description = ?2, repository_url = ?3, environment = ?4, status = ?5, image_refs = ?6, updated_at = datetime('now')
-        WHERE id = ?7
+        SET name = ?1, description = ?2, repository_url = ?3, environment = ?4, status = ?5, image_refs = ?6, outline_url = ?7, updated_at = datetime('now')
+        WHERE id = ?8
         "#,
     )
     .bind(&name)
@@ -151,6 +153,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateService) -> Result
     .bind(&environment)
     .bind(&status)
     .bind(&image_refs)
+    .bind(&outline_url)
     .bind(id)
     .execute(pool)
     .await?;
