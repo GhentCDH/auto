@@ -5,7 +5,8 @@ use crate::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub domain: String,
+    pub host: String,
+    pub base_url: String,
     pub database_url: String,
     pub kuma_url: Url,
     pub kuma_username: String,
@@ -38,10 +39,10 @@ impl Config {
         let outline_api_key = std::env::var("OUTLINE_API_KEY").ok();
 
         Ok(Self {
-            domain: var("DOMAIN"),
+            host: var("HOST"),
+            base_url: var("BASE_URL"),
             database_url: var("DATABASE_URL"),
-            kuma_url: Url::parse(&var("KUMA_URL"))
-                .expect("KUMA_URL should be a valid URL"),
+            kuma_url: Url::parse(&var("KUMA_URL")).expect("KUMA_URL should be a valid URL"),
             kuma_username: var("KUMA_USERNAME"),
             kuma_password: var("KUMA_PASSWORD"),
             outline_url,
