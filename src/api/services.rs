@@ -261,8 +261,7 @@ async fn sync_outline(
     let client = crate::outline::OutlineClient::new(outline_url, outline_api_key);
 
     let doc = client.get_document(&doc_id).await?;
-    let overview_md = svc.to_md(&state);
-    let new_text = crate::overview::splice_overview(&doc.text, &overview_md);
+    let new_text = svc.splice_overview(&state, &doc.text);
     client.update_document(&doc_id, &new_text).await?;
 
     Ok(axum::http::StatusCode::NO_CONTENT)

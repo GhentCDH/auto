@@ -32,7 +32,7 @@ async fn sync_all(State(state): State<AppState>) -> Result<impl IntoResponse> {
                 outline::sync_application(&state, &app_id).await
             }
         })
-        .buffer_unordered(10)
+        .buffer_unordered(1)
         .collect()
         .await;
 
@@ -45,7 +45,7 @@ async fn sync_all(State(state): State<AppState>) -> Result<impl IntoResponse> {
                 outline::sync_service(&state, &serv_id).await
             }
         })
-        .buffer_unordered(10)
+        .buffer_unordered(1)
         .collect()
         .await;
 

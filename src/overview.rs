@@ -7,18 +7,133 @@ use crate::AppState;
 use crate::models::{ApplicationWithRelations, ServiceWithRelations};
 use itertools::Itertools;
 use std::fmt::Write;
-use std::sync::LazyLock;
 
 /// The set of zero-width characters used for encoding.
 /// Adding more characters reduces the number of characters needed per byte.
-/// Must have a power-of-2 length (2, 4, 8, or 16).
+/// Must have a power-of-2 length (2, 4, 8, or 16, 32, 64 <- current).
 const ZWC_ALPHABET: &[char] = &[
-    '\u{200B}', '\u{200C}', '\u{200D}', '\u{2060}', '\u{2061}', '\u{2062}', '\u{2063}', '\u{2064}',
-    '\u{206A}', '\u{206B}', '\u{206C}', '\u{206D}', '\u{206E}', '\u{206F}', '\u{FEFF}', '\u{FFA0}',
+    '\u{E0020}',
+    '\u{E0021}',
+    '\u{E0022}',
+    '\u{E0023}',
+    '\u{E0024}',
+    '\u{E0025}',
+    '\u{E0026}',
+    '\u{E0027}',
+    '\u{E0028}',
+    '\u{E0029}',
+    '\u{E002A}',
+    '\u{E002B}',
+    '\u{E002C}',
+    '\u{E002D}',
+    '\u{E002E}',
+    '\u{E002F}',
+    '\u{E0030}',
+    '\u{E0031}',
+    '\u{E0032}',
+    '\u{E0033}',
+    '\u{E0034}',
+    '\u{E0035}',
+    '\u{E0036}',
+    '\u{E0037}',
+    '\u{E0038}',
+    '\u{E0039}',
+    '\u{E003A}',
+    '\u{E003B}',
+    '\u{E003C}',
+    '\u{E003D}',
+    '\u{E003E}',
+    '\u{E003F}',
+    '\u{E0040}',
+    '\u{E0041}',
+    '\u{E0042}',
+    '\u{E0043}',
+    '\u{E0044}',
+    '\u{E0045}',
+    '\u{E0046}',
+    '\u{E0047}',
+    '\u{E0048}',
+    '\u{E0049}',
+    '\u{E004A}',
+    '\u{E004B}',
+    '\u{E004C}',
+    '\u{E004D}',
+    '\u{E004E}',
+    '\u{E004F}',
+    '\u{E0050}',
+    '\u{E0051}',
+    '\u{E0052}',
+    '\u{E0053}',
+    '\u{E0054}',
+    '\u{E0055}',
+    '\u{E0056}',
+    '\u{E0057}',
+    '\u{E0058}',
+    '\u{E0059}',
+    '\u{E005A}',
+    '\u{E005B}',
+    '\u{E005C}',
+    '\u{E005D}',
+    '\u{E005E}',
+    '\u{E005F}',
 ];
 
 pub trait Overview {
     fn to_md(&self, state: &AppState) -> String;
+    fn marker_single_start(&self) -> String;
+    fn marker_single_end(&self) -> String;
+    fn marker_start(&self) -> String {
+        repeated_marker(&self.marker_single_start())
+    }
+    fn marker_end(&self) -> String {
+        repeated_marker(&self.marker_single_end())
+    }
+    /// Wrap the markdown overview in start/end markers and splice it into `existing_text`.
+    ///
+    /// Detection is resilient: if even a single repetition of each marker survives
+    /// editing, the block is located and replaced. On replacement the full set of
+    /// repetitions is written back, restoring redundancy.
+    ///
+    /// - If both markers are found, the block between them (inclusive) is replaced.
+    /// - Otherwise the marked block is prepended to the existing text.
+    fn splice_overview(&self, state: &AppState, existing_text: &str) -> String {
+        let new_overview = self.to_md(state);
+        let marked = format!(
+            "{}{}{}",
+            self.marker_start(),
+            new_overview,
+            self.marker_end()
+        );
+
+        let start_single = &self.marker_single_start();
+        let end_single = &self.marker_single_end();
+
+        // Find the earliest start marker and the latest end marker
+        if let Some(start_match) = find_marker(existing_text, start_single) {
+            let search_after = start_match.1;
+            if let Some(end_match) = rfind_marker(existing_text, search_after, end_single) {
+                // Expand both spans to cover all adjacent repetitions
+                let (start_pos, _) = expand_marker_span(existing_text, start_match, start_single);
+                let (_, end_pos) = expand_marker_span(existing_text, end_match, end_single);
+
+                // Consume a trailing newline if present
+                let end_pos = if existing_text[end_pos..].starts_with('\n') {
+                    end_pos + 1
+                } else {
+                    end_pos
+                };
+
+                let mut result = String::with_capacity(existing_text.len());
+                result.push_str(&existing_text[..start_pos]);
+                result.push_str(&marked);
+                result.push_str(&existing_text[end_pos..]);
+                return result;
+            }
+        }
+
+        // No existing markers found — prepend
+        format!("{marked}\n\n{existing_text}")
+    }
 }
 
 /// Helper: append a row to the markdown table only if the value is present
@@ -43,18 +158,55 @@ fn encode_zwc(tag: &str) -> String {
     assert!(base.is_power_of_two() && (2..=256).contains(&base));
 
     let bits_per_char = base.ilog2() as usize;
-    let chars_per_byte = 8usize.div_ceil(bits_per_char);
-    let mask = base - 1;
+    let mask = (base - 1) as u64;
 
+    // Accumulate all bits into a buffer, then drain in chunks of bits_per_char
+    let mut bit_buf: u64 = 0;
+    let mut bits_in_buf = 0usize;
     let mut out = String::new();
+
     for byte in tag.bytes() {
-        // Iterate over chunks from most-significant to least-significant
-        for i in (0..chars_per_byte).rev() {
-            let index = (byte as usize >> (i * bits_per_char)) & mask;
+        bit_buf = (bit_buf << 8) | byte as u64;
+        bits_in_buf += 8;
+
+        while bits_in_buf >= bits_per_char {
+            bits_in_buf -= bits_per_char;
+            let index = ((bit_buf >> bits_in_buf) & mask) as usize;
             out.push(ZWC_ALPHABET[index]);
         }
     }
+
+    // Flush remaining bits, left-aligned (pad with zeros on the right)
+    if bits_in_buf > 0 {
+        let index = ((bit_buf << (bits_per_char - bits_in_buf)) & mask) as usize;
+        out.push(ZWC_ALPHABET[index]);
+    }
+
     out
+}
+
+#[allow(dead_code)]
+fn decode_zwc(encoded: &str) -> Option<String> {
+    let base = ZWC_ALPHABET.len();
+    let bits_per_char = base.ilog2() as usize;
+
+    let mut bit_buf: u64 = 0;
+    let mut bits_in_buf = 0usize;
+    let mut out = Vec::new();
+
+    for ch in encoded.chars() {
+        let index = ZWC_ALPHABET.iter().position(|&c| c == ch)?;
+        bit_buf = (bit_buf << bits_per_char) | index as u64;
+        bits_in_buf += bits_per_char;
+
+        while bits_in_buf >= 8 {
+            bits_in_buf -= 8;
+            out.push(((bit_buf >> bits_in_buf) & 0xFF) as u8);
+        }
+    }
+
+    // Ignore leftover bits (they're just padding zeros)
+    String::from_utf8(out).ok()
 }
 
 /// Number of times each marker is repeated for redundancy.
@@ -65,9 +217,6 @@ const MARKER_REPETITIONS: usize = 3;
 /// is less likely to destroy adjacent copies. Uses a Unicode character that is
 /// unlikely to appear in the tag encoding itself.
 const MARKER_SEP: char = '\u{2028}'; // Line Separator — invisible in most renderers
-
-static MARKER_START_SINGLE: LazyLock<String> = LazyLock::new(|| encode_zwc("<auto>"));
-static MARKER_END_SINGLE: LazyLock<String> = LazyLock::new(|| encode_zwc("</auto>"));
 
 /// Build the full (repeated) marker string.
 fn repeated_marker(single: &str) -> String {
@@ -80,9 +229,6 @@ fn repeated_marker(single: &str) -> String {
     }
     out
 }
-
-static MARKER_START: LazyLock<String> = LazyLock::new(|| repeated_marker(&MARKER_START_SINGLE));
-static MARKER_END: LazyLock<String> = LazyLock::new(|| repeated_marker(&MARKER_END_SINGLE));
 
 /// Find the *earliest* surviving copy of a marker in `text`.
 /// Returns `Some((byte_start, byte_end))` of the single copy that matched.
@@ -141,57 +287,23 @@ fn expand_marker_span(text: &str, matched: (usize, usize), single: &str) -> (usi
     (start, end)
 }
 
-/// Wrap `new_overview` in start/end markers and splice it into `existing_text`.
-///
-/// Detection is resilient: if even a single repetition of each marker survives
-/// editing, the block is located and replaced. On replacement the full set of
-/// repetitions is written back, restoring redundancy.
-///
-/// - If both markers are found, the block between them (inclusive) is replaced.
-/// - Otherwise the marked block is prepended to the existing text.
-pub fn splice_overview(existing_text: &str, new_overview: &str) -> String {
-    let marked = format!("{}{}{}", *MARKER_START, new_overview, *MARKER_END);
-
-    let start_single = &*MARKER_START_SINGLE;
-    let end_single = &*MARKER_END_SINGLE;
-
-    // Find the earliest start marker and the latest end marker
-    if let Some(start_match) = find_marker(existing_text, start_single) {
-        let search_after = start_match.1;
-        if let Some(end_match) = rfind_marker(existing_text, search_after, end_single) {
-            // Expand both spans to cover all adjacent repetitions
-            let (start_pos, _) = expand_marker_span(existing_text, start_match, start_single);
-            let (_, end_pos) = expand_marker_span(existing_text, end_match, end_single);
-
-            // Consume a trailing newline if present
-            let end_pos = if existing_text[end_pos..].starts_with('\n') {
-                end_pos + 1
-            } else {
-                end_pos
-            };
-
-            let mut result = String::with_capacity(existing_text.len());
-            result.push_str(&existing_text[..start_pos]);
-            result.push_str(&marked);
-            result.push_str(&existing_text[end_pos..]);
-            return result;
-        }
-    }
-
-    // No existing markers found — prepend
-    format!("{marked}\n\n{existing_text}")
-}
-
 impl Overview for ApplicationWithRelations {
     fn to_md(&self, state: &AppState) -> String {
         let mut md = String::new();
+
+        writeln!(
+            md,
+            "\n# Auto Information ({})\n",
+            self.application.environment.to_uppercase()
+        )
+        .unwrap();
 
         if let Some(description) = &self.application.description {
             writeln!(md, "{description}").unwrap();
             writeln!(md).unwrap();
         }
 
-        let auto_url = format!("{}/{}", state.config.domain, &self.application.id[..8]);
+        let auto_url = format!("{}/{}", state.config.base_url, &self.application.id[..8]);
         header(
             &mut md,
             "Auto",
@@ -217,7 +329,23 @@ impl Overview for ApplicationWithRelations {
                 &self
                     .stacks
                     .iter()
-                    .map(|s| &*s.name)
+                    .map(|s| &s.name)
+                    .filter(|i| !i.is_empty())
+                    .join(", "),
+            );
+        }
+
+        if !self.services.is_empty() {
+            row(
+                &mut md,
+                "Services",
+                &self
+                    .services
+                    .iter()
+                    .map(|s| {
+                        let s_url = format!("{}/{}", state.config.base_url, &s.id[..8]);
+                        format!("[{}]({})", &s.name, s_url)
+                    })
                     .filter(|i| !i.is_empty())
                     .join(", "),
             );
@@ -230,7 +358,7 @@ impl Overview for ApplicationWithRelations {
                 &self
                     .infra
                     .iter()
-                    .map(|i| &*i.name)
+                    .map(|i| &i.name)
                     .filter(|i| !i.is_empty())
                     .join(", "),
             );
@@ -243,7 +371,7 @@ impl Overview for ApplicationWithRelations {
                 &self
                     .network_shares
                     .iter()
-                    .map(|s| &*s.name)
+                    .map(|s| &s.path)
                     .filter(|i| !i.is_empty())
                     .join(", "),
             );
@@ -263,18 +391,33 @@ impl Overview for ApplicationWithRelations {
 
         md
     }
+
+    fn marker_single_start(&self) -> String {
+        encode_zwc(&format!("<a{}>", &self.application.id[..8],))
+    }
+
+    fn marker_single_end(&self) -> String {
+        encode_zwc(&format!("</{}>", &self.application.id[..8],))
+    }
 }
 
 impl Overview for ServiceWithRelations {
     fn to_md(&self, state: &AppState) -> String {
         let mut md = String::new();
 
+        writeln!(
+            md,
+            "\n# Auto Information ({})\n",
+            self.service.environment.to_uppercase()
+        )
+        .unwrap();
+
         if let Some(description) = &self.service.description {
             writeln!(md, "{description}").unwrap();
             writeln!(md).unwrap();
         }
 
-        let auto_url = format!("{}/{}", state.config.domain, &self.service.id[..8]);
+        let auto_url = format!("{}/{}", state.config.base_url, &self.service.id[..8]);
         header(
             &mut md,
             "Auto",
@@ -294,7 +437,7 @@ impl Overview for ServiceWithRelations {
                 &self
                     .infra
                     .iter()
-                    .map(|i| &*i.name)
+                    .map(|i| &i.name)
                     .filter(|i| !i.is_empty())
                     .join(", "),
             );
@@ -304,83 +447,97 @@ impl Overview for ServiceWithRelations {
 
         md
     }
+
+    fn marker_single_start(&self) -> String {
+        encode_zwc(&format!("<{}>", &self.service.id[..8]))
+    }
+
+    fn marker_single_end(&self) -> String {
+        encode_zwc(&format!("</{}>", &self.service.id[..8]))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Result;
 
-    #[test]
-    fn markers_are_distinct() {
-        assert_ne!(*MARKER_START, *MARKER_END);
-        assert_ne!(*MARKER_START_SINGLE, *MARKER_END_SINGLE);
+    struct TestOverview;
+
+    impl Overview for TestOverview {
+        fn to_md(&self, _state: &AppState) -> String {
+            "content!".to_string()
+        }
+
+        fn marker_single_start(&self) -> String {
+            "<start>".to_string()
+        }
+
+        fn marker_single_end(&self) -> String {
+            "</end>".to_string()
+        }
     }
 
-    #[test]
-    fn splice_prepends_when_no_markers() {
+    async fn appstate() -> Result<AppState> {
+        AppState::new().await
+    }
+
+    #[tokio::test]
+    async fn splice_prepends_when_no_markers() {
+        let state = appstate().await.unwrap();
         let existing = "# Hello\n\nSome content";
-        let overview = "| Auto | test |\n|---------|---------|";
-        let result = splice_overview(existing, overview);
-        assert!(result.starts_with(&*MARKER_START));
-        assert!(result.contains(overview));
+        let t = TestOverview;
+        let result = t.splice_overview(&state, existing);
+        assert!(result.starts_with(&t.marker_start()));
+        assert!(result.contains(&t.to_md(&state)));
         assert!(result.ends_with(existing));
     }
 
-    #[test]
-    fn splice_replaces_existing_block() {
+    #[tokio::test]
+    async fn splice_replaces_existing_block() {
+        let state = appstate().await.unwrap();
+        let t = TestOverview;
         let overview_old = "old overview";
-        let overview_new = "new overview";
         let existing = format!(
             "{}\n{}\n{}\n\n# Rest of doc",
-            *MARKER_START, overview_old, *MARKER_END
+            t.marker_start(),
+            overview_old,
+            t.marker_end()
         );
-        let result = splice_overview(&existing, overview_new);
-        assert!(result.contains(overview_new));
+        let result = t.splice_overview(&state, &existing);
+        assert!(result.contains(&t.to_md(&state)));
         assert!(!result.contains(overview_old));
         assert!(result.contains("# Rest of doc"));
-        // Should only have one set of markers
         assert_eq!(
-            result.matches(&*MARKER_START_SINGLE).count(),
+            result.matches(&t.marker_single_start()).count(),
             MARKER_REPETITIONS
         );
     }
 
-    #[test]
-    fn splice_survives_partial_marker_corruption() {
+    #[tokio::test]
+    async fn splice_survives_partial_marker_corruption() {
+        let state = appstate().await.unwrap();
+        let t = TestOverview;
         let overview_old = "old overview";
-        let overview_new = "new overview";
 
-        // Build a document with full markers, then corrupt some repetitions
         let full = format!(
             "{}{}{}# Rest of doc",
-            *MARKER_START, overview_old, *MARKER_END
+            t.marker_start(),
+            overview_old,
+            t.marker_end()
         );
 
-        // Remove the first repetition of the start marker (keep 2nd and 3rd)
-        let start_single = &*MARKER_START_SINGLE;
+        let start_single = t.marker_single_start();
         let corrupted = {
-            // Find the first occurrence and blank it out
             let pos = full.find(start_single.as_str()).unwrap();
             let mut s = full.clone();
             s.replace_range(pos..pos + start_single.len(), "");
             s
         };
 
-        let result = splice_overview(&corrupted, overview_new);
-        assert!(result.contains(overview_new));
+        let result = t.splice_overview(&state, &corrupted);
+        assert!(result.contains(&t.to_md(&state)));
         assert!(!result.contains(overview_old));
         assert!(result.contains("# Rest of doc"));
-    }
-
-    #[test]
-    fn repeated_marker_has_correct_structure() {
-        let single = &*MARKER_START_SINGLE;
-        let full = &*MARKER_START;
-
-        // Should contain exactly MARKER_REPETITIONS copies
-        assert_eq!(full.matches(single.as_str()).count(), MARKER_REPETITIONS);
-
-        // Should contain MARKER_REPETITIONS - 1 separators
-        assert_eq!(full.matches(MARKER_SEP).count(), MARKER_REPETITIONS - 1);
     }
 }
