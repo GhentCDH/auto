@@ -11,6 +11,7 @@ mod error;
 pub mod kuma;
 pub mod models;
 mod openapi;
+pub mod outline;
 pub mod overview;
 mod routes;
 mod service;

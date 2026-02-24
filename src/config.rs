@@ -10,6 +10,8 @@ pub struct Config {
     pub kuma_url: Url,
     pub kuma_username: String,
     pub kuma_password: String,
+    pub outline_url: Option<Url>,
+    pub outline_api_key: Option<String>,
 }
 
 /// # Panics
@@ -30,6 +32,11 @@ impl Config {
             }
         }
 
+        let outline_url = std::env::var("OUTLINE_URL")
+            .ok()
+            .and_then(|u| Url::parse(&u).ok());
+        let outline_api_key = std::env::var("OUTLINE_API_KEY").ok();
+
         Ok(Self {
             domain: var("DOMAIN"),
             database_url: var("DATABASE_URL"),
@@ -37,6 +44,8 @@ impl Config {
                 .expect("KUMA_URL should be a valid URL"),
             kuma_username: var("KUMA_USERNAME"),
             kuma_password: var("KUMA_PASSWORD"),
+            outline_url,
+            outline_api_key,
         })
     }
 }

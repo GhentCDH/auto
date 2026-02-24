@@ -25,6 +25,7 @@ pub fn routes() -> Router<AppState> {
         .route("/", get(list).post(create))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
         .route("/{id}/overview.md", get(get_overview_md))
+        .route("/{id}/sync-outline", post(sync_outline))
         .route(
             "/{id}/infra/{infra_id}",
             post(link_infra).delete(unlink_infra),
@@ -220,4 +221,47 @@ async fn unlink_infra(
 ) -> Result<impl axum::response::IntoResponse> {
     service::unlink_infra(&state.pool, &service_id, &infra_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/services/{id}/sync-outline",
+    tag = "services",
+    params(
+        ("id" = String, Path, description = "Service ID")
+    ),
+    responses(
+        (status = 200, description = "Overview synced to Outline"),
+        (status = 400, description = "Outline not configured or no outline_url set"),
+        (status = 404, description = "Service not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn sync_outline(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl axum::response::IntoResponse> {
+    let (Some(outline_url), Some(outline_api_key)) =
+        (&state.config.outline_url, &state.config.outline_api_key)
+    else {
+        return Err(crate::Error::ValidationError(
+            "Outline not configured (set OUTLINE_URL and OUTLINE_API_KEY)".to_string(),
+        ));
+    };
+
+    let svc = service::get_with_relations(&state.pool, &id).await?;
+
+    let entity_outline_url = svc.service.outline_url.as_deref().ok_or_else(|| {
+        crate::Error::ValidationError("No Outline document linked to this service".to_string())
+    })?;
+
+    let doc_id = crate::outline::OutlineClient::extract_doc_id(entity_outline_url)?;
+    let client = crate::outline::OutlineClient::new(outline_url, outline_api_key);
+
+    let doc = client.get_document(&doc_id).await?;
+    let overview_md = svc.to_md(&state);
+    let new_text = crate::overview::splice_overview(&doc.text, &overview_md);
+    client.update_document(&doc_id, &new_text).await?;
+
+    Ok(axum::http::StatusCode::OK)
 }

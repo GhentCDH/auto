@@ -31,7 +31,8 @@ use utoipa::{Modify, OpenApi};
         crate::api::applications::unlink_share,
         crate::api::applications::link_stack,
         crate::api::applications::unlink_stack,
-        
+        crate::api::applications::sync_outline,
+
         // Services
         crate::api::services::list,
         crate::api::services::get_one,
@@ -40,7 +41,8 @@ use utoipa::{Modify, OpenApi};
         crate::api::services::delete_one,
         crate::api::services::link_infra,
         crate::api::services::unlink_infra,
-        
+        crate::api::services::sync_outline,
+
         // Infrastructure
         crate::api::infra::list,
         crate::api::infra::get_one,

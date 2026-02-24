@@ -12,6 +12,7 @@ pub mod domains;
 pub mod healthchecks;
 pub mod infra;
 pub mod notes;
+pub mod outline;
 pub mod people;
 pub mod search;
 pub mod services;
@@ -33,6 +34,7 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .nest("/healthchecks", healthchecks::routes())
         .nest("/dashboard", dashboard::routes())
         .nest("/search", search::routes())
+        .nest("/outline", outline::routes())
         .route("/resolve/{id}", get(resolve_id))
         .with_state(state)
 }
