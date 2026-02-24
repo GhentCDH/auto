@@ -27,6 +27,7 @@ const form = ref<CreateApplication>({
   environment: 'prd',
   url: '',
   status: 'active',
+  outline_url: '',
 });
 
 const imageRefList = ref<ImageRef[]>([]);
@@ -42,6 +43,7 @@ watch(
         environment: app.environment,
         url: app.url || '',
         status: app.status,
+        outline_url: app.outline_url || '',
       };
       imageRefList.value = app.image_refs ? JSON.parse(app.image_refs) : [];
     }
@@ -60,6 +62,7 @@ watch(
         environment: app.environment,
         url: app.url || '',
         status: app.status,
+        outline_url: app.outline_url || '',
       };
       imageRefList.value = app.image_refs ? JSON.parse(app.image_refs) : [];
     }
@@ -134,6 +137,17 @@ onMounted(() => {
         placeholder="https://..."
       />
       <div class="label">optional - main URL to access the application</div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Outline Document URL</legend>
+      <input
+        v-model="form.outline_url"
+        type="url"
+        class="input w-full"
+        placeholder="https://docs.example.com/doc/..."
+      />
+      <div class="label">optional - link to the Outline wiki page for this application</div>
     </fieldset>
 
     <fieldset class="fieldset">

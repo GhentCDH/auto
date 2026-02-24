@@ -55,6 +55,7 @@ export interface Application {
   url: string | null;
   status: string;
   image_refs: string | null;
+  outline_url: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -68,6 +69,7 @@ export interface CreateApplication {
   url?: string;
   status?: string;
   image_refs?: string;
+  outline_url?: string;
 }
 
 export interface UpdateApplication {
@@ -78,6 +80,7 @@ export interface UpdateApplication {
   url?: string;
   status?: string;
   image_refs?: string;
+  outline_url?: string;
 }
 
 export interface ApplicationWithRelations extends Application {
@@ -100,6 +103,7 @@ export interface Service {
   environment: string;
   status: string;
   image_refs: string | null;
+  outline_url: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -112,6 +116,7 @@ export interface CreateService {
   environment?: string;
   status?: string;
   image_refs?: string;
+  outline_url?: string;
 }
 
 export interface UpdateService {
@@ -121,6 +126,7 @@ export interface UpdateService {
   environment?: string;
   status?: string;
   image_refs?: string;
+  outline_url?: string;
 }
 
 export interface ServiceRelation {

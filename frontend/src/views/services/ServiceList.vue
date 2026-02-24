@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
-import { servicesApi } from '@/api';
+import { outlineApi, servicesApi } from '@/api';
 import type {
   Service,
   ServiceWithRelations,
@@ -28,6 +28,20 @@ const filters = ref<Record<string, string | null>>({
   status: null,
   environment: null,
 });
+
+const syncLoading = ref(false);
+
+async function syncOutline(): Promise<void> {
+  try {
+    const promise = outlineApi.sync();
+    toast.promise(promise, {
+      loading: 'Syncing all applications and services to Outline...',
+      success: 'Outline sync completed',
+      error: (e: unknown) => (e instanceof Error ? e.message : 'Sync failed'),
+    });
+    await promise;
+  } catch {}
+}
 
 function onFilterChange(key: string, value: string | null) {
   filters.value[key] = value;
@@ -95,6 +109,18 @@ async function handleDuplicateSubmit(formData: CreateService | UpdateService) {
     :filters="filters"
     @update:filters="filters = $event"
   >
+    <template #toolbar>
+      <div class="flex justify-end w-full gap-2">
+        <button
+          class="btn btn-primary"
+          :disabled="syncLoading"
+          @click="syncOutline"
+        >
+          <span v-if="syncLoading" class="loading loading-spinner loading-sm" />
+          {{ syncLoading ? 'Syncing...' : 'Sync Outline' }}
+        </button>
+      </div>
+    </template>
     <template #columns>
       <th class="name-env">
         Name

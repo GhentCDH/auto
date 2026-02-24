@@ -21,6 +21,7 @@ const form = ref<CreateService>({
   repository_url: '',
   environment: 'prd',
   status: 'active',
+  outline_url: '',
 });
 
 const imageRefList = ref<ImageRef[]>([]);
@@ -35,6 +36,7 @@ watch(
         repository_url: svc.repository_url || '',
         environment: svc.environment,
         status: svc.status,
+        outline_url: svc.outline_url || '',
       };
       imageRefList.value = svc.image_refs ? JSON.parse(svc.image_refs) : [];
     }
@@ -52,6 +54,7 @@ watch(
         repository_url: svc.repository_url || '',
         environment: svc.environment,
         status: svc.status,
+        outline_url: svc.outline_url || '',
       };
       imageRefList.value = svc.image_refs ? JSON.parse(svc.image_refs) : [];
     }
@@ -115,6 +118,17 @@ onMounted(() => {
         placeholder="https://github.com/..."
       />
       <div class="label">optional</div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Outline Document URL</legend>
+      <input
+        v-model="form.outline_url"
+        type="url"
+        class="input w-full"
+        placeholder="https://docs.example.com/doc/..."
+      />
+      <div class="label">optional - link to the Outline wiki page for this service</div>
     </fieldset>
 
     <fieldset class="fieldset">

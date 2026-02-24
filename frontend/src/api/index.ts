@@ -180,6 +180,9 @@ export const applicationsApi = {
     request<void>(`/applications/${appId}/stacks/${stackId}`, {
       method: 'DELETE',
     }),
+
+  syncOutline: (id: string) =>
+    request<void>(`/applications/${id}/sync-outline`, { method: 'POST' }),
 };
 
 // Services API
@@ -215,6 +218,9 @@ export const servicesApi = {
     request<void>(`/services/${serviceId}/infra/${infraId}`, {
       method: 'DELETE',
     }),
+
+  syncOutline: (id: string) =>
+    request<void>(`/services/${id}/sync-outline`, { method: 'POST' }),
 };
 
 // Infra API
@@ -421,10 +427,17 @@ export const healthchecksApi = {
 // Resolve API
 export const resolveApi = {
   resolve: (id: string) =>
-    request<{ id: string; name: string; entity_type: string }>(`/resolve/${id}`),
+    request<{ id: string; name: string; entity_type: string }>(
+      `/resolve/${id}`
+    ),
 };
 
 // Version API
 export const versionApi = {
   get: () => request<{ version: string }>('/version'),
+};
+
+// Outline Sync API
+export const outlineApi = {
+  sync: () => request<void>('/outline/sync'),
 };

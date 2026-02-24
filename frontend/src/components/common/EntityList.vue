@@ -232,7 +232,7 @@ defineExpose({ loadData, updateFilter, localFilters });
               v-for="(item, index) in data.data"
               :key="item.id"
               class="hover:bg-base-200 transition-colors duration-75 cursor-pointer"
-              :class="index % 2 === 0 ? '' : 'bg-black/10'"
+              :class="index % 2 === 0 ? '' : 'bg-base-200/50'"
               @click="navigateToDetail(item.id)"
             >
               <slot name="row" :item="item" />

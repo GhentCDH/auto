@@ -82,6 +82,7 @@ const loading = ref(true);
 const error = ref('');
 const showEditModal = ref(false);
 const showDeleteDialog = ref(false);
+const syncingOutline = ref(false);
 
 // Link modal states
 type LinkStep = 'select' | 'create' | 'form';
@@ -181,6 +182,19 @@ async function handleDelete() {
     toast.error(
       e instanceof Error ? e.message : 'Failed to delete application'
     );
+  }
+}
+
+async function handleSyncOutline() {
+  syncingOutline.value = true;
+  try {
+    await toast.promise(applicationsApi.syncOutline(id), {
+      loading: 'Syncing overview to Outline...',
+      success: 'Overview synced to Outline',
+      error: (e: Error) => e.message || 'Failed to sync to Outline',
+    });
+  } finally {
+    syncingOutline.value = false;
   }
 }
 
@@ -659,6 +673,15 @@ onMounted(loadData);
         </div>
         <div class="flex gap-2">
           <button class="btn btn-sm" @click="showEditModal = true">Edit</button>
+          <button
+            v-if="app.outline_url"
+            class="btn btn-sm btn-accent"
+            :disabled="syncingOutline"
+            @click="handleSyncOutline"
+          >
+            <span v-if="syncingOutline" class="loading loading-spinner loading-xs"></span>
+            Sync Outline
+          </button>
           <button class="btn btn-sm btn-error" @click="showDeleteDialog = true">
             Delete
           </button>
@@ -695,6 +718,17 @@ onMounted(loadData);
                     target="_blank"
                     class="link link-primary"
                     >{{ app.repository_url }}</a
+                  >
+                  <span v-else>-</span>
+                </div>
+                <div>
+                  <div class="text-sm text-base-content/70">Outline</div>
+                  <a
+                    v-if="app.outline_url"
+                    :href="app.outline_url"
+                    target="_blank"
+                    class="link link-primary"
+                    >{{ app.outline_url }}</a
                   >
                   <span v-else>-</span>
                 </div>
