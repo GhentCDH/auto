@@ -69,8 +69,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=build-global
+          cache-to: type=gha,mode=max,scope=build-global
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
