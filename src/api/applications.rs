@@ -7,8 +7,8 @@ use serde::Deserialize;
 use tracing::instrument;
 
 use crate::models::{
-    CreateApplication, LinkDomain, LinkInfra, LinkNetworkShare, LinkPerson, LinkService,
-    PaginationParams, UpdateApplication, ApplicationWithRelations, Application,
+    Application, ApplicationWithRelations, CreateApplication, LinkDomain, LinkInfra,
+    LinkNetworkShare, LinkPerson, LinkService, PaginationParams, UpdateApplication,
 };
 use crate::overview::Overview as _;
 use crate::service::application;
@@ -533,5 +533,5 @@ async fn sync_outline(
     let new_text = crate::overview::splice_overview(&doc.text, &overview_md);
     client.update_document(&doc_id, &new_text).await?;
 
-    Ok(axum::http::StatusCode::OK)
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
