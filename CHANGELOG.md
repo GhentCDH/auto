@@ -1,3 +1,27 @@
+## [1.3.0] - 2026-02-24
+
+### 🚀 Features
+
+- *(frontend)* App and serv duplication
+- *(backend)* Overview rust module
+- *(backend)* Overview trait and overview endpoints
+- *(backend)* Generic resolve endpoints, with id prefix support
+- *(frontend)* Generic UUID(prefix) resolver
+- *(database)* Add outline_url column to applications and services
+- *(backend)* Outline_url columns
+- *(backend)* Outline syncing
+- *(frontend)* Outline syncing
+- *(backend)* Outline document <auto> </auto> markers with redundancy
+- *(frontend)* Outline -> Docs in detail view
+
+### 🐛 Bug Fixes
+
+- *(frontend)* Typechecking problems
+- *(frontend)* Breadcrumb shows 'People' insead of 'Persons' or 'Peoples'
+
+### ⚙️ Miscellaneous Tasks
+
+- *(justfile)* Reduce debug logging for verbose crates
 ## [1.2.2] - 2026-02-23
 
 ### 🚀 Features
