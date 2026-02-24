@@ -250,7 +250,10 @@ onMounted(loadData);
             :disabled="syncingOutline"
             @click="handleSyncOutline"
           >
-            <span v-if="syncingOutline" class="loading loading-spinner loading-xs"></span>
+            <span
+              v-if="syncingOutline"
+              class="loading loading-spinner loading-xs"
+            ></span>
             Sync Outline
           </button>
           <button class="btn btn-sm btn-error" @click="showDeleteDialog = true">
@@ -282,7 +285,7 @@ onMounted(loadData);
                   <span v-else>-</span>
                 </div>
                 <div>
-                  <div class="text-sm text-base-content/70">Outline</div>
+                  <div class="text-sm text-base-content/70">Docs</div>
                   <a
                     v-if="service.outline_url"
                     :href="service.outline_url"

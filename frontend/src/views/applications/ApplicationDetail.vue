@@ -62,14 +62,7 @@ import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
 import { infraTypes } from '@/values';
 import type { ImageRef } from '@/types';
-import {
-  Pin,
-  ExternalLink,
-  Plus,
-  Edit,
-  Link2Off,
-  Package,
-} from 'lucide-vue-next';
+import { Pin, ExternalLink, Plus, Edit, Link2Off } from 'lucide-vue-next';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
 import ImageRefBadge from '@/components/common/ImageRefBadge.vue';
@@ -188,11 +181,13 @@ async function handleDelete() {
 async function handleSyncOutline() {
   syncingOutline.value = true;
   try {
-    await toast.promise(applicationsApi.syncOutline(id), {
+    const promise = applicationsApi.syncOutline(id);
+    toast.promise(promise, {
       loading: 'Syncing overview to Outline...',
       success: 'Overview synced to Outline',
       error: (e: Error) => e.message || 'Failed to sync to Outline',
     });
+    await promise;
   } finally {
     syncingOutline.value = false;
   }
@@ -679,7 +674,10 @@ onMounted(loadData);
             :disabled="syncingOutline"
             @click="handleSyncOutline"
           >
-            <span v-if="syncingOutline" class="loading loading-spinner loading-xs"></span>
+            <span
+              v-if="syncingOutline"
+              class="loading loading-spinner loading-xs"
+            ></span>
             Sync Outline
           </button>
           <button class="btn btn-sm btn-error" @click="showDeleteDialog = true">
@@ -722,7 +720,7 @@ onMounted(loadData);
                   <span v-else>-</span>
                 </div>
                 <div>
-                  <div class="text-sm text-base-content/70">Outline</div>
+                  <div class="text-sm text-base-content/70">Docs</div>
                   <a
                     v-if="app.outline_url"
                     :href="app.outline_url"
@@ -1638,7 +1636,7 @@ onMounted(loadData);
   </div>
 </template>
 
-<style>
+<style lang="postcss">
 @reference "tailwindcss";
 
 table {

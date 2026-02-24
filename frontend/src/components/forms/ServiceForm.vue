@@ -128,7 +128,9 @@ onMounted(() => {
         class="input w-full"
         placeholder="https://docs.example.com/doc/..."
       />
-      <div class="label">optional - link to the Outline wiki page for this service</div>
+      <div class="label">
+        optional - link to the Outline wiki page for this service
+      </div>
     </fieldset>
 
     <fieldset class="fieldset">
