@@ -1,3 +1,9 @@
+## [1.3.1] - 2026-02-24
+
+### 🚀 Features
+
+- *(backend)* Better marks for outline outputs, specifying id
+- *(backend)* Split domain to HOST and BASE_URL
 ## [1.3.0] - 2026-02-24
 
 ### 🚀 Features
