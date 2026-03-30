@@ -839,6 +839,7 @@ onMounted(loadData);
                     <tr>
                       <th>Domain</th>
                       <th>Target</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
