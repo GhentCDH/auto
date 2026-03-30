@@ -17,6 +17,8 @@ body = """
         - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
             {% if commit.breaking %}[**breaking**] {% endif %}\
             {{ commit.message | upper_first }}\
+            {% if commit.remote.pr_number %} ([#{{ commit.remote.pr_number }}](https://github.com/GhentCDH/auto/pull/{{ commit.remote.pr_number }})){% endif %}\
+            {% if commit.remote.username %} by [@{{ commit.remote.username }}](https://github.com/{{ commit.remote.username }}){% endif %}\
     {% endfor %}
 {% endfor %}
 """

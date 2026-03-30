@@ -1,29 +1,29 @@
 [package]
 name = "auto"
-version = "1.3.1"
+version = "1.4.0"
 edition = "2024"
 description = "Digital assets management system"
 authors = ["Miel Peeters <peetersmiel@gmail.com>"]
 
 [dependencies]
-tokio = { version = "1.49.0", features = ["full"] }
+tokio = { version = "1.50.0", features = ["full"] }
 axum = { version = "0.8.8", features = ["macros", "multipart"] }
 axum-extra = { version = "0.12.5", features = [
   "cookie",
   "form",
   "typed-header",
 ] }
-chrono = "0.4.43"
+chrono = "0.4.44"
 chrono-humanize = "0.2.3"
-time = "0.3.44"
-uuid = { version = "1.19.0", features = ["v4", "serde"] }
+time = "0.3.47"
+uuid = { version = "1.23.0", features = ["v4", "serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 derive_more = { version = "2.1.1", features = ["full"] }
 thiserror = "2.0.18"
 dotenvy = "0.15.7"
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 tower-http = { version = "0.6.8", features = [
   "trace",
   "timeout",
@@ -33,10 +33,10 @@ tower-http = { version = "0.6.8", features = [
 rust-embed = { version = "8.11.0", features = ["axum-ex"] }
 mime_guess = "2.0.5"
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
-futures = "0.3.31"
+futures = "0.3.32"
 reqwest = { version = "0.13.2", features = ["json"] }
 rust_socketio = { version = "0.6", features = ["async"] }
 url = "2"
-utoipa = { version = "5.3", features = ["axum_extras", "chrono", "uuid"] }
+utoipa = { version = "5.4", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
 itertools = "0.14.0"
