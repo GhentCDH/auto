@@ -22,7 +22,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          three: ['three', '@tresjs/core', '@tresjs/cientos'],
           markdown: ['marked', 'dompurify'],
         },
       },
