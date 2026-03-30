@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import type { Domain, CreateDomain, UpdateDomain } from '@/types';
 import EntitySelector from '../common/EntitySelector.vue';
 import { applicationsApi, servicesApi } from '@/api';
@@ -49,20 +49,21 @@ watch(
   { immediate: true }
 );
 
-function validate() {
-  return (
-    (form.value.target_application_id === undefined &&
-      form.value.target_service_id !== undefined) ||
+const fqdnContainsProtocol = computed(() => form.value.fqdn.includes('://'));
+
+const isValid = computed(() => {
+  const hasTarget =
     (form.value.target_application_id !== undefined &&
-      form.value.target_service_id === undefined)
-  );
-}
+      form.value.target_service_id === undefined) ||
+    (form.value.target_application_id === undefined &&
+      form.value.target_service_id !== undefined);
+  return form.value.fqdn && !fqdnContainsProtocol.value && hasTarget;
+});
 
 function handleSubmit() {
-  if (validate()) {
+  if (isValid.value) {
     emit('submit', form.value);
   }
-  // TODO: handle bad validates! (disable button!)
 }
 
 const nameInput = ref<HTMLInputElement>();
@@ -96,10 +97,14 @@ function handleServiceSelect(service: { id: string; name: string }) {
           ref="nameInput"
           type="text"
           class="input w-full"
+          :class="{ 'input-error': fqdnContainsProtocol }"
           placeholder="example.com"
           required
           autofocus
         />
+        <p v-if="fqdnContainsProtocol" class="text-error text-sm mt-1">
+          Domain name must not contain a protocol (e.g. https://)
+        </p>
       </fieldset>
 
       <fieldset class="fieldset col-span-2">
@@ -196,7 +201,7 @@ function handleServiceSelect(service: { id: string; name: string }) {
 
     <div class="flex justify-end gap-2">
       <button type="button" class="btn" @click="emit('cancel')">Cancel</button>
-      <button type="submit" class="btn btn-primary">
+      <button type="submit" class="btn btn-primary" :disabled="!isValid">
         {{ domain ? 'Update' : 'Create' }}
       </button>
     </div>
