@@ -26,7 +26,7 @@ function onFilterChange(key: string, value: string | null) {
   <EntityList
     ref="entityListRef"
     title="Storage"
-    add-label="Add Storag"
+    add-label="Add Storage"
     search-placeholder="Search storage..."
     empty-message="No storage found"
     modal-title="Create Storage"
