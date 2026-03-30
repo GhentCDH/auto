@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import MascotViewer from '../common/MascotViewer.vue';
 
@@ -33,11 +33,30 @@ const navItems = [
   { name: 'Healthchecks', path: '/healthchecks' },
 ];
 
+const searchInput = ref<HTMLInputElement>();
+
 function handleSearch() {
   if (searchQuery.value.trim()) {
     router.push({ path: '/search', query: { q: searchQuery.value } });
   }
 }
+
+// Keyboard shortcuts
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if (
+    e.target instanceof HTMLInputElement ||
+    e.target instanceof HTMLTextAreaElement ||
+    e.target instanceof HTMLSelectElement
+  )
+    return;
+  if (e.key === '/') {
+    e.preventDefault();
+    searchInput.value?.focus();
+  }
+}
+
+onMounted(() => document.addEventListener('keydown', handleGlobalKeydown));
+onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
 </script>
 
 <template>
@@ -95,6 +114,7 @@ function handleSearch() {
       <form @submit.prevent="handleSearch" class="form-control">
         <div class="input-group">
           <input
+            ref="searchInput"
             v-model="searchQuery"
             type="text"
             placeholder="Search..."
