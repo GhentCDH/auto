@@ -126,7 +126,17 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<DomainWit
     extend_relations(pool, domain).await
 }
 
+fn validate_fqdn(fqdn: &str) -> Result<()> {
+    if fqdn.contains("://") {
+        return Err(Error::ValidationError(
+            "Domain name must not contain a protocol (e.g. https://)".into(),
+        ));
+    }
+    Ok(())
+}
+
 pub async fn create(pool: &SqlitePool, input: CreateDomain) -> Result<Domain> {
+    validate_fqdn(&input.fqdn)?;
     let id = new_id();
 
     sqlx::query(
@@ -158,6 +168,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateDomain) -> Result<
     let existing = get(pool, id).await?;
 
     let fqdn = input.fqdn.unwrap_or(existing.fqdn);
+    validate_fqdn(&fqdn)?;
     let registrar = input.registrar.or(existing.registrar);
     let dns_provider = input.dns_provider.or(existing.dns_provider);
     let expires_at = input.expires_at.or(existing.expires_at);
