@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, onUnmounted } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import { X } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -11,9 +11,18 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+const modalBox = ref<HTMLDivElement>();
+
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     emit('close');
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    const form = modalBox.value?.querySelector('form');
+    if (form) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
   }
 }
 
@@ -36,7 +45,7 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <dialog class="modal" :class="{ 'modal-open': open }">
-      <div v-if="open" class="modal-box">
+      <div v-if="open" ref="modalBox" class="modal-box">
         <h3 class="text-lg font-bold">{{ title }}</h3>
         <button
           class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
