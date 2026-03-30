@@ -767,7 +767,7 @@ onMounted(loadData);
               >
                 No services linked
               </div>
-              <div v-else class="overflow-x-auto">
+              <div v-else class="overflow-x-auto overflow-y-hidden">
                 <table class="table table-sm">
                   <thead>
                     <tr>
