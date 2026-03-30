@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { infraApi } from '@/api';
@@ -60,6 +60,23 @@ async function handleDelete() {
 }
 
 onMounted(loadData);
+
+// Keyboard shortcuts
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if (
+    e.target instanceof HTMLInputElement ||
+    e.target instanceof HTMLTextAreaElement ||
+    e.target instanceof HTMLSelectElement
+  )
+    return;
+  if (e.key === 'e' && !showEditModal.value) {
+    e.preventDefault();
+    showEditModal.value = true;
+  }
+}
+
+onMounted(() => document.addEventListener('keydown', handleGlobalKeydown));
+onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
 </script>
 
 <template>
