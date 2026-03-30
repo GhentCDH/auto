@@ -4,7 +4,7 @@ import type { Domain, CreateDomain, UpdateDomain } from '@/types';
 import EntitySelector from '../common/EntitySelector.vue';
 import { applicationsApi, servicesApi } from '@/api';
 
-const target_type = ref<'application' | 'service' | null>(null);
+const target_type = ref<'application' | 'service'>('application');
 const showTargetSelector = ref(false);
 const selectedName = ref<string | null>(null);
 
@@ -39,6 +39,9 @@ watch(
         target_service_id: d.target_service_id || undefined,
         notes: d.notes || '',
       };
+      target_type.value = d.target_application_id ? 'application' : 'service';
+      selectedName.value =
+        d.target_application_name || d.target_service_name || null;
     }
   },
   { immediate: true }
@@ -98,32 +101,73 @@ function handleServiceSelect(service: { id: string; name: string }) {
       </fieldset>
 
       <fieldset class="fieldset col-span-2">
-        <legend class="fieldset-legend">Target</legend>
-        <select
-          v-model="target_type"
-          class="select w-full"
-          @change="showTargetSelector = true"
-        >
-          <option value="application">Application</option>
-          <option value="service">Service</option>
-        </select>
+        <legend class="fieldset-legend">Target *</legend>
+        <div class="flex gap-4 mb-2">
+          <label class="label cursor-pointer gap-2">
+            <input
+              type="radio"
+              name="target_type"
+              value="application"
+              v-model="target_type"
+              class="radio radio-primary"
+              @change="
+                showTargetSelector = true;
+                form.target_service_id = undefined;
+              "
+            />
+            <span>Application</span>
+          </label>
+          <label class="label cursor-pointer gap-2">
+            <input
+              type="radio"
+              name="target_type"
+              value="service"
+              v-model="target_type"
+              class="radio radio-primary"
+              @change="
+                showTargetSelector = true;
+                form.target_application_id = undefined;
+              "
+            />
+            <span>Service</span>
+          </label>
+        </div>
 
         <div v-if="showTargetSelector" class="bg-base-200 rounded-box p-2">
           <EntitySelector
             v-if="target_type === 'application'"
-            title="Target Application"
+            title="Applications"
             :fetch-fn="applicationsApi.list"
+            :allow-create="false"
             @select="handleApplicationSelect"
+            @cancel="showTargetSelector = false"
           />
           <EntitySelector
             v-else-if="target_type === 'service'"
-            title="Target Service"
+            title="Services"
             :fetch-fn="servicesApi.list"
+            :allow-create="false"
             @select="handleServiceSelect"
+            @cancel="showTargetSelector = false"
           />
         </div>
-        <div v-else-if="selectedName" class="text-right w-full">
-          selected: <span class="text-[1.08rem]">{{ selectedName }} </span>
+        <div
+          v-else-if="selectedName"
+          class="flex items-center justify-between bg-base-200 rounded-box px-4 py-2"
+        >
+          <div class="flex items-center gap-2">
+            <span class="badge badge-primary badge-sm">{{
+              target_type === 'application' ? 'App' : 'Service'
+            }}</span>
+            <span class="font-medium">{{ selectedName }}</span>
+          </div>
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs"
+            @click="showTargetSelector = true"
+          >
+            Change
+          </button>
         </div>
       </fieldset>
 
