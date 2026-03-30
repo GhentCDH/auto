@@ -17,19 +17,15 @@ jobs:
       release_body: ${{ steps.git-cliff.outputs.content }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-      
       - name: Generate a changelog
-        id: git-cliff  # This was missing!
-        uses: orhun/git-cliff-action@v4
+        uses: orhun/git-cliff-action@07dda386992489f0a6151dee53f3a137713644de # main
+        id: git-cliff
         with:
           config: cliff.toml
-          args: --verbose --latest
-        env:
-          GITHUB_REPO: ${{ github.repository }}
-          # Remove OUTPUT env var - you want the output in the step output, not a file
+          args: --verbose --latest --no-exec --github-repo ${{ github.repository }}
 
   build-and-release:
     needs: generate-changelog
