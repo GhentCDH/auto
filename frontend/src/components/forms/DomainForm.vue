@@ -5,13 +5,15 @@ import EntitySelector from '../common/EntitySelector.vue';
 import { applicationsApi, servicesApi } from '@/api';
 
 const target_type = ref<'application' | 'service'>('application');
-const showTargetSelector = ref(false);
 const selectedName = ref<string | null>(null);
 
 const props = defineProps<{
   domain?: Domain;
   initialName?: string;
 }>();
+
+// Show target selector by default unless editing an existing domain
+const showTargetSelector = ref(!props.domain);
 
 const emit = defineEmits<{
   submit: [data: CreateDomain | UpdateDomain];

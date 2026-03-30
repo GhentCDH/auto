@@ -9,7 +9,6 @@ import EntitySelector from '../common/EntitySelector.vue';
 import { applicationsApi, servicesApi, domainsApi } from '@/api';
 
 const target_type = ref<'application' | 'service'>('application');
-const showTargetSelector = ref(false);
 const showDomainSelector = ref(false);
 const selectedTargetName = ref<string | null>(null);
 const selectedDomainName = ref<string | null>(null);
@@ -36,6 +35,11 @@ if (props.initialApplicationId) {
 if (props.initialTargetName) {
   selectedTargetName.value = props.initialTargetName;
 }
+
+// Show target selector by default unless a target is already provided
+const showTargetSelector = ref(
+  !props.initialApplicationId && !props.initialServiceId && !props.healthcheck
+);
 
 const form = ref<CreateHealthcheck>({
   name: props.initialName || '',
