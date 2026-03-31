@@ -1,3 +1,22 @@
+## [1.4.1] - 2026-03-31
+
+### 🚀 Features
+
+- *(backend)* Better outline sync formatting by [@mielpeeters](https://github.com/mielpeeters)
+
+### 📚 Documentation
+
+- Update openapi documentation by [@mielpeeters](https://github.com/mielpeeters)
+
+### 🎨 Styling
+
+- Reformat (cargo fmt) by [@mielpeeters](https://github.com/mielpeeters)
+
+### ⚙️ Miscellaneous Tasks
+
+- Prek.toml by [@mielpeeters](https://github.com/mielpeeters)
+- Script for checking if openapi documentation is in sync by [@mielpeeters](https://github.com/mielpeeters)
+- Add openapi-in-sync as prek hook ([#114](https://github.com/GhentCDH/auto/pull/114)) by [@mielpeeters](https://github.com/mielpeeters)
 ## [1.4.0] - 2026-03-30
 
 ### 🚀 Features
