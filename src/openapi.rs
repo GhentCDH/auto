@@ -12,10 +12,12 @@ use utoipa::{Modify, OpenApi};
         // Health endpoints
         crate::api::healthcheck,
         crate::api::version,
+        crate::api::resolve_id,
 
         // Applications
         crate::api::applications::list,
         crate::api::applications::get_one,
+        crate::api::applications::get_overview_md,
         crate::api::applications::create,
         crate::api::applications::update,
         crate::api::applications::delete_one,
@@ -36,6 +38,7 @@ use utoipa::{Modify, OpenApi};
         // Services
         crate::api::services::list,
         crate::api::services::get_one,
+        crate::api::services::get_overview_md,
         crate::api::services::create,
         crate::api::services::update,
         crate::api::services::delete_one,
@@ -200,6 +203,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::UptimeEvent,
 
             // Service layer
+            crate::service::search::ResolvedEntity,
             crate::service::dashboard::DashboardStats,
             crate::service::dashboard::EntityStats,
             crate::service::dashboard::ExpiringDomain,
