@@ -384,8 +384,13 @@ async fn run_poller_loop(
     let mut policy = ReconnectPolicy::new();
 
     loop {
-        match connect_and_poll(&config, uptime_state.clone(), uptime_tx.clone(), &mut refresh_rx)
-            .await
+        match connect_and_poll(
+            &config,
+            uptime_state.clone(),
+            uptime_tx.clone(),
+            &mut refresh_rx,
+        )
+        .await
         {
             Ok(()) => {
                 // Clean disconnect triggered by refresh signal

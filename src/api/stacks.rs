@@ -4,7 +4,7 @@ use axum::{
     routing::get,
 };
 
-use crate::models::{CreateStack, PaginationParams, UpdateStack, StackWithRelations, Stack};
+use crate::models::{CreateStack, PaginationParams, Stack, StackWithRelations, UpdateStack};
 use crate::service::stack;
 use crate::{AppState, Result};
 

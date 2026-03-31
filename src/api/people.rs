@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreatePerson, PaginationParams, UpdatePerson, PersonWithRelations, Person};
+use crate::models::{CreatePerson, PaginationParams, Person, PersonWithRelations, UpdatePerson};
 use crate::service::person;
 use crate::{AppState, Result};
 

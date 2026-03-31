@@ -12,7 +12,7 @@ use utoipa::{Modify, OpenApi};
         // Health endpoints
         crate::api::healthcheck,
         crate::api::version,
-        
+
         // Applications
         crate::api::applications::list,
         crate::api::applications::get_one,
@@ -49,42 +49,42 @@ use utoipa::{Modify, OpenApi};
         crate::api::infra::create,
         crate::api::infra::update,
         crate::api::infra::delete_one,
-        
+
         // Domains
         crate::api::domains::list,
         crate::api::domains::get_one,
         crate::api::domains::create,
         crate::api::domains::update,
         crate::api::domains::delete_one,
-        
+
         // People
         crate::api::people::list,
         crate::api::people::get_one,
         crate::api::people::create,
         crate::api::people::update,
         crate::api::people::delete_one,
-        
+
         // Network shares
         crate::api::shares::list,
         crate::api::shares::get_one,
         crate::api::shares::create,
         crate::api::shares::update,
         crate::api::shares::delete_one,
-        
+
         // Notes
         crate::api::notes::list,
         crate::api::notes::get_one,
         crate::api::notes::create,
         crate::api::notes::update,
         crate::api::notes::delete_one,
-        
+
         // Stacks
         crate::api::stacks::list,
         crate::api::stacks::get_one,
         crate::api::stacks::create,
         crate::api::stacks::update,
         crate::api::stacks::delete_one,
-        
+
         // Healthchecks
         crate::api::healthchecks::list,
         crate::api::healthchecks::get_one,
@@ -96,10 +96,10 @@ use utoipa::{Modify, OpenApi};
         crate::api::healthchecks::kuma_endpoint,
         crate::api::healthchecks::sync_kuma_one,
         crate::api::healthchecks::sync_kuma_all,
-        
+
         // Dashboard
         crate::api::dashboard::stats,
-        
+
         // Search
         crate::api::search::global_search,
     ),
@@ -116,13 +116,13 @@ use utoipa::{Modify, OpenApi};
             crate::models::PaginatedResponse<crate::models::Note>,
             crate::models::PaginatedResponse<crate::models::Stack>,
             crate::models::PaginatedResponse<crate::models::Healthcheck>,
-            
+
             // Applications
             crate::models::Application,
             crate::models::CreateApplication,
             crate::models::UpdateApplication,
             crate::models::ApplicationWithRelations,
-            
+
             // Services
             crate::models::Service,
             crate::models::CreateService,
@@ -131,7 +131,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::LinkService,
             crate::models::ServiceWithRelations,
             crate::models::ApplicationServiceRelation,
-            
+
             // Infrastructure
             crate::models::Infra,
             crate::models::CreateInfra,
@@ -141,7 +141,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::InfraWithRelations,
             crate::models::ApplicationInfraRelation,
             crate::models::ServiceInfraRelation,
-            
+
             // Domains
             crate::models::Domain,
             crate::models::CreateDomain,
@@ -152,7 +152,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::TargetName,
             crate::models::DomainWithRelations,
             crate::models::ApplicationDomainRelation,
-            
+
             // People
             crate::models::Person,
             crate::models::CreatePerson,
@@ -161,7 +161,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::LinkPerson,
             crate::models::PersonWithRelations,
             crate::models::ApplicationPersonRelation,
-            
+
             // Network shares
             crate::models::NetworkShare,
             crate::models::CreateNetworkShare,
@@ -170,12 +170,12 @@ use utoipa::{Modify, OpenApi};
             crate::models::LinkNetworkShare,
             crate::models::NetworkShareWithRelations,
             crate::models::ApplicationNetworkShareRelation,
-            
+
             // Notes
             crate::models::Note,
             crate::models::CreateNote,
             crate::models::UpdateNote,
-            
+
             // Stacks
             crate::models::Stack,
             crate::models::CreateStack,
@@ -183,7 +183,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::StackRelation,
             crate::models::StackWithRelations,
             crate::models::ApplicationStackRelation,
-            
+
             // Healthchecks
             crate::models::Healthcheck,
             crate::models::CreateHealthcheck,
@@ -193,12 +193,12 @@ use utoipa::{Modify, OpenApi};
             crate::models::HealthcheckExecuteResult,
             crate::models::KumaMonitor,
             crate::models::KumaEndpoint,
-            
+
             // Uptime
             crate::models::HeartbeatEntry,
             crate::models::MonitorUptime,
             crate::models::UptimeEvent,
-            
+
             // Service layer
             crate::service::dashboard::DashboardStats,
             crate::service::dashboard::EntityStats,

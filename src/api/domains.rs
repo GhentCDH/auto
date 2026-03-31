@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreateDomain, PaginationParams, UpdateDomain, DomainWithRelations, Domain};
+use crate::models::{CreateDomain, Domain, DomainWithRelations, PaginationParams, UpdateDomain};
 use crate::service::domain;
 use crate::{AppState, Result};
 

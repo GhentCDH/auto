@@ -130,7 +130,7 @@ async fn get_overview_md(
     Path(id): Path<String>,
 ) -> Result<impl axum::response::IntoResponse> {
     let app = application::get_with_relations(&state.pool, &id).await?;
-    let md = app.to_md(&state);
+    let md = app.body_md(&state);
     Ok(([(axum::http::header::CONTENT_TYPE, "text/markdown")], md))
 }
 

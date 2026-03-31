@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreateInfra, PaginationParams, UpdateInfra, InfraWithRelations, Infra};
+use crate::models::{CreateInfra, Infra, InfraWithRelations, PaginationParams, UpdateInfra};
 use crate::service::infra;
 use crate::{AppState, Result};
 

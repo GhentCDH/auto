@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreateNote, PaginationParams, UpdateNote, Note};
+use crate::models::{CreateNote, Note, PaginationParams, UpdateNote};
 use crate::service::note;
 use crate::{AppState, Result};
 

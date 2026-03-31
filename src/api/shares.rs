@@ -5,7 +5,10 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreateNetworkShare, PaginationParams, UpdateNetworkShare, NetworkShareWithRelations, NetworkShare};
+use crate::models::{
+    CreateNetworkShare, NetworkShare, NetworkShareWithRelations, PaginationParams,
+    UpdateNetworkShare,
+};
 use crate::service::network_share;
 use crate::{AppState, Result};
 
