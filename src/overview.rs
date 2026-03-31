@@ -79,7 +79,8 @@ const ZWC_ALPHABET: &[char] = &[
 ];
 
 pub trait Overview {
-    fn to_md(&self, state: &AppState) -> String;
+    fn title_md(&self, state: &AppState) -> String;
+    fn body_md(&self, state: &AppState) -> String;
     fn marker_single_start(&self) -> String;
     fn marker_single_end(&self) -> String;
     fn marker_start(&self) -> String {
@@ -97,11 +98,13 @@ pub trait Overview {
     /// - If both markers are found, the block between them (inclusive) is replaced.
     /// - Otherwise the marked block is prepended to the existing text.
     fn splice_overview(&self, state: &AppState, existing_text: &str) -> String {
-        let new_overview = self.to_md(state);
+        let new_title = self.title_md(state);
+        let new_body = self.body_md(state);
         let marked = format!(
-            "{}{}{}",
+            "# {}{}\n{}{}",
             self.marker_start(),
-            new_overview,
+            new_title,
+            new_body,
             self.marker_end()
         );
 
@@ -115,6 +118,19 @@ pub trait Overview {
                 // Expand both spans to cover all adjacent repetitions
                 let (start_pos, _) = expand_marker_span(existing_text, start_match, start_single);
                 let (_, end_pos) = expand_marker_span(existing_text, end_match, end_single);
+
+                // expand start_pos to include "# " that could come before it
+                let start_pos = {
+                    let prefix = &existing_text[..start_pos];
+                    let trimmed = prefix.trim_end_matches(' ');
+                    if trimmed.ends_with('#') {
+                        // walk back past all '#' chars
+                        let without_hashes = trimmed.trim_end_matches('#');
+                        without_hashes.len()
+                    } else {
+                        start_pos
+                    }
+                };
 
                 // Consume a trailing newline if present
                 let end_pos = if existing_text[end_pos..].starts_with('\n') {
@@ -288,15 +304,15 @@ fn expand_marker_span(text: &str, matched: (usize, usize), single: &str) -> (usi
 }
 
 impl Overview for ApplicationWithRelations {
-    fn to_md(&self, state: &AppState) -> String {
-        let mut md = String::new();
-
-        writeln!(
-            md,
-            "\n# Auto Information ({})\n",
+    fn title_md(&self, _state: &AppState) -> String {
+        format!(
+            "Auto Information ({})",
             self.application.environment.to_uppercase()
         )
-        .unwrap();
+    }
+
+    fn body_md(&self, state: &AppState) -> String {
+        let mut md = String::new();
 
         if let Some(description) = &self.application.description {
             writeln!(md, "{description}").unwrap();
@@ -393,7 +409,7 @@ impl Overview for ApplicationWithRelations {
     }
 
     fn marker_single_start(&self) -> String {
-        encode_zwc(&format!("<a{}>", &self.application.id[..8],))
+        encode_zwc(&format!("<{}>", &self.application.id[..8],))
     }
 
     fn marker_single_end(&self) -> String {
@@ -402,15 +418,15 @@ impl Overview for ApplicationWithRelations {
 }
 
 impl Overview for ServiceWithRelations {
-    fn to_md(&self, state: &AppState) -> String {
-        let mut md = String::new();
-
-        writeln!(
-            md,
-            "\n# Auto Information ({})\n",
+    fn title_md(&self, _state: &AppState) -> String {
+        format!(
+            "Auto Information ({})",
             self.service.environment.to_uppercase()
         )
-        .unwrap();
+    }
+
+    fn body_md(&self, state: &AppState) -> String {
+        let mut md = String::new();
 
         if let Some(description) = &self.service.description {
             writeln!(md, "{description}").unwrap();
@@ -465,7 +481,11 @@ mod tests {
     struct TestOverview;
 
     impl Overview for TestOverview {
-        fn to_md(&self, _state: &AppState) -> String {
+        fn title_md(&self, _state: &AppState) -> String {
+            "title!".to_string()
+        }
+
+        fn body_md(&self, _state: &AppState) -> String {
             "content!".to_string()
         }
 
@@ -488,8 +508,12 @@ mod tests {
         let existing = "# Hello\n\nSome content";
         let t = TestOverview;
         let result = t.splice_overview(&state, existing);
-        assert!(result.starts_with(&t.marker_start()));
-        assert!(result.contains(&t.to_md(&state)));
+        assert!(
+            result.starts_with(&format!("# {}", t.marker_start())),
+            "result: {}",
+            result
+        );
+        assert!(result.contains(&t.body_md(&state)));
         assert!(result.ends_with(existing));
     }
 
@@ -498,14 +522,16 @@ mod tests {
         let state = appstate().await.unwrap();
         let t = TestOverview;
         let overview_old = "old overview";
+        let title_old = "old title";
         let existing = format!(
-            "{}\n{}\n{}\n\n# Rest of doc",
+            "# {}{}\n{}{}\n\n# Rest of doc",
             t.marker_start(),
+            title_old,
             overview_old,
             t.marker_end()
         );
         let result = t.splice_overview(&state, &existing);
-        assert!(result.contains(&t.to_md(&state)));
+        assert!(result.contains(&t.body_md(&state)), "result: {}", result);
         assert!(!result.contains(overview_old));
         assert!(result.contains("# Rest of doc"));
         assert_eq!(
@@ -519,10 +545,12 @@ mod tests {
         let state = appstate().await.unwrap();
         let t = TestOverview;
         let overview_old = "old overview";
+        let title_old = "old title";
 
         let full = format!(
-            "{}{}{}# Rest of doc",
+            "# {}{}\n{}{}# Rest of doc",
             t.marker_start(),
+            title_old,
             overview_old,
             t.marker_end()
         );
@@ -536,7 +564,7 @@ mod tests {
         };
 
         let result = t.splice_overview(&state, &corrupted);
-        assert!(result.contains(&t.to_md(&state)));
+        assert!(result.contains(&t.body_md(&state)));
         assert!(!result.contains(overview_old));
         assert!(result.contains("# Rest of doc"));
     }
