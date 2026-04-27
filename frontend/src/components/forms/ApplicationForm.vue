@@ -6,7 +6,7 @@ import type {
   ImageRef,
   UpdateApplication,
 } from '@/types';
-import { environments } from '@/values';
+import { environments, statuses } from '@/values';
 import { Plus, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -168,10 +168,7 @@ onMounted(() => {
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Status</legend>
       <select v-model="form.status" class="select w-full">
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-        <option value="deprecated">Deprecated</option>
-        <option value="archived">Archived</option>
+        <option v-for="(label, value) in statuses" :key="value" :value="value">{{ label }}</option>
       </select>
     </fieldset>
 

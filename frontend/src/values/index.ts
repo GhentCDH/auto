@@ -1,7 +1,20 @@
+export function toFilterOptions(
+  obj: Record<string, string>
+): { value: string; label: string }[] {
+  return Object.entries(obj).map(([value, label]) => ({ value, label }));
+}
+
+export const statuses = {
+  active: 'Active',
+  inactive: 'Inactive',
+  deprecated: 'Deprecated',
+  archived: 'Archived',
+};
+
 export const environments = {
+  prd: 'Production',
   dev: 'Development',
   qas: 'Quality Assurance',
-  prd: 'Production',
   tst: 'Testing',
 };
 
@@ -39,11 +52,10 @@ export const domainStatus = {
 };
 
 export const contributionTypes = {
+  project_owner: 'Project Owner',
   developer: 'Developer',
   maintainer: 'Maintainer',
-  communcation: 'Communication',
   stakeholder: 'Stakeholder',
-  manager: 'Manager',
 };
 
 export const noteTypes = {
@@ -53,37 +65,13 @@ export const noteTypes = {
 };
 
 // Filter options for use in ColumnFilter component
-export const statusFilterOptions = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-  { value: 'deprecated', label: 'Deprecated' },
-];
-
-export const environmentFilterOptions = [
-  { value: 'prd', label: 'Production' },
-  { value: 'qas', label: 'QAS' },
-  { value: 'dev', label: 'Development' },
-  { value: 'tst', label: 'Testing' },
-];
-
-export const domainStatusFilterOptions = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-  { value: 'expired', label: 'Expired' },
-];
+export const statusFilterOptions = toFilterOptions(statuses);
+export const environmentFilterOptions = toFilterOptions(environments);
+export const domainStatusFilterOptions = toFilterOptions(domainStatus);
+export const shareTypeFilterOptions = toFilterOptions(shareTypes);
+export const infraTypeFilterOptions = toFilterOptions(infraTypes);
 
 export const personActiveFilterOptions = [
   { value: 'true', label: 'Active' },
   { value: 'false', label: 'Inactive' },
-];
-
-export const shareTypeFilterOptions = [
-  { value: 'smb', label: 'SMB' },
-  { value: 'nfs', label: 'NFS' },
-];
-
-export const infraTypeFilterOptions = [
-  { value: 'nomad_cluster', label: 'Nomad Cluster' },
-  { value: 'server', label: 'Server' },
-  { value: 'vm', label: 'Virtual Machine' },
 ];
