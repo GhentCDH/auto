@@ -1,3 +1,8 @@
+## [1.4.2] - 2026-04-27
+
+### 🚀 Features
+
+- *(frontend)* Contribution types better suit GhentCDH now
 ## [1.4.1] - 2026-03-31
 
 ### 🚀 Features

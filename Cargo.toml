@@ -1,12 +1,12 @@
 [package]
 name = "auto"
-version = "1.4.1"
+version = "1.4.2"
 edition = "2024"
 description = "Digital assets management system"
 authors = ["Miel Peeters <peetersmiel@gmail.com>"]
 
 [dependencies]
-tokio = { version = "1.50.0", features = ["full"] }
+tokio = { version = "1.52.1", features = ["full"] }
 axum = { version = "0.8.8", features = ["macros", "multipart"] }
 axum-extra = { version = "0.12.5", features = [
   "cookie",
