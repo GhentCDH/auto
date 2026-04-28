@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-/// How many seconds of heartbeat history to keep in memory (1 hour).
-pub const HEARTBEAT_WINDOW_SECS: i64 = 3600;
+/// How many heartbeats to keep in memory.
+pub const HEARTBEAT_WINDOW_SIZE: usize = 120;
 
 /// A single heartbeat record from Kuma.
 ///

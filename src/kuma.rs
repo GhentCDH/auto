@@ -15,7 +15,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
 use futures::FutureExt as _;
 use rust_socketio::{
     Payload,
@@ -28,7 +27,7 @@ use tracing::{debug, error, info, trace, warn};
 use crate::{
     AppState, Error, Result,
     models::{
-        HEARTBEAT_WINDOW_SECS, HealthcheckWithRelations, HeartbeatEntry, MonitorUptime,
+        HEARTBEAT_WINDOW_SIZE, HealthcheckWithRelations, HeartbeatEntry, MonitorUptime,
         UpdateHealthcheck, UptimeEvent,
     },
     service,
@@ -558,19 +557,14 @@ async fn handle_heartbeat_list(values: Vec<Value>, state: UptimeState, tx: Uptim
         return;
     };
 
-    let cutoff = Utc::now() - chrono::Duration::seconds(HEARTBEAT_WINDOW_SECS);
-
     let mut heartbeats: Vec<HeartbeatEntry> = heartbeats
         .iter()
         .filter_map(parse_heartbeat_entry)
-        .filter(|h| {
-            DateTime::parse_from_rfc3339(&h.time)
-                .map(|t| t.with_timezone(&Utc) > cutoff)
-                .unwrap_or(true) // keep if time is unparseable
-        })
         .collect();
 
     heartbeats.sort_by(|a, b| a.time.cmp(&b.time));
+
+    heartbeats.drain(..heartbeats.len().saturating_sub(HEARTBEAT_WINDOW_SIZE));
 
     let import_length = heartbeats.len();
 
@@ -616,8 +610,6 @@ async fn handle_heartbeat(values: Vec<Value>, state: UptimeState, tx: UptimeTx) 
         None => return,
     };
 
-    let cutoff = Utc::now() - chrono::Duration::seconds(HEARTBEAT_WINDOW_SECS);
-
     let is_new = {
         let mut write = state.write().await;
         let monitor = write.entry(kuma_id).or_insert(MonitorUptime {
@@ -634,12 +626,12 @@ async fn handle_heartbeat(values: Vec<Value>, state: UptimeState, tx: UptimeTx) 
         }
 
         // Prune entries older than the window
-        monitor.heartbeats.retain(|h| {
-            DateTime::parse_from_rfc3339(&h.time)
-                .map(|t| t.with_timezone(&Utc) > cutoff)
-                .unwrap_or(true)
-        });
-
+        monitor.heartbeats.drain(
+            ..monitor
+                .heartbeats
+                .len()
+                .saturating_sub(HEARTBEAT_WINDOW_SIZE),
+        );
         is_new
     };
 

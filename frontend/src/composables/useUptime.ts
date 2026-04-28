@@ -20,7 +20,7 @@ type UptimeEvent =
 const monitors = ref<Map<number, MonitorData>>(new Map());
 let eventSource: EventSource | null = null;
 let consumerCount = 0;
-const HEARTBEAT_WINDOW_SECS = 3600 * 2;
+const HEARTBEAT_WINDOW_SIZE = 120;
 
 function openConnection() {
   if (eventSource) return;
@@ -37,13 +37,13 @@ function openConnection() {
         monitors.value = newMap;
       } else if (event.type === 'update') {
         const existing = monitors.value.get(event.kuma_id);
-        const cutoff = Date.now() - HEARTBEAT_WINDOW_SECS * 1000;
 
         if (existing) {
           existing.heartbeats.push(event.entry);
-          existing.heartbeats = existing.heartbeats.filter((h) => {
-            return new Date(h.time).getTime() > cutoff;
-          });
+          existing.heartbeats.splice(
+            0,
+            Math.max(0, existing.heartbeats.length - HEARTBEAT_WINDOW_SIZE)
+          );
           // Trigger Vue reactivity for Map mutation
           monitors.value = new Map(monitors.value);
         } else {
