@@ -530,51 +530,58 @@ async fn connect_and_poll(
 
 /// Processes `heartbeatList` — bulk history sent by Kuma on connect after login.
 ///
-/// Payload shape: `[{ "1": [{status, time, ping, msg}, ...], "2": [...] }]`
-/// Keys are monitor IDs as strings (JS object keys are always strings).
+/// The values is expected to have the following shape:
+/// ```json
+/// [
+///   "1",
+///   [
+///     {
+///       "status": ...,
+///       "time": ...,
+///       "ping": ...,
+///       "msg": ...
+///     },
+///     ...
+///   ]
+/// ]
+/// ```
 async fn handle_heartbeat_list(values: Vec<Value>, state: UptimeState, tx: UptimeTx) {
-    let data = match values.into_iter().next() {
-        Some(v) => v,
-        None => return,
+    let Some(kuma_id) = values
+        .first()
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.parse::<i32>().ok())
+    else {
+        return;
     };
-    let obj = match data.as_object() {
-        Some(o) => o,
-        None => return,
+
+    let Some(heartbeats) = values.get(1).and_then(|h| h.as_array()) else {
+        return;
     };
 
     let cutoff = Utc::now() - chrono::Duration::seconds(HEARTBEAT_WINDOW_SECS);
 
+    let mut heartbeats: Vec<HeartbeatEntry> = heartbeats
+        .iter()
+        .filter_map(parse_heartbeat_entry)
+        .filter(|h| {
+            DateTime::parse_from_rfc3339(&h.time)
+                .map(|t| t.with_timezone(&Utc) > cutoff)
+                .unwrap_or(true) // keep if time is unparseable
+        })
+        .collect();
+
+    heartbeats.sort_by(|a, b| a.time.cmp(&b.time));
+
+    let import_length = heartbeats.len();
+
     let mut write = state.write().await;
-    for (monitor_id_str, beats_val) in obj {
-        let kuma_id: i32 = match monitor_id_str.parse() {
-            Ok(id) => id,
-            Err(_) => continue,
-        };
-        let beats_arr = match beats_val.as_array() {
-            Some(a) => a,
-            None => continue,
-        };
-
-        let mut heartbeats: Vec<HeartbeatEntry> = beats_arr
-            .iter()
-            .filter_map(parse_heartbeat_entry)
-            .filter(|h| {
-                DateTime::parse_from_rfc3339(&h.time)
-                    .map(|t| t.with_timezone(&Utc) > cutoff)
-                    .unwrap_or(true) // keep if time is unparseable
-            })
-            .collect();
-
-        heartbeats.sort_by(|a, b| a.time.cmp(&b.time));
-
-        write.insert(
+    write.insert(
+        kuma_id,
+        MonitorUptime {
             kuma_id,
-            MonitorUptime {
-                kuma_id,
-                heartbeats,
-            },
-        );
-    }
+            heartbeats,
+        },
+    );
     drop(write);
 
     // Broadcast snapshot to all connected SSE clients
@@ -585,8 +592,8 @@ async fn handle_heartbeat_list(values: Vec<Value>, state: UptimeState, tx: Uptim
     let _ = tx.send(UptimeEvent::Snapshot { monitors: snapshot });
 
     info!(
-        "Kuma poller: received heartbeat list for {} monitors",
-        obj.len()
+        "Kuma poller: received heartbeat list for id {} ({} heartbeats)",
+        kuma_id, import_length
     );
 }
 
