@@ -1,3 +1,8 @@
+## [1.4.4] - 2026-04-28
+
+### 🐛 Bug Fixes
+
+- *(backend)* Load healthcheck results from last hour on startup by [@mielpeeters](https://github.com/mielpeeters)
 ## [1.4.3] - 2026-04-28
 
 ### 🚀 Features
