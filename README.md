@@ -1,8 +1,9 @@
 # Auto
 
-A lightweight IT asset management tool for tracking applications, services, infrastructure, and their relationships. Built as a single binary with an embedded web interface.
+A lightweight IT asset management tool for tracking applications, services, infrastructure, and their relationships. \
+Built as a single binary with an embedded web interface.
 
-![AUTO](https://github.com/user-attachments/assets/d0688b2a-306e-420f-a718-21f5c00a2cdd)
+<img width="100%" alt="Dashboard of Auto" style="max-width: 1000px;" src="https://github.com/user-attachments/assets/6c92330f-13f7-42ed-8334-ba8eb0981329" />
 
 ## Features
 
@@ -18,27 +19,47 @@ All entities can be linked together with relationship metadata, making it easy t
 
 ## Quick Start
 
+The app is built as a Rust backend at `src/` (with Axum as the web framework) with a Vue frontend at `frontend/`.
+
+Configuration is done through environment variables, managed in an `.env` file.
+The server reads environment variables and overwrites them with `.env`, or `dev.env` when present.
+
+You can get started by copying `dev.env` to `.env`, and changing what you want.
+
+### Database
+
+Data is stored in an SQLite database. To create this database, choose a location for the database file, e.g. `data/data.db`.
+Then configure that in the environment; e.g. `DATABASE_URL=sqlite://data/data.db`. \
+The `create-db` just recipe then creates a database and performs migrations on it:
+
+```sh
+just create-db
+```
+
+### Development Server
+
+```bash
+just dev
+```
+
+This command starts up the frontend server at `http://localhost:5173`, which proxies the api requests
+to a local dev-build of the backend.
+
+It should automatically reload on changes.
+
+### Building
+
+Production builds are done with the `--release/-r` option for `cargo build`:
+
 ```bash
 # Build and run
 cargo build --release
 ./target/release/auto
-
-# Or for development
-cargo run
 ```
 
-The server starts at `localhost:8080` by default. Configure via environment variables or `.env` file:
+This generates a single binary that has the frontend embedded in it.
 
-```env
-DOMAIN=localhost:8080
-DATABASE_URL=sqlite://data/data.db
-```
-
-For logging output, set `RUST_LOG`:
-
-```bash
-RUST_LOG=info cargo run
-```
+Note that `cargo build --release` builds the frontend first (as defined in [`build.rs`](./build.rs))
 
 ## Development
 
@@ -46,14 +67,14 @@ This project uses [just](https://github.com/casey/just) as a command runner.
 
 ### Database
 
+Requires `sqlx-cli` (`cargo install sqlx-cli`). \
+It's a CLI that manages database creation, migrations, etc.
+
 ```bash
 just create-db         # Create database and run migrations
 just migrate           # Run pending migrations
 just reset-db          # Reset database (destructive)
-just prepare           # Generate sqlx query cache for offline builds
 ```
-
-Requires `sqlx-cli` (`cargo install sqlx-cli`).
 
 ### Backend
 
@@ -69,7 +90,7 @@ cargo test             # Run tests
 ```bash
 cd frontend
 bun install            # Install dependencies
-bun run dev            # Dev server with hot reload (proxies /api to :6767)
+bun run dev            # Dev server with hot reload (proxies /api to :8080)
 bun run build          # Production build
 bun run format         # Format with Prettier
 ```
@@ -79,7 +100,7 @@ For frontend development, run both the backend (`cargo run`) and frontend dev se
 ### Docker
 
 ```bash
-just docker-build                    # Build image
+just docker-build                    # Build image with tag auto:latest
 just docker-run                      # Run with defaults (dev.env, port 8080)
 just docker-run env-file=prod.env    # Run with custom env file
 ```
