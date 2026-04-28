@@ -1,3 +1,8 @@
+## [1.4.5] - 2026-04-28
+
+### 🐛 Bug Fixes
+
+- *(backend + frontend)* Don't limit healthcheck time, but count by [@mielpeeters](https://github.com/mielpeeters)
 ## [1.4.4] - 2026-04-28
 
 ### 🐛 Bug Fixes
