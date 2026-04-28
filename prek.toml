@@ -25,7 +25,7 @@ hooks = [
   ], pass_filenames = false },
   { id = "cargo-test", name = "cargo test", entry = "cargo test", language = "system", types = [
     "rust",
-  ] },
+  ], pass_filenames = false },
   { id = "openapi-sync", name = "openapi sync", entry = "bash openapi-in-sync.sh", language = "system", types = [
     "rust",
   ], pass_filenames = false },

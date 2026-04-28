@@ -6,6 +6,7 @@ use crate::error::Error;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub host: String,
+    pub port: String,
     pub base_url: String,
     pub database_url: String,
     pub kuma_url: Url,
@@ -40,6 +41,7 @@ impl Config {
 
         Ok(Self {
             host: var("HOST"),
+            port: var("PORT"),
             base_url: var("BASE_URL"),
             database_url: var("DATABASE_URL"),
             kuma_url: Url::parse(&var("KUMA_URL")).expect("KUMA_URL should be a valid URL"),
