@@ -1,8 +1,24 @@
+## [1.4.3] - 2026-04-28
+
+### 🚀 Features
+
+- *(backend)* Split HOST to HOST and PORT by [@mielpeeters](https://github.com/mielpeeters)
+- *(frontend)* Title auto -> Auto by [@mielpeeters](https://github.com/mielpeeters)
+
+### 🔨 Build
+
+- Build frontend with cargo build.rs by [@mielpeeters](https://github.com/mielpeeters)
+
+### ⚙️ Miscellaneous Tasks
+
+- Update README by [@mielpeeters](https://github.com/mielpeeters)
+- Update dev.env by [@mielpeeters](https://github.com/mielpeeters)
+- Simplify justfile by [@mielpeeters](https://github.com/mielpeeters)
 ## [1.4.2] - 2026-04-27
 
 ### 🚀 Features
 
-- *(frontend)* Contribution types better suit GhentCDH now
+- *(frontend)* Contribution types better suit GhentCDH now by [@mielpeeters](https://github.com/mielpeeters)
 ## [1.4.1] - 2026-03-31
 
 ### 🚀 Features
