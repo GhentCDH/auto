@@ -39,7 +39,7 @@ COPY src ./src
 COPY migrations ./migrations
 COPY --from=frontend-builder /app/frontend-dist /app/frontend-dist
 
-RUN cargo build --release
+RUN SKIP_FRONTEND_BUILD=1 cargo build --release
 RUN mv target/release/auto app
 
 FROM alpine:3.23 AS runtime
