@@ -40,3 +40,4 @@ url = "2"
 utoipa = { version = "5.4", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
 itertools = "0.14.0"
+hickory-resolver = "0.26.1"
