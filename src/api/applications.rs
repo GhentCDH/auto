@@ -10,9 +10,9 @@ use crate::models::{
     Application, ApplicationWithRelations, CreateApplication, LinkDomain, LinkInfra,
     LinkNetworkShare, LinkPerson, LinkService, PaginationParams, UpdateApplication,
 };
-use crate::overview::Overview as _;
 use crate::service::application;
 use crate::{AppState, Result};
+use crate::{api::complete_id_of_type, overview::Overview as _};
 
 #[derive(Debug, Deserialize, Default)]
 pub struct ApplicationFilters {
@@ -96,7 +96,7 @@ async fn list(
     path = "/api/applications/{id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)")
     ),
     responses(
         (status = 200, description = "Application found", body = ApplicationWithRelations),
@@ -108,6 +108,7 @@ async fn get_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let id = complete_id_of_type(&state, &id, "application").await?;
     let result = application::get_with_relations(&state.pool, &id).await?;
     Ok(Json(result))
 }
@@ -117,7 +118,7 @@ async fn get_one(
     path = "/api/applications/{id}/overview.md",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)")
     ),
     responses(
         (status = 200, description = "Markdown overview", content_type = "text/markdown", body = String),
@@ -129,6 +130,7 @@ async fn get_overview_md(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let id = complete_id_of_type(&state, &id, "application").await?;
     let app = application::get_with_relations(&state.pool, &id).await?;
     let md = app.body_md(&state);
     Ok(([(axum::http::header::CONTENT_TYPE, "text/markdown")], md))
@@ -158,7 +160,7 @@ async fn create(
     path = "/api/applications/{id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)")
     ),
     request_body = UpdateApplication,
     responses(
@@ -173,6 +175,7 @@ async fn update(
     Path(id): Path<String>,
     Json(input): Json<UpdateApplication>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let id = complete_id_of_type(&state, &id, "application").await?;
     let result = application::update(&state.pool, &id, input).await?;
     Ok(Json(result))
 }
@@ -182,7 +185,7 @@ async fn update(
     path = "/api/applications/{id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)")
     ),
     responses(
         (status = 204, description = "Application deleted"),
@@ -194,6 +197,7 @@ async fn delete_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let id = complete_id_of_type(&state, &id, "application").await?;
     application::delete(&state.pool, &id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -205,8 +209,8 @@ async fn delete_one(
     path = "/api/applications/{id}/infra/{infra_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("infra_id" = String, Path, description = "Infrastructure ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("infra_id" = String, Path, description = "Infrastructure ID (prefix or full)")
     ),
     request_body = LinkInfra,
     responses(
@@ -220,6 +224,8 @@ async fn link_infra(
     Path((app_id, infra_id)): Path<(String, String)>,
     Json(input): Json<LinkInfra>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let infra_id = complete_id_of_type(&state, &infra_id, "infra").await?;
     application::link_infra(&state.pool, &app_id, &infra_id, input.notes.as_deref()).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -229,8 +235,8 @@ async fn link_infra(
     path = "/api/applications/{id}/infra/{infra_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("infra_id" = String, Path, description = "Infrastructure ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("infra_id" = String, Path, description = "Infrastructure ID (prefix or full)")
     ),
     responses(
         (status = 204, description = "Infrastructure unlinked successfully"),
@@ -242,6 +248,8 @@ async fn unlink_infra(
     State(state): State<AppState>,
     Path((app_id, infra_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let infra_id = complete_id_of_type(&state, &infra_id, "infra").await?;
     application::unlink_infra(&state.pool, &app_id, &infra_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -251,8 +259,8 @@ async fn unlink_infra(
     path = "/api/applications/{id}/services/{service_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("service_id" = String, Path, description = "Service ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("service_id" = String, Path, description = "Service ID (prefix or full)")
     ),
     request_body = LinkService,
     responses(
@@ -266,6 +274,8 @@ async fn link_service(
     Path((app_id, service_id)): Path<(String, String)>,
     Json(input): Json<LinkService>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let service_id = complete_id_of_type(&state, &service_id, "service").await?;
     application::link_service(&state.pool, &app_id, &service_id, input.notes.as_deref()).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -275,8 +285,8 @@ async fn link_service(
     path = "/api/applications/{id}/services/{service_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("service_id" = String, Path, description = "Service ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("service_id" = String, Path, description = "Service ID (prefix or full)")
     ),
     responses(
         (status = 204, description = "Service unlinked successfully"),
@@ -288,6 +298,8 @@ async fn unlink_service(
     State(state): State<AppState>,
     Path((app_id, service_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let service_id = complete_id_of_type(&state, &service_id, "service").await?;
     application::unlink_service(&state.pool, &app_id, &service_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -297,8 +309,8 @@ async fn unlink_service(
     path = "/api/applications/{id}/domains/{domain_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("domain_id" = String, Path, description = "Domain ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("domain_id" = String, Path, description = "Domain ID (prefix or full)")
     ),
     request_body = LinkDomain,
     responses(
@@ -313,6 +325,8 @@ async fn link_domain(
     Path((app_id, domain_id)): Path<(String, String)>,
     Json(input): Json<LinkDomain>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let domain_id = complete_id_of_type(&state, &domain_id, "domain").await?;
     application::link_domain(&state.pool, &app_id, &domain_id, input.notes.as_deref()).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -322,8 +336,8 @@ async fn link_domain(
     path = "/api/applications/{id}/domains/{domain_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("domain_id" = String, Path, description = "Domain ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("domain_id" = String, Path, description = "Domain ID (prefix or full)")
     ),
     responses(
         (status = 204, description = "Domain unlinked successfully"),
@@ -335,6 +349,8 @@ async fn unlink_domain(
     State(state): State<AppState>,
     Path((app_id, domain_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let domain_id = complete_id_of_type(&state, &domain_id, "domain").await?;
     application::unlink_domain(&state.pool, &app_id, &domain_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -344,8 +360,8 @@ async fn unlink_domain(
     path = "/api/applications/{id}/people/{person_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("person_id" = String, Path, description = "Person ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("person_id" = String, Path, description = "Person ID (prefix or full)")
     ),
     request_body = LinkPerson,
     responses(
@@ -359,6 +375,8 @@ async fn link_person(
     Path((app_id, person_id)): Path<(String, String)>,
     Json(input): Json<LinkPerson>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let person_id = complete_id_of_type(&state, &person_id, "person").await?;
     application::link_person(
         &state.pool,
         &app_id,
@@ -377,8 +395,8 @@ async fn link_person(
     path = "/api/applications/{id}/people/{person_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("person_id" = String, Path, description = "Person ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("person_id" = String, Path, description = "Person ID (prefix or full)")
     ),
     responses(
         (status = 204, description = "Person unlinked successfully"),
@@ -390,6 +408,8 @@ async fn unlink_person(
     State(state): State<AppState>,
     Path((app_id, person_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let person_id = complete_id_of_type(&state, &person_id, "person").await?;
     application::unlink_person(&state.pool, &app_id, &person_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -399,8 +419,8 @@ async fn unlink_person(
     path = "/api/applications/{id}/shares/{share_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("share_id" = String, Path, description = "Network share ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("share_id" = String, Path, description = "Network share ID (prefix or full)")
     ),
     request_body = LinkNetworkShare,
     responses(
@@ -414,6 +434,8 @@ async fn link_share(
     Path((app_id, share_id)): Path<(String, String)>,
     Json(input): Json<LinkNetworkShare>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let share_id = complete_id_of_type(&state, &share_id, "network_share").await?;
     application::link_network_share(
         &state.pool,
         &app_id,
@@ -432,8 +454,8 @@ async fn link_share(
     path = "/api/applications/{id}/shares/{share_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("share_id" = String, Path, description = "Network share ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("share_id" = String, Path, description = "Network share ID (prefix or full)")
     ),
     responses(
         (status = 204, description = "Network share unlinked successfully"),
@@ -445,6 +467,8 @@ async fn unlink_share(
     State(state): State<AppState>,
     Path((app_id, share_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let share_id = complete_id_of_type(&state, &share_id, "network_share").await?;
     application::unlink_network_share(&state.pool, &app_id, &share_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -454,8 +478,8 @@ async fn unlink_share(
     path = "/api/applications/{id}/stacks/{stack_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("stack_id" = String, Path, description = "Stack ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("stack_id" = String, Path, description = "Stack ID (prefix or full)")
     ),
     responses(
         (status = 204, description = "Stack linked successfully"),
@@ -467,6 +491,8 @@ async fn link_stack(
     State(state): State<AppState>,
     Path((app_id, stack_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let stack_id = complete_id_of_type(&state, &stack_id, "stack").await?;
     application::link_stack(&state.pool, &app_id, &stack_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -476,8 +502,8 @@ async fn link_stack(
     path = "/api/applications/{id}/stacks/{stack_id}",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID"),
-        ("stack_id" = String, Path, description = "Stack ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)"),
+        ("stack_id" = String, Path, description = "Stack ID (prefix or full)")
     ),
     responses(
         (status = 204, description = "Stack unlinked successfully"),
@@ -489,6 +515,8 @@ async fn unlink_stack(
     State(state): State<AppState>,
     Path((app_id, stack_id)): Path<(String, String)>,
 ) -> Result<impl axum::response::IntoResponse> {
+    let app_id = complete_id_of_type(&state, &app_id, "application").await?;
+    let stack_id = complete_id_of_type(&state, &stack_id, "stack").await?;
     application::unlink_stack(&state.pool, &app_id, &stack_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
@@ -498,7 +526,7 @@ async fn unlink_stack(
     path = "/api/applications/{id}/sync-outline",
     tag = "applications",
     params(
-        ("id" = String, Path, description = "Application ID")
+        ("id" = String, Path, description = "Application ID (prefix or full)")
     ),
     responses(
         (status = 200, description = "Overview synced to Outline"),
@@ -519,6 +547,7 @@ async fn sync_outline(
         ));
     };
 
+    let id = complete_id_of_type(&state, &id, "application").await?;
     let app = application::get_with_relations(&state.pool, &id).await?;
 
     let entity_outline_url = app.application.outline_url.as_deref().ok_or_else(|| {

@@ -3,6 +3,7 @@ use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Form, Json, Router};
+use uuid::Uuid;
 
 use crate::AppState;
 
@@ -84,6 +85,25 @@ async fn resolve_id(
 ) -> crate::Result<impl IntoResponse> {
     let resolved = crate::service::search::resolve_id(&state.pool, &id).await?;
     Ok(Json(resolved))
+}
+
+/// Resolve an id into a verified Uuid of particular entity type
+async fn complete_id_of_type(
+    state: &AppState,
+    id: &str,
+    entity_type: &str,
+) -> crate::Result<String> {
+    if id.parse::<Uuid>().is_err() {
+        let resolved = crate::service::search::resolve_id(&state.pool, id).await?;
+        if resolved.entity_type != entity_type {
+            return Err(crate::Error::NotFound(format!(
+                "No entity found with id {id}"
+            )));
+        }
+        Ok(resolved.id)
+    } else {
+        Ok(id.to_string())
+    }
 }
 
 #[allow(unused)]
