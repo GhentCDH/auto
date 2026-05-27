@@ -1,8 +1,9 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    ApplicationInfraRelation, CreateInfra, Infra, InfraDomainRef, InfraIp, InfraWithRelations,
-    PaginatedResponse, PaginationParams, ServiceInfraRelation, UpdateDomain, UpdateInfra, new_id,
+    ApplicationInfraRelation, CreateDomain, CreateInfra, Infra, InfraDomainRef, InfraIp,
+    InfraWithRelations, NewInfraDomain, PaginatedResponse, PaginationParams, ServiceInfraRelation,
+    UpdateDomain, UpdateInfra, new_id,
 };
 use crate::{Error, Result, service};
 
@@ -143,6 +144,31 @@ async fn set_domain_target(pool: &SqlitePool, domain_id: &str, infra_id: &str) -
     Ok(())
 }
 
+/// Create a fresh domain that targets this infra. Breaks the circular create
+/// order — the new domain gets its required target (`target_infra_id`) from the
+/// infra that was just inserted, instead of needing one to exist beforehand.
+async fn create_domain_target(
+    pool: &SqlitePool,
+    new_domain: NewInfraDomain,
+    infra_id: &str,
+) -> Result<()> {
+    service::domain::create(
+        pool,
+        CreateDomain {
+            fqdn: new_domain.fqdn,
+            registrar: new_domain.registrar,
+            dns_provider: new_domain.dns_provider,
+            expires_at: new_domain.expires_at,
+            notes: new_domain.notes,
+            target_application_id: None,
+            target_service_id: None,
+            target_infra_id: Some(infra_id.to_string()),
+        },
+    )
+    .await?;
+    Ok(())
+}
+
 /// Replace the manually-assigned IPs for an infra. Only touches `source='manual'`
 /// rows — domain-resolved IPs are left untouched.
 async fn replace_manual_ips(pool: &SqlitePool, infra_id: &str, ips: &[String]) -> Result<()> {
@@ -189,6 +215,9 @@ pub async fn create(pool: &SqlitePool, input: CreateInfra) -> Result<Infra> {
     if let Some(domain_id) = &input.domain_id {
         set_domain_target(pool, domain_id, &id).await?;
     }
+    if let Some(new_domain) = input.new_domain {
+        create_domain_target(pool, new_domain, &id).await?;
+    }
     if let Some(manual_ips) = &input.manual_ips {
         replace_manual_ips(pool, &id, manual_ips).await?;
     }
@@ -219,6 +248,9 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateInfra) -> Result<I
 
     if let Some(domain_id) = &input.domain_id {
         set_domain_target(pool, domain_id, id).await?;
+    }
+    if let Some(new_domain) = input.new_domain {
+        create_domain_target(pool, new_domain, id).await?;
     }
     if let Some(manual_ips) = &input.manual_ips {
         replace_manual_ips(pool, id, manual_ips).await?;

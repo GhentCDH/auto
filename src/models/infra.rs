@@ -32,10 +32,25 @@ pub struct InfraDomainRef {
     pub fqdn: String,
 }
 
+/// A brand-new domain to create alongside an infra. Has no target field: the
+/// server points it at the infra being created (`domain.target_infra_id`),
+/// which is the only way to resolve the otherwise-circular create order
+/// (a domain requires a target, an infra resolves IPs from its domain).
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct NewInfraDomain {
+    pub fqdn: String,
+    pub registrar: Option<String>,
+    pub dns_provider: Option<String>,
+    pub expires_at: Option<String>,
+    pub notes: Option<String>,
+}
+
 /// DTO for creating a new infra.
 ///
-/// `domain_id` (optional) sets that domain's target to this infra, so its IPs
-/// are resolved from DNS. `manual_ips` (optional) assigns fixed IPs directly.
+/// `domain_id` (optional) sets an existing domain's target to this infra, so its
+/// IPs are resolved from DNS. `new_domain` (optional) creates a fresh domain
+/// targeting this infra in the same request. `manual_ips` (optional) assigns
+/// fixed IPs directly.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateInfra {
     pub name: String,
@@ -43,10 +58,11 @@ pub struct CreateInfra {
     #[serde(rename = "type")]
     pub infra_type: String,
     pub domain_id: Option<String>,
+    pub new_domain: Option<NewInfraDomain>,
     pub manual_ips: Option<Vec<String>>,
 }
 
-/// DTO for updating an infra. See [`CreateInfra`] for `domain_id` / `manual_ips`.
+/// DTO for updating an infra. See [`CreateInfra`] for the field semantics.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateInfra {
     pub name: Option<String>,
@@ -54,6 +70,7 @@ pub struct UpdateInfra {
     #[serde(rename = "type")]
     pub infra_type: Option<String>,
     pub domain_id: Option<String>,
+    pub new_domain: Option<NewInfraDomain>,
     pub manual_ips: Option<Vec<String>>,
 }
 

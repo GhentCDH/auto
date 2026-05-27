@@ -150,6 +150,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::ServiceInfraRelation,
             crate::models::InfraIp,
             crate::models::InfraDomainRef,
+            crate::models::NewInfraDomain,
 
             // Domains
             crate::models::Domain,
