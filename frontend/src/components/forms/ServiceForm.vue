@@ -149,7 +149,9 @@ onMounted(() => {
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Status</legend>
       <select v-model="form.status" class="select w-full">
-        <option v-for="(label, value) in statuses" :key="value" :value="value">{{ label }}</option>
+        <option v-for="(label, value) in statuses" :key="value" :value="value">
+          {{ label }}
+        </option>
       </select>
     </fieldset>
 

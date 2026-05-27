@@ -171,10 +171,7 @@ onMounted(loadDns);
       >
         Resolving…
       </div>
-      <div
-        v-else-if="dnsRecords.length === 0"
-        class="text-base-content/70"
-      >
+      <div v-else-if="dnsRecords.length === 0" class="text-base-content/70">
         No DNS records found
       </div>
       <div v-else class="overflow-x-auto">

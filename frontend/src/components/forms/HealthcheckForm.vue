@@ -5,11 +5,9 @@ import type {
   CreateHealthcheck,
   UpdateHealthcheck,
 } from '@/types';
-import EntitySelector from '../common/EntitySelector.vue';
-import { applicationsApi, servicesApi, domainsApi } from '@/api';
+import EntityPicker from '../common/EntityPicker.vue';
 
 const target_type = ref<'application' | 'service'>('application');
-const showDomainSelector = ref(false);
 const selectedTargetName = ref<string | null>(null);
 const selectedDomainName = ref<string | null>(null);
 
@@ -35,11 +33,6 @@ if (props.initialApplicationId) {
 if (props.initialTargetName) {
   selectedTargetName.value = props.initialTargetName;
 }
-
-// Show target selector by default unless a target is already provided
-const showTargetSelector = ref(
-  !props.initialApplicationId && !props.initialServiceId && !props.healthcheck
-);
 
 const form = ref<CreateHealthcheck>({
   name: props.initialName || '',
@@ -181,21 +174,25 @@ const nameInput = ref<HTMLInputElement>();
 function handleApplicationSelect(application: { id: string; name: string }) {
   form.value.service_id = '';
   form.value.application_id = application.id;
-  showTargetSelector.value = false;
   selectedTargetName.value = application.name;
 }
 
 function handleServiceSelect(service: { id: string; name: string }) {
   form.value.service_id = service.id;
   form.value.application_id = '';
-  showTargetSelector.value = false;
   selectedTargetName.value = service.name;
 }
 
 function handleDomainSelect(domain: { id: string; name: string }) {
   form.value.domain_id = domain.id;
-  showDomainSelector.value = false;
   selectedDomainName.value = domain.name;
+}
+
+// Switching target type clears the previous pick so the new picker opens fresh.
+function switchTargetType() {
+  form.value.application_id = '';
+  form.value.service_id = '';
+  selectedTargetName.value = null;
 }
 
 function addHeader() {
@@ -242,10 +239,7 @@ watch(
               value="application"
               v-model="target_type"
               class="radio radio-primary"
-              @change="
-                showTargetSelector = true;
-                form.service_id = '';
-              "
+              @change="switchTargetType"
             />
             <span>Application</span>
           </label>
@@ -256,88 +250,34 @@ watch(
               value="service"
               v-model="target_type"
               class="radio radio-primary"
-              @change="
-                showTargetSelector = true;
-                form.application_id = '';
-              "
+              @change="switchTargetType"
             />
             <span>Service</span>
           </label>
         </div>
 
-        <div v-if="showTargetSelector" class="bg-base-200 rounded-box p-2">
-          <EntitySelector
-            v-if="target_type === 'application'"
-            title="Applications"
-            :fetch-fn="applicationsApi.list"
-            :allow-create="false"
-            @select="handleApplicationSelect"
-            @cancel="showTargetSelector = false"
-          />
-          <EntitySelector
-            v-else-if="target_type === 'service'"
-            title="Services"
-            :fetch-fn="servicesApi.list"
-            :allow-create="false"
-            @select="handleServiceSelect"
-            @cancel="showTargetSelector = false"
-          />
-        </div>
-        <div
-          v-else-if="selectedTargetName"
-          class="flex items-center justify-between bg-base-200 rounded-box px-4 py-2"
-        >
-          <div class="flex items-center gap-2">
-            <span class="badge badge-primary badge-sm">{{
-              target_type === 'application' ? 'App' : 'Service'
-            }}</span>
-            <span class="font-medium">{{ selectedTargetName }}</span>
-          </div>
-          <button
-            type="button"
-            class="btn btn-ghost btn-xs"
-            @click="showTargetSelector = true"
-          >
-            Change
-          </button>
-        </div>
+        <EntityPicker
+          v-if="target_type === 'application'"
+          entity-type="application"
+          :selected-name="selectedTargetName"
+          @select="handleApplicationSelect"
+        />
+        <EntityPicker
+          v-else-if="target_type === 'service'"
+          entity-type="service"
+          :selected-name="selectedTargetName"
+          @select="handleServiceSelect"
+        />
       </fieldset>
 
       <fieldset class="fieldset md:col-span-2">
         <legend class="fieldset-legend">Domain *</legend>
-        <button
-          v-if="!showDomainSelector && !selectedDomainName"
-          type="button"
-          class="btn btn-outline w-full"
-          @click="showDomainSelector = true"
-        >
-          Select Domain
-        </button>
-        <div v-else-if="showDomainSelector" class="bg-base-200 rounded-box p-2">
-          <EntitySelector
-            title="Domains"
-            :fetch-fn="domainsApi.list"
-            :allow-create="false"
-            @select="handleDomainSelect"
-            @cancel="showDomainSelector = false"
-          />
-        </div>
-        <div
-          v-else
-          class="flex items-center justify-between bg-base-200 rounded-box px-4 py-2"
-        >
-          <div class="flex items-center gap-2">
-            <span class="badge badge-secondary badge-sm">Domain</span>
-            <span class="font-medium">{{ selectedDomainName }}</span>
-          </div>
-          <button
-            type="button"
-            class="btn btn-ghost btn-xs"
-            @click="showDomainSelector = true"
-          >
-            Change
-          </button>
-        </div>
+        <EntityPicker
+          entity-type="domain"
+          badge-class="badge-secondary"
+          :selected-name="selectedDomainName"
+          @select="handleDomainSelect"
+        />
       </fieldset>
 
       <fieldset class="fieldset">

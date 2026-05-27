@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import type { Infra, InfraIp, CreateInfra, UpdateInfra } from '@/types';
+import type {
+  Infra,
+  InfraIp,
+  CreateInfra,
+  UpdateInfra,
+  NewInfraDomain,
+  CreateDomain,
+} from '@/types';
 import { infraTypes } from '@/values';
-import { domainsApi } from '@/api';
 import SelectWithCustom from '../common/SelectWithCustom.vue';
-import EntitySelector from '../common/EntitySelector.vue';
+import EntityPicker from '../common/EntityPicker.vue';
 
 const props = defineProps<{
   // Detail view passes InfraWithRelations (carries `ips` + targeting `domain`);
@@ -31,7 +37,10 @@ const form = ref<CreateInfra>({
 const ipMode = ref<'domain' | 'manual'>('manual');
 const manualIps = ref<string[]>(['']);
 const selectedDomainName = ref<string | null>(null);
-const showDomainSelector = ref(false);
+// A new domain to create together with this infra (targets the infra itself,
+// so it can't be created up front — the backend bundles it). Mutually
+// exclusive with form.domain_id (picking an existing domain).
+const pendingNewDomain = ref<NewInfraDomain | null>(null);
 
 watch(
   () => props.infra,
@@ -69,8 +78,23 @@ watch(
 
 function handleDomainSelect(domain: { id: string; name: string }) {
   form.value.domain_id = domain.id;
+  pendingNewDomain.value = null;
   selectedDomainName.value = domain.name;
-  showDomainSelector.value = false;
+}
+
+// User created a brand-new domain in the picker: hold it, don't persist yet.
+// It's sent as `new_domain` on submit so the backend can target it at this infra.
+function handleDomainCreate(data: unknown) {
+  const d = data as CreateDomain;
+  pendingNewDomain.value = {
+    fqdn: d.fqdn,
+    registrar: d.registrar || undefined,
+    dns_provider: d.dns_provider || undefined,
+    expires_at: d.expires_at || undefined,
+    notes: d.notes || undefined,
+  };
+  form.value.domain_id = undefined;
+  selectedDomainName.value = d.fqdn;
 }
 
 function addIpField() {
@@ -88,6 +112,7 @@ function handleSubmit() {
   };
   if (ipMode.value === 'domain') {
     if (form.value.domain_id) data.domain_id = form.value.domain_id;
+    else if (pendingNewDomain.value) data.new_domain = pendingNewDomain.value;
   } else {
     data.manual_ips = manualIps.value.map((s) => s.trim()).filter(Boolean);
   }
@@ -146,32 +171,17 @@ onMounted(() => {
 
       <!-- Domain: server resolves & refreshes IPs from DNS -->
       <template v-if="ipMode === 'domain'">
-        <div
-          v-if="selectedDomainName && !showDomainSelector"
-          class="flex items-center justify-between bg-base-200 rounded-box px-4 py-2"
-        >
-          <div class="flex items-center gap-2">
-            <span class="badge badge-primary badge-sm">Domain</span>
-            <span class="font-medium">{{ selectedDomainName }}</span>
-          </div>
-          <button
-            type="button"
-            class="btn btn-ghost btn-xs"
-            @click="showDomainSelector = true"
-          >
-            Change
-          </button>
+        <EntityPicker
+          entity-type="domain"
+          :selected-name="selectedDomainName"
+          defer-create
+          :create-form-props="{ hideTarget: true }"
+          @select="handleDomainSelect"
+          @create-deferred="handleDomainCreate"
+        />
+        <div class="label">
+          IPs are resolved by the server and refreshed periodically.
         </div>
-        <div v-else class="bg-base-200 rounded-box p-2">
-          <EntitySelector
-            title="Domains"
-            :fetch-fn="domainsApi.list"
-            :allow-create="false"
-            @select="handleDomainSelect"
-            @cancel="showDomainSelector = false"
-          />
-        </div>
-        <div class="label">IPs are resolved by the server and refreshed periodically.</div>
       </template>
 
       <!-- Manual: fixed IPs -->
@@ -195,7 +205,11 @@ onMounted(() => {
             ✕
           </button>
         </div>
-        <button type="button" class="btn btn-sm btn-outline" @click="addIpField">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline"
+          @click="addIpField"
+        >
           + Add IP
         </button>
       </template>

@@ -125,7 +125,10 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
         </div>
         <div class="flex gap-2">
           <button class="btn btn-sm" :disabled="syncLoading" @click="syncIps">
-            <span v-if="syncLoading" class="loading loading-spinner loading-xs" />
+            <span
+              v-if="syncLoading"
+              class="loading loading-spinner loading-xs"
+            />
             Sync IPs
           </button>
           <button class="btn btn-sm" @click="showEditModal = true">Edit</button>

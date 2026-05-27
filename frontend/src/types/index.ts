@@ -165,12 +165,24 @@ export interface Infra {
   created_by: string | null;
 }
 
+/** A new domain created alongside an infra. No target — the server points it
+ *  at the infra being created, breaking the otherwise-circular create order. */
+export interface NewInfraDomain {
+  fqdn: string;
+  registrar?: string;
+  dns_provider?: string;
+  expires_at?: string;
+  notes?: string;
+}
+
 export interface CreateInfra {
   name: string;
   description?: string;
   type: string;
-  /** If set, points this domain at the infra so its IPs resolve from DNS. */
+  /** If set, points this existing domain at the infra so its IPs resolve from DNS. */
   domain_id?: string;
+  /** Create a fresh domain targeting this infra in the same request. */
+  new_domain?: NewInfraDomain;
   /** Manually-assigned IPs (used when the infra has no domain). */
   manual_ips?: string[];
 }
@@ -180,6 +192,7 @@ export interface UpdateInfra {
   description?: string;
   type?: string;
   domain_id?: string;
+  new_domain?: NewInfraDomain;
   manual_ips?: string[];
 }
 

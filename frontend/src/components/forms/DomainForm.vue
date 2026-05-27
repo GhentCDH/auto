@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue';
 import type { Domain, CreateDomain, UpdateDomain } from '@/types';
-import EntitySelector from '../common/EntitySelector.vue';
-import { applicationsApi, servicesApi, infraApi } from '@/api';
+import EntityPicker from '../common/EntityPicker.vue';
 
 const target_type = ref<'application' | 'service' | 'infra'>('application');
 const selectedName = ref<string | null>(null);
@@ -10,10 +9,11 @@ const selectedName = ref<string | null>(null);
 const props = defineProps<{
   domain?: Domain;
   initialName?: string;
+  // When true, the parent supplies the target (e.g. InfraForm creating a domain
+  // that targets the infra being created), so the target picker is hidden and
+  // not required for validity.
+  hideTarget?: boolean;
 }>();
-
-// Show target selector by default unless editing an existing domain
-const showTargetSelector = ref(!props.domain);
 
 const emit = defineEmits<{
   submit: [data: CreateDomain | UpdateDomain];
@@ -66,7 +66,11 @@ const isValid = computed(() => {
     form.value.target_service_id,
     form.value.target_infra_id,
   ].filter((x) => x !== undefined).length;
-  return form.value.fqdn && !fqdnContainsProtocol.value && count === 1;
+  return (
+    form.value.fqdn &&
+    !fqdnContainsProtocol.value &&
+    (props.hideTarget || count === 1)
+  );
 });
 
 function handleSubmit() {
@@ -89,8 +93,16 @@ function selectTarget(
     type === 'application' ? entity.id : undefined;
   form.value.target_service_id = type === 'service' ? entity.id : undefined;
   form.value.target_infra_id = type === 'infra' ? entity.id : undefined;
-  showTargetSelector.value = false;
   selectedName.value = entity.name;
+}
+
+// Switching target type clears the previous selection so the picker for the
+// newly-chosen type opens fresh in search mode.
+function switchTargetType() {
+  form.value.target_application_id = undefined;
+  form.value.target_service_id = undefined;
+  form.value.target_infra_id = undefined;
+  selectedName.value = null;
 }
 
 const handleApplicationSelect = (e: { id: string; name: string }) =>
@@ -121,7 +133,7 @@ const handleInfraSelect = (e: { id: string; name: string }) =>
         </p>
       </fieldset>
 
-      <fieldset class="fieldset col-span-2">
+      <fieldset v-if="!hideTarget" class="fieldset col-span-2">
         <legend class="fieldset-legend">Target *</legend>
         <div class="flex gap-4 mb-2">
           <label class="label cursor-pointer gap-2">
@@ -131,11 +143,7 @@ const handleInfraSelect = (e: { id: string; name: string }) =>
               value="application"
               v-model="target_type"
               class="radio radio-primary"
-              @change="
-                showTargetSelector = true;
-                form.target_service_id = undefined;
-                form.target_infra_id = undefined;
-              "
+              @change="switchTargetType"
             />
             <span>Application</span>
           </label>
@@ -146,11 +154,7 @@ const handleInfraSelect = (e: { id: string; name: string }) =>
               value="service"
               v-model="target_type"
               class="radio radio-primary"
-              @change="
-                showTargetSelector = true;
-                form.target_application_id = undefined;
-                form.target_infra_id = undefined;
-              "
+              @change="switchTargetType"
             />
             <span>Service</span>
           </label>
@@ -161,64 +165,30 @@ const handleInfraSelect = (e: { id: string; name: string }) =>
               value="infra"
               v-model="target_type"
               class="radio radio-primary"
-              @change="
-                showTargetSelector = true;
-                form.target_application_id = undefined;
-                form.target_service_id = undefined;
-              "
+              @change="switchTargetType"
             />
             <span>Infra</span>
           </label>
         </div>
 
-        <div v-if="showTargetSelector" class="bg-base-200 rounded-box p-2">
-          <EntitySelector
-            v-if="target_type === 'application'"
-            title="Applications"
-            :fetch-fn="applicationsApi.list"
-            :allow-create="false"
-            @select="handleApplicationSelect"
-            @cancel="showTargetSelector = false"
-          />
-          <EntitySelector
-            v-else-if="target_type === 'service'"
-            title="Services"
-            :fetch-fn="servicesApi.list"
-            :allow-create="false"
-            @select="handleServiceSelect"
-            @cancel="showTargetSelector = false"
-          />
-          <EntitySelector
-            v-else-if="target_type === 'infra'"
-            title="Infrastructure"
-            :fetch-fn="infraApi.list"
-            :allow-create="false"
-            @select="handleInfraSelect"
-            @cancel="showTargetSelector = false"
-          />
-        </div>
-        <div
-          v-else-if="selectedName"
-          class="flex items-center justify-between bg-base-200 rounded-box px-4 py-2"
-        >
-          <div class="flex items-center gap-2">
-            <span class="badge badge-primary badge-sm">{{
-              target_type === 'application'
-                ? 'App'
-                : target_type === 'infra'
-                  ? 'Infra'
-                  : 'Service'
-            }}</span>
-            <span class="font-medium">{{ selectedName }}</span>
-          </div>
-          <button
-            type="button"
-            class="btn btn-ghost btn-xs"
-            @click="showTargetSelector = true"
-          >
-            Change
-          </button>
-        </div>
+        <EntityPicker
+          v-if="target_type === 'application'"
+          entity-type="application"
+          :selected-name="selectedName"
+          @select="handleApplicationSelect"
+        />
+        <EntityPicker
+          v-else-if="target_type === 'service'"
+          entity-type="service"
+          :selected-name="selectedName"
+          @select="handleServiceSelect"
+        />
+        <EntityPicker
+          v-else-if="target_type === 'infra'"
+          entity-type="infra"
+          :selected-name="selectedName"
+          @select="handleInfraSelect"
+        />
       </fieldset>
 
       <fieldset class="fieldset">
