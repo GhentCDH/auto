@@ -2,9 +2,9 @@
 import { ref, watch, onMounted, computed } from 'vue';
 import type { Domain, CreateDomain, UpdateDomain } from '@/types';
 import EntitySelector from '../common/EntitySelector.vue';
-import { applicationsApi, servicesApi } from '@/api';
+import { applicationsApi, servicesApi, infraApi } from '@/api';
 
-const target_type = ref<'application' | 'service'>('application');
+const target_type = ref<'application' | 'service' | 'infra'>('application');
 const selectedName = ref<string | null>(null);
 
 const props = defineProps<{
@@ -39,11 +39,19 @@ watch(
         expires_at: d.expires_at || '',
         target_application_id: d.target_application_id || undefined,
         target_service_id: d.target_service_id || undefined,
+        target_infra_id: d.target_infra_id || undefined,
         notes: d.notes || '',
       };
-      target_type.value = d.target_application_id ? 'application' : 'service';
+      target_type.value = d.target_application_id
+        ? 'application'
+        : d.target_infra_id
+          ? 'infra'
+          : 'service';
       selectedName.value =
-        d.target_application_name || d.target_service_name || null;
+        d.target_application_name ||
+        d.target_service_name ||
+        d.target_infra_name ||
+        null;
     }
   },
   { immediate: true }
@@ -52,12 +60,13 @@ watch(
 const fqdnContainsProtocol = computed(() => form.value.fqdn.includes('://'));
 
 const isValid = computed(() => {
-  const hasTarget =
-    (form.value.target_application_id !== undefined &&
-      form.value.target_service_id === undefined) ||
-    (form.value.target_application_id === undefined &&
-      form.value.target_service_id !== undefined);
-  return form.value.fqdn && !fqdnContainsProtocol.value && hasTarget;
+  // Exactly one target of the three must be set.
+  const count = [
+    form.value.target_application_id,
+    form.value.target_service_id,
+    form.value.target_infra_id,
+  ].filter((x) => x !== undefined).length;
+  return form.value.fqdn && !fqdnContainsProtocol.value && count === 1;
 });
 
 function handleSubmit() {
@@ -72,19 +81,24 @@ onMounted(() => {
   nameInput.value?.focus();
 });
 
-function handleApplicationSelect(application: { id: string; name: string }) {
-  form.value.target_service_id = undefined;
-  form.value.target_application_id = application.id;
+function selectTarget(
+  type: 'application' | 'service' | 'infra',
+  entity: { id: string; name: string }
+) {
+  form.value.target_application_id =
+    type === 'application' ? entity.id : undefined;
+  form.value.target_service_id = type === 'service' ? entity.id : undefined;
+  form.value.target_infra_id = type === 'infra' ? entity.id : undefined;
   showTargetSelector.value = false;
-  selectedName.value = application.name;
+  selectedName.value = entity.name;
 }
 
-function handleServiceSelect(service: { id: string; name: string }) {
-  form.value.target_service_id = service.id;
-  form.value.target_application_id = undefined;
-  showTargetSelector.value = false;
-  selectedName.value = service.name;
-}
+const handleApplicationSelect = (e: { id: string; name: string }) =>
+  selectTarget('application', e);
+const handleServiceSelect = (e: { id: string; name: string }) =>
+  selectTarget('service', e);
+const handleInfraSelect = (e: { id: string; name: string }) =>
+  selectTarget('infra', e);
 </script>
 
 <template>
@@ -120,6 +134,7 @@ function handleServiceSelect(service: { id: string; name: string }) {
               @change="
                 showTargetSelector = true;
                 form.target_service_id = undefined;
+                form.target_infra_id = undefined;
               "
             />
             <span>Application</span>
@@ -134,9 +149,25 @@ function handleServiceSelect(service: { id: string; name: string }) {
               @change="
                 showTargetSelector = true;
                 form.target_application_id = undefined;
+                form.target_infra_id = undefined;
               "
             />
             <span>Service</span>
+          </label>
+          <label class="label cursor-pointer gap-2">
+            <input
+              type="radio"
+              name="target_type"
+              value="infra"
+              v-model="target_type"
+              class="radio radio-primary"
+              @change="
+                showTargetSelector = true;
+                form.target_application_id = undefined;
+                form.target_service_id = undefined;
+              "
+            />
+            <span>Infra</span>
           </label>
         </div>
 
@@ -157,6 +188,14 @@ function handleServiceSelect(service: { id: string; name: string }) {
             @select="handleServiceSelect"
             @cancel="showTargetSelector = false"
           />
+          <EntitySelector
+            v-else-if="target_type === 'infra'"
+            title="Infrastructure"
+            :fetch-fn="infraApi.list"
+            :allow-create="false"
+            @select="handleInfraSelect"
+            @cancel="showTargetSelector = false"
+          />
         </div>
         <div
           v-else-if="selectedName"
@@ -164,7 +203,11 @@ function handleServiceSelect(service: { id: string; name: string }) {
         >
           <div class="flex items-center gap-2">
             <span class="badge badge-primary badge-sm">{{
-              target_type === 'application' ? 'App' : 'Service'
+              target_type === 'application'
+                ? 'App'
+                : target_type === 'infra'
+                  ? 'Infra'
+                  : 'Service'
             }}</span>
             <span class="font-medium">{{ selectedName }}</span>
           </div>

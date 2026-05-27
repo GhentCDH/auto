@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { toast } from 'vue-sonner';
 import { infraApi } from '@/api';
 import type { Infra } from '@/types';
 import EntityList from '@/components/common/EntityList.vue';
@@ -18,6 +19,18 @@ function onFilterChange(key: string, value: string | null) {
   filters.value[key] = value;
   entityListRef.value?.updateFilter(key, value);
 }
+
+const syncLoading = ref(false);
+function syncAllIps() {
+  syncLoading.value = true;
+  const promise = infraApi.syncAll();
+  toast.promise(promise, {
+    loading: 'Resolving all infra IPs…',
+    success: 'All infra IPs synced',
+    error: (e: unknown) => (e instanceof Error ? e.message : 'Sync failed'),
+  });
+  promise.finally(() => (syncLoading.value = false));
+}
 </script>
 
 <template>
@@ -34,6 +47,19 @@ function onFilterChange(key: string, value: string | null) {
     :filters="filters"
     @update:filters="filters = $event"
   >
+    <template #toolbar>
+      <div class="flex gap-2 mb-4">
+        <button
+          class="btn btn-outline btn-sm"
+          :disabled="syncLoading"
+          @click="syncAllIps"
+        >
+          <span v-if="syncLoading" class="loading loading-spinner loading-sm" />
+          {{ syncLoading ? 'Syncing…' : 'Sync all IPs' }}
+        </button>
+      </div>
+    </template>
+
     <template #columns>
       <th>Name</th>
       <th>Description</th>

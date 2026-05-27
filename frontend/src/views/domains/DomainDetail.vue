@@ -108,6 +108,12 @@ onMounted(loadDns);
           >
             {{ (entity as DomainNamedWithRelations).target_service_name }}
           </router-link>
+          <router-link
+            v-if="(entity as DomainNamedWithRelations).target_infra_id"
+            :to="`/infra/${(entity as DomainNamedWithRelations).target_infra_id}`"
+          >
+            {{ (entity as DomainNamedWithRelations).target_infra_name }}
+          </router-link>
         </div>
       </div>
     </template>
@@ -177,6 +183,7 @@ onMounted(loadDns);
             <tr>
               <th>Type</th>
               <th class="w-full">Value</th>
+              <th>Infra</th>
               <th>TTL</th>
               <th>Priority</th>
             </tr>
@@ -191,6 +198,17 @@ onMounted(loadDns);
                 >
               </td>
               <td class="font-mono break-all">{{ r.value }}</td>
+              <td>
+                <router-link
+                  v-if="r.infra"
+                  :to="`/infra/${r.infra.id}`"
+                  class="badge badge-sm badge-success badge-outline"
+                  :title="`Matches infra ${r.infra.name}`"
+                >
+                  {{ r.infra.name }}
+                </router-link>
+                <span v-else class="text-base-content/30">-</span>
+              </td>
               <td>{{ r.ttl }}</td>
               <td>{{ r.priority ?? '-' }}</td>
             </tr>

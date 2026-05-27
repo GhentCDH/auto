@@ -169,12 +169,24 @@ export interface CreateInfra {
   name: string;
   description?: string;
   type: string;
+  /** If set, points this domain at the infra so its IPs resolve from DNS. */
+  domain_id?: string;
+  /** Manually-assigned IPs (used when the infra has no domain). */
+  manual_ips?: string[];
 }
 
 export interface UpdateInfra {
   name?: string;
   description?: string;
   type?: string;
+  domain_id?: string;
+  manual_ips?: string[];
+}
+
+export interface InfraIp {
+  ip: string;
+  source: string; // 'domain' | 'manual'
+  last_synced_at: string;
 }
 
 export interface InfraRelation {
@@ -185,6 +197,8 @@ export interface InfraRelation {
 }
 
 export interface InfraWithRelations extends Infra {
+  ips: InfraIp[];
+  domain: { id: string; fqdn: string } | null;
   applications: ApplicationInfraRelation[];
   services: ServiceInfraRelation[];
 }
@@ -219,6 +233,8 @@ export interface Domain {
   target_application_name: string | null;
   target_service_id: string | null;
   target_service_name: string | null;
+  target_infra_id: string | null;
+  target_infra_name: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -228,12 +244,20 @@ export interface DomainNamed extends Domain {
   name: string;
 }
 
+/** A backlink from a DNS A/AAAA record to a known infra (matched by IP). */
+export interface InfraMatch {
+  id: string;
+  name: string;
+}
+
 /** A single DNS record resolved live for a domain's FQDN. */
 export interface DnsRecord {
   record_type: string;
   value: string;
   ttl: number;
   priority: number | null;
+  /** Set when this record's IP matches a tracked infra. */
+  infra?: InfraMatch;
 }
 
 /** Result of a live DNS lookup for one FQDN (records are not persisted). */
@@ -251,6 +275,7 @@ export interface CreateDomain {
   expires_at?: string;
   target_application_id?: string;
   target_service_id?: string;
+  target_infra_id?: string;
   notes?: string;
 }
 
@@ -261,6 +286,7 @@ export interface UpdateDomain {
   expires_at?: string;
   target_application_id?: string;
   target_service_id?: string;
+  target_infra_id?: string;
   status?: string;
   notes?: string;
 }

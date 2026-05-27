@@ -49,6 +49,24 @@ async function handleUpdate(formData: unknown) {
   }
 }
 
+const syncLoading = ref(false);
+async function syncIps() {
+  syncLoading.value = true;
+  try {
+    const promise = infraApi.syncOne(id);
+    toast.promise(promise, {
+      loading: 'Resolving IPs…',
+      success: 'IPs synced',
+      error: (e: unknown) => (e instanceof Error ? e.message : 'Sync failed'),
+    });
+    infra.value = await promise;
+  } catch {
+    // toast.promise already surfaced the error
+  } finally {
+    syncLoading.value = false;
+  }
+}
+
 async function handleDelete() {
   try {
     await infraApi.delete(id);
@@ -106,6 +124,10 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
           </h1>
         </div>
         <div class="flex gap-2">
+          <button class="btn btn-sm" :disabled="syncLoading" @click="syncIps">
+            <span v-if="syncLoading" class="loading loading-spinner loading-xs" />
+            Sync IPs
+          </button>
           <button class="btn btn-sm" @click="showEditModal = true">Edit</button>
           <button class="btn btn-sm btn-error" @click="showDeleteDialog = true">
             Delete
@@ -141,6 +163,46 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                   <div class="text-sm text-base-content/70">Updated</div>
                   <div>{{ new Date(infra.updated_at).toLocaleString() }}</div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- IP Addresses Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h2 class="card-title">IP Addresses ({{ infra.ips.length }})</h2>
+              <div v-if="infra.ips.length === 0" class="text-base-content/70">
+                No IPs — attach a domain or add manual IPs via Edit.
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th class="w-full">IP</th>
+                      <th>Source</th>
+                      <th>Synced</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="ip in infra.ips" :key="ip.ip">
+                      <td class="font-mono break-all">{{ ip.ip }}</td>
+                      <td>
+                        <span
+                          class="badge badge-sm"
+                          :class="
+                            ip.source === 'domain'
+                              ? 'badge-info'
+                              : 'badge-ghost'
+                          "
+                          >{{ ip.source }}</span
+                        >
+                      </td>
+                      <td class="text-xs text-base-content/60">
+                        {{ new Date(ip.last_synced_at).toLocaleString() }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

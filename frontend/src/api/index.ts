@@ -244,6 +244,11 @@ export const infraApi = {
     }),
 
   delete: (id: string) => request<void>(`/infra/${id}`, { method: 'DELETE' }),
+
+  // Re-resolve infra IPs from their domains (forced; bypasses staleness check).
+  syncAll: () => request<void>('/infra/sync', { method: 'POST' }),
+  syncOne: (id: string) =>
+    request<InfraWithRelations>(`/infra/${id}/sync`, { method: 'POST' }),
 };
 
 // Domains API
