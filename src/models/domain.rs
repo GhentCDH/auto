@@ -13,6 +13,7 @@ pub struct Domain {
     pub notes: Option<String>,
     pub target_application_id: Option<String>,
     pub target_service_id: Option<String>,
+    pub target_infra_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -28,6 +29,7 @@ pub struct CreateDomain {
     pub notes: Option<String>,
     pub target_application_id: Option<String>,
     pub target_service_id: Option<String>,
+    pub target_infra_id: Option<String>,
 }
 
 /// DTO for updating a domain
@@ -40,6 +42,7 @@ pub struct UpdateDomain {
     pub notes: Option<String>,
     pub target_application_id: Option<String>,
     pub target_service_id: Option<String>,
+    pub target_infra_id: Option<String>,
 }
 
 /// Domain relation for application detail view
@@ -66,6 +69,8 @@ pub enum DomainTarget {
     Application { id: String, name: String },
     #[serde(rename = "service")]
     Service { id: String, name: String },
+    #[serde(rename = "infra")]
+    Infra { id: String, name: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
@@ -80,6 +85,7 @@ pub struct DomainWithRelations {
     pub domain: Domain,
     pub target_application_name: Option<String>,
     pub target_service_name: Option<String>,
+    pub target_infra_name: Option<String>,
     pub applications: Vec<ApplicationDomainRelation>,
 }
 

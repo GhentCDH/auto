@@ -1,10 +1,10 @@
 use sqlx::SqlitePool;
 
 use crate::models::{
-    ApplicationInfraRelation, CreateInfra, Infra, InfraWithRelations, PaginatedResponse,
-    PaginationParams, ServiceInfraRelation, UpdateInfra, new_id,
+    ApplicationInfraRelation, CreateInfra, Infra, InfraDomainRef, InfraIp, InfraWithRelations,
+    PaginatedResponse, PaginationParams, ServiceInfraRelation, UpdateDomain, UpdateInfra, new_id,
 };
-use crate::{Error, Result};
+use crate::{Error, Result, service};
 
 pub async fn list(
     pool: &SqlitePool,
@@ -65,6 +65,27 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Infra> {
 pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<InfraWithRelations> {
     let infra = get(pool, id).await?;
 
+    let ips = sqlx::query_as::<_, InfraIp>(
+        r#"
+        SELECT ip, source, last_synced_at
+        FROM infra_ip
+        WHERE infra_id = ?1
+        ORDER BY source, ip
+        "#,
+    )
+    .bind(id)
+    .fetch_all(pool)
+    .await?;
+
+    let domain = sqlx::query_as::<_, InfraDomainRef>(
+        r#"
+        SELECT id, fqdn FROM domain WHERE target_infra_id = ?1 LIMIT 1
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
+
     let applications = sqlx::query_as::<_, ApplicationInfraRelation>(
         r#"
         SELECT a.id, a.name, a.environment, a.status
@@ -93,9 +114,60 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<InfraWith
 
     Ok(InfraWithRelations {
         infra,
+        ips,
+        domain,
         applications,
         services,
     })
+}
+
+/// Point a domain at this infra (sets `domain.target_infra_id`, clearing any
+/// app/service target per the XOR). This is the cross-entity write behind the
+/// infra form's "Domain" option — single source of truth stays on the domain.
+async fn set_domain_target(pool: &SqlitePool, domain_id: &str, infra_id: &str) -> Result<()> {
+    service::domain::update(
+        pool,
+        domain_id,
+        UpdateDomain {
+            fqdn: None,
+            registrar: None,
+            dns_provider: None,
+            expires_at: None,
+            notes: None,
+            target_application_id: None,
+            target_service_id: None,
+            target_infra_id: Some(infra_id.to_string()),
+        },
+    )
+    .await?;
+    Ok(())
+}
+
+/// Replace the manually-assigned IPs for an infra. Only touches `source='manual'`
+/// rows — domain-resolved IPs are left untouched.
+async fn replace_manual_ips(pool: &SqlitePool, infra_id: &str, ips: &[String]) -> Result<()> {
+    sqlx::query("DELETE FROM infra_ip WHERE infra_id = ?1 AND source = 'manual'")
+        .bind(infra_id)
+        .execute(pool)
+        .await?;
+    for ip in ips {
+        let ip = ip.trim();
+        if ip.is_empty() {
+            continue;
+        }
+        sqlx::query(
+            r#"
+            INSERT INTO infra_ip (infra_id, ip, source, last_synced_at)
+            VALUES (?1, ?2, 'manual', datetime('now'))
+            ON CONFLICT (infra_id, ip) DO UPDATE SET source = 'manual', last_synced_at = datetime('now')
+            "#,
+        )
+        .bind(infra_id)
+        .bind(ip)
+        .execute(pool)
+        .await?;
+    }
+    Ok(())
 }
 
 pub async fn create(pool: &SqlitePool, input: CreateInfra) -> Result<Infra> {
@@ -113,6 +185,13 @@ pub async fn create(pool: &SqlitePool, input: CreateInfra) -> Result<Infra> {
     .bind(&input.infra_type)
     .execute(pool)
     .await?;
+
+    if let Some(domain_id) = &input.domain_id {
+        set_domain_target(pool, domain_id, &id).await?;
+    }
+    if let Some(manual_ips) = &input.manual_ips {
+        replace_manual_ips(pool, &id, manual_ips).await?;
+    }
 
     get(pool, &id).await
 }
@@ -137,6 +216,13 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateInfra) -> Result<I
     .bind(id)
     .execute(pool)
     .await?;
+
+    if let Some(domain_id) = &input.domain_id {
+        set_domain_target(pool, domain_id, id).await?;
+    }
+    if let Some(manual_ips) = &input.manual_ips {
+        replace_manual_ips(pool, id, manual_ips).await?;
+    }
 
     get(pool, id).await
 }

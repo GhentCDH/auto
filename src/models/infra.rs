@@ -16,22 +16,45 @@ pub struct Infra {
     pub created_by: Option<String>,
 }
 
-/// DTO for creating a new infra
+/// An IP address associated with infra — either resolved from its domain
+/// (`source = "domain"`) or assigned manually (`source = "manual"`).
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct InfraIp {
+    pub ip: String,
+    pub source: String,
+    pub last_synced_at: String,
+}
+
+/// The domain that targets an infra (if any), for prefilling the editor.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct InfraDomainRef {
+    pub id: String,
+    pub fqdn: String,
+}
+
+/// DTO for creating a new infra.
+///
+/// `domain_id` (optional) sets that domain's target to this infra, so its IPs
+/// are resolved from DNS. `manual_ips` (optional) assigns fixed IPs directly.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateInfra {
     pub name: String,
     pub description: Option<String>,
     #[serde(rename = "type")]
     pub infra_type: String,
+    pub domain_id: Option<String>,
+    pub manual_ips: Option<Vec<String>>,
 }
 
-/// DTO for updating an infra
+/// DTO for updating an infra. See [`CreateInfra`] for `domain_id` / `manual_ips`.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateInfra {
     pub name: Option<String>,
     pub description: Option<String>,
     #[serde(rename = "type")]
     pub infra_type: Option<String>,
+    pub domain_id: Option<String>,
+    pub manual_ips: Option<Vec<String>>,
 }
 
 /// Infra relation for embedding in Application/Service detail views
@@ -56,6 +79,9 @@ pub struct LinkInfra {
 pub struct InfraWithRelations {
     #[serde(flatten)]
     pub infra: Infra,
+    pub ips: Vec<InfraIp>,
+    /// The domain targeting this infra, if one does (source of domain IPs).
+    pub domain: Option<InfraDomainRef>,
     pub applications: Vec<ApplicationInfraRelation>,
     pub services: Vec<ServiceInfraRelation>,
 }

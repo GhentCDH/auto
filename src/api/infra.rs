@@ -1,12 +1,12 @@
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    routing::get,
+    routing::{get, post},
 };
 use serde::Deserialize;
 
 use crate::models::{CreateInfra, Infra, InfraWithRelations, PaginationParams, UpdateInfra};
-use crate::service::infra;
+use crate::service::{infra, infra_sync};
 use crate::{AppState, Result};
 
 #[derive(Debug, Deserialize, Default)]
@@ -21,7 +21,10 @@ pub struct InfraFilters {
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list).post(create))
+        // Static `/sync` registered before the `/{id}` param route.
+        .route("/sync", post(sync_all))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
+        .route("/{id}/sync", post(sync_one))
 }
 
 #[utoipa::path(
@@ -69,6 +72,8 @@ async fn get_one(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<impl axum::response::IntoResponse> {
+    // Lazily re-resolve this infra's IPs if they've gone stale.
+    infra_sync::ensure_fresh_infra_ips(&state, &id).await?;
     let result = infra::get_with_relations(&state.pool, &id).await?;
     Ok(Json(result))
 }
@@ -89,6 +94,8 @@ async fn create(
     Json(input): Json<CreateInfra>,
 ) -> Result<impl axum::response::IntoResponse> {
     let result = infra::create(&state.pool, input).await?;
+    // Populate IPs immediately if a domain was attached (best-effort).
+    let _ = infra_sync::sync_infra_ips(&state, Some(&result.id)).await;
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }
 
@@ -113,6 +120,44 @@ async fn update(
     Json(input): Json<UpdateInfra>,
 ) -> Result<impl axum::response::IntoResponse> {
     let result = infra::update(&state.pool, &id, input).await?;
+    let _ = infra_sync::sync_infra_ips(&state, Some(&result.id)).await;
+    Ok(Json(result))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/infra/sync",
+    tag = "infra",
+    responses(
+        (status = 204, description = "All infra IPs re-resolved"),
+        (status = 502, description = "DNS resolution failed")
+    )
+)]
+async fn sync_all(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
+    infra_sync::sync_infra_ips(&state, None).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/infra/{id}/sync",
+    tag = "infra",
+    params(
+        ("id" = String, Path, description = "Infrastructure ID")
+    ),
+    responses(
+        (status = 200, description = "Infra IPs re-resolved", body = InfraWithRelations),
+        (status = 404, description = "Infrastructure not found"),
+        (status = 502, description = "DNS resolution failed")
+    )
+)]
+async fn sync_one(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl axum::response::IntoResponse> {
+    infra::get(&state.pool, &id).await?; // 404 if unknown
+    infra_sync::sync_infra_ips(&state, Some(&id)).await?;
+    let result = infra::get_with_relations(&state.pool, &id).await?;
     Ok(Json(result))
 }
 

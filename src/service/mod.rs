@@ -4,6 +4,7 @@ pub mod dns;
 pub mod domain;
 pub mod healthcheck;
 pub mod infra;
+pub mod infra_sync;
 pub mod network_share;
 pub mod note;
 pub mod person;

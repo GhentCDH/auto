@@ -12,6 +12,17 @@ pub struct DnsRecord {
     pub ttl: u32,
     /// Preference value — only populated for MX records.
     pub priority: Option<u16>,
+    /// Set when this record's value (an A/AAAA IP) matches a known infra IP.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub infra: Option<InfraMatch>,
+}
+
+/// A backlink from a DNS A/AAAA record to infrastructure tracked in Auto,
+/// when the resolved IP matches a stored `infra_ip`.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct InfraMatch {
+    pub id: String,
+    pub name: String,
 }
 
 /// The result of a live DNS lookup for one FQDN.

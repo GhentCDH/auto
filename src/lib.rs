@@ -53,14 +53,28 @@ impl AppState {
     pub async fn new() -> Result<Self> {
         let config = Config::from_env()?;
 
+        info!("Running migrations");
+
+        // Migrations run on a dedicated connection with foreign-key enforcement
+        // disabled. Some migrations rebuild a referenced table (e.g. domain) via
+        // drop/rename; with FK on, sqlx's transactional apply would fire implicit
+        // DELETE cascades/RESTRICT against child tables. foreign_keys is a
+        // connection-level pragma (set before any transaction), so disabling it
+        // here does not affect the runtime pool below, which keeps FK on.
+        {
+            use sqlx::{ConnectOptions, Connection};
+            use std::str::FromStr;
+            let mut mig_conn = sqlx::sqlite::SqliteConnectOptions::from_str(&config.database_url)?
+                .foreign_keys(false)
+                .connect()
+                .await?;
+            sqlx::migrate!("./migrations").run(&mut mig_conn).await?;
+            mig_conn.close().await?;
+        }
+
         info!("Connecting to database");
 
         let pool = SqlitePool::connect(&config.database_url).await?;
-
-        info!("Running migrations");
-
-        // Run migrations
-        sqlx::migrate!("./migrations").run(&pool).await?;
 
         let (uptime_tx, _) = broadcast::channel::<UptimeEvent>(64);
         let uptime_state: UptimeState = Arc::new(RwLock::new(HashMap::new()));

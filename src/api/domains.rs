@@ -8,7 +8,7 @@ use serde::Deserialize;
 use crate::models::{
     CreateDomain, DnsLookup, Domain, DomainWithRelations, PaginationParams, UpdateDomain,
 };
-use crate::service::{dns, domain};
+use crate::service::{dns, domain, infra_sync};
 use crate::{AppState, Result};
 
 #[derive(Debug, Deserialize, Default)]
@@ -91,6 +91,9 @@ async fn create(
     Json(input): Json<CreateDomain>,
 ) -> Result<impl axum::response::IntoResponse> {
     let result = domain::create(&state.pool, input).await?;
+    // If this domain resolves to a known infra IP, link the infra to the
+    // app/service it's attached to (add-only, best-effort).
+    let _ = infra_sync::reconcile_infra_links(&state, Some(&result.id)).await;
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }
 
@@ -115,6 +118,7 @@ async fn update(
     Json(input): Json<UpdateDomain>,
 ) -> Result<impl axum::response::IntoResponse> {
     let result = domain::update(&state.pool, &id, input).await?;
+    let _ = infra_sync::reconcile_infra_links(&state, Some(&result.id)).await;
     Ok(Json(result))
 }
 
@@ -137,7 +141,7 @@ async fn dns_records(
 ) -> Result<impl axum::response::IntoResponse> {
     // Resolve the FQDN from the stored domain (404 if the id is unknown).
     let domain = domain::get(&state.pool, &id).await?;
-    let lookup = dns::lookup(&state, &domain.fqdn).await?;
+    let lookup = dns::lookup_with_infra(&state, &domain.fqdn).await?;
     Ok(Json(lookup))
 }
 
@@ -153,7 +157,7 @@ async fn dns_records(
 async fn dns_records_all(
     State(state): State<AppState>,
 ) -> Result<impl axum::response::IntoResponse> {
-    let lookups = dns::lookup_all(&state).await?;
+    let lookups = dns::lookup_all_with_infra(&state).await?;
     Ok(Json(lookups))
 }
 

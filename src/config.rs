@@ -14,6 +14,9 @@ pub struct Config {
     pub kuma_password: String,
     pub outline_url: Option<Url>,
     pub outline_api_key: Option<String>,
+    /// How many days before an infra's domain-resolved IPs are considered stale
+    /// and re-resolved on read. Optional env `INFRA_IP_REFRESH_DAYS` (default 10).
+    pub infra_ip_refresh_days: u64,
 }
 
 /// # Panics
@@ -39,6 +42,11 @@ impl Config {
             .and_then(|u| Url::parse(&u).ok());
         let outline_api_key = std::env::var("OUTLINE_API_KEY").ok();
 
+        let infra_ip_refresh_days = std::env::var("INFRA_IP_REFRESH_DAYS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(10);
+
         Ok(Self {
             host: var("HOST"),
             port: var("PORT"),
@@ -49,6 +57,7 @@ impl Config {
             kuma_password: var("KUMA_PASSWORD"),
             outline_url,
             outline_api_key,
+            infra_ip_refresh_days,
         })
     }
 }

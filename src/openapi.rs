@@ -52,6 +52,8 @@ use utoipa::{Modify, OpenApi};
         crate::api::infra::create,
         crate::api::infra::update,
         crate::api::infra::delete_one,
+        crate::api::infra::sync_all,
+        crate::api::infra::sync_one,
 
         // Domains
         crate::api::domains::list,
@@ -146,6 +148,8 @@ use utoipa::{Modify, OpenApi};
             crate::models::InfraWithRelations,
             crate::models::ApplicationInfraRelation,
             crate::models::ServiceInfraRelation,
+            crate::models::InfraIp,
+            crate::models::InfraDomainRef,
 
             // Domains
             crate::models::Domain,
@@ -159,6 +163,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::ApplicationDomainRelation,
             crate::models::DnsRecord,
             crate::models::DnsLookup,
+            crate::models::InfraMatch,
 
             // People
             crate::models::Person,

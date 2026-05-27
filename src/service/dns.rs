@@ -12,7 +12,9 @@ use futures::{StreamExt, stream};
 use hickory_resolver::net::{DnsError, NetError};
 use hickory_resolver::proto::rr::{RData, RecordType};
 
-use crate::models::{DnsLookup, DnsRecord};
+use sqlx::SqlitePool;
+
+use crate::models::{DnsLookup, DnsRecord, InfraMatch};
 use crate::{AppState, Error, Result};
 
 /// How long a resolved record set stays fresh in the in-memory cache.
@@ -121,6 +123,7 @@ async fn query_type(state: &AppState, fqdn: &str, rtype: RecordType) -> Result<V
                     value: trim_trailing_dot(&value),
                     ttl: record.ttl,
                     priority,
+                    infra: None,
                 }
             })
             .collect()),
@@ -135,4 +138,64 @@ async fn query_type(state: &AppState, fqdn: &str, rtype: RecordType) -> Result<V
 /// DNS names carry a trailing dot (FQDN root); strip it for display.
 fn trim_trailing_dot(value: &str) -> String {
     value.strip_suffix('.').unwrap_or(value).to_string()
+}
+
+/// Like [`lookup`], but annotates each A/AAAA record whose IP matches a known
+/// infra IP. The DNS cache stays pure — annotation happens on the returned copy.
+pub async fn lookup_with_infra(state: &AppState, fqdn: &str) -> Result<DnsLookup> {
+    let mut lookup = lookup(state, fqdn).await?;
+    annotate_infra(&state.pool, &mut lookup.records).await?;
+    Ok(lookup)
+}
+
+/// Like [`lookup_all`], but with infra annotation on every record.
+pub async fn lookup_all_with_infra(state: &AppState) -> Result<Vec<DnsLookup>> {
+    let mut lookups = lookup_all(state).await?;
+    for lookup in &mut lookups {
+        annotate_infra(&state.pool, &mut lookup.records).await?;
+    }
+    Ok(lookups)
+}
+
+/// Fill `DnsRecord.infra` for A/AAAA records whose value matches a stored
+/// `infra_ip`, via a single `IN (...)` query.
+async fn annotate_infra(pool: &SqlitePool, records: &mut [DnsRecord]) -> Result<()> {
+    let ips: Vec<String> = records
+        .iter()
+        .filter(|r| r.record_type == "A" || r.record_type == "AAAA")
+        .map(|r| r.value.trim().to_lowercase())
+        .collect();
+    if ips.is_empty() {
+        return Ok(());
+    }
+
+    // Build "?,?,?" placeholders for the IN clause.
+    let placeholders = std::iter::repeat_n("?", ips.len())
+        .collect::<Vec<_>>()
+        .join(",");
+    let sql = format!(
+        "SELECT infra_ip.ip, infra.id, infra.name FROM infra_ip \
+         JOIN infra ON infra.id = infra_ip.infra_id WHERE infra_ip.ip IN ({placeholders})"
+    );
+    let mut query = sqlx::query_as::<_, (String, String, String)>(&sql);
+    for ip in &ips {
+        query = query.bind(ip);
+    }
+    let rows = query.fetch_all(pool).await?;
+
+    let mut ip_to_infra: std::collections::HashMap<String, InfraMatch> =
+        std::collections::HashMap::new();
+    for (ip, id, name) in rows {
+        ip_to_infra.entry(ip).or_insert(InfraMatch { id, name });
+    }
+
+    for record in records.iter_mut() {
+        if record.record_type == "A" || record.record_type == "AAAA" {
+            let key = record.value.trim().to_lowercase();
+            if let Some(m) = ip_to_infra.get(&key) {
+                record.infra = Some(m.clone());
+            }
+        }
+    }
+    Ok(())
 }
