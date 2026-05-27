@@ -59,6 +59,8 @@ use utoipa::{Modify, OpenApi};
         crate::api::domains::create,
         crate::api::domains::update,
         crate::api::domains::delete_one,
+        crate::api::domains::dns_records,
+        crate::api::domains::dns_records_all,
 
         // People
         crate::api::people::list,
@@ -155,6 +157,8 @@ use utoipa::{Modify, OpenApi};
             crate::models::TargetName,
             crate::models::DomainWithRelations,
             crate::models::ApplicationDomainRelation,
+            crate::models::DnsRecord,
+            crate::models::DnsLookup,
 
             // People
             crate::models::Person,

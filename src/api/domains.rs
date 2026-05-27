@@ -5,8 +5,10 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreateDomain, Domain, DomainWithRelations, PaginationParams, UpdateDomain};
-use crate::service::domain;
+use crate::models::{
+    CreateDomain, DnsLookup, Domain, DomainWithRelations, PaginationParams, UpdateDomain,
+};
+use crate::service::{dns, domain};
 use crate::{AppState, Result};
 
 #[derive(Debug, Deserialize, Default)]
@@ -19,7 +21,10 @@ pub struct DomainFilters {
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list).post(create))
+        // Static `/dns` is matched ahead of the `/{id}` param route by axum's router.
+        .route("/dns", get(dns_records_all))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
+        .route("/{id}/dns", get(dns_records))
 }
 
 #[utoipa::path(
@@ -111,6 +116,45 @@ async fn update(
 ) -> Result<impl axum::response::IntoResponse> {
     let result = domain::update(&state.pool, &id, input).await?;
     Ok(Json(result))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/domains/{id}/dns",
+    tag = "domains",
+    params(
+        ("id" = String, Path, description = "Domain ID")
+    ),
+    responses(
+        (status = 200, description = "Live DNS records for the domain's FQDN", body = DnsLookup),
+        (status = 404, description = "Domain not found"),
+        (status = 502, description = "DNS resolution failed")
+    )
+)]
+async fn dns_records(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl axum::response::IntoResponse> {
+    // Resolve the FQDN from the stored domain (404 if the id is unknown).
+    let domain = domain::get(&state.pool, &id).await?;
+    let lookup = dns::lookup(&state, &domain.fqdn).await?;
+    Ok(Json(lookup))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/domains/dns",
+    tag = "domains",
+    responses(
+        (status = 200, description = "Live DNS records for every known domain", body = [DnsLookup]),
+        (status = 502, description = "DNS resolution failed")
+    )
+)]
+async fn dns_records_all(
+    State(state): State<AppState>,
+) -> Result<impl axum::response::IntoResponse> {
+    let lookups = dns::lookup_all(&state).await?;
+    Ok(Json(lookups))
 }
 
 #[utoipa::path(

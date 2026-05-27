@@ -28,6 +28,8 @@ pub enum Error {
     InternalError(String),
     #[error("Kuma convert error")]
     KumaConvertError,
+    #[error("DnsError: {0}")]
+    DnsError(String),
 }
 
 /// Error response body for API endpoints
@@ -71,6 +73,7 @@ impl IntoResponse for Error {
                     )
                 }
             }
+            Error::DnsError(msg) => (StatusCode::BAD_GATEWAY, "dns_error", msg.clone()),
             Error::KumaConvertError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",

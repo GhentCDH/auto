@@ -1,5 +1,6 @@
 pub mod application;
 pub mod dashboard;
+pub mod dns;
 pub mod domain;
 pub mod healthcheck;
 pub mod infra;

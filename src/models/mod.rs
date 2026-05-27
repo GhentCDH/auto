@@ -1,4 +1,5 @@
 mod application;
+mod dns;
 mod domain;
 mod healthcheck;
 mod infra;
@@ -10,6 +11,7 @@ mod stack;
 mod uptime;
 
 pub use application::*;
+pub use dns::*;
 pub use domain::*;
 pub use healthcheck::*;
 pub use infra::*;
