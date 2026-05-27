@@ -228,6 +228,22 @@ export interface DomainNamed extends Domain {
   name: string;
 }
 
+/** A single DNS record resolved live for a domain's FQDN. */
+export interface DnsRecord {
+  record_type: string;
+  value: string;
+  ttl: number;
+  priority: number | null;
+}
+
+/** Result of a live DNS lookup for one FQDN (records are not persisted). */
+export interface DnsLookup {
+  fqdn: string;
+  records: DnsRecord[];
+  resolved_at: string;
+  error?: string;
+}
+
 export interface CreateDomain {
   fqdn: string;
   registrar?: string;

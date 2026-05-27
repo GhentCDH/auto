@@ -12,6 +12,7 @@ import type {
   CreateService,
   CreateStack,
   DashboardStats,
+  DnsLookup,
   Domain,
   DomainFilterParams,
   DomainWithRelations,
@@ -281,6 +282,10 @@ export const domainsApi = {
     }),
 
   delete: (id: string) => request<void>(`/domains/${id}`, { method: 'DELETE' }),
+
+  // Live DNS records — resolved server-side on demand, never persisted.
+  getDns: (id: string) => request<DnsLookup>(`/domains/${id}/dns`),
+  getAllDns: () => request<DnsLookup[]>(`/domains/dns`),
 };
 
 // People API
