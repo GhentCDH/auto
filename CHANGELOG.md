@@ -1,3 +1,32 @@
+## [1.5.0] - 2026-05-28
+
+### Features
+
+- DNS records for domains
+  A new card has been added to the domains detail page which shows all relevant DNS records that the server could resolve.
+
+- Infrastructure IP addresses
+  Infrastructure entries now keep track of their IP address. This is done either manually, or automatically through
+  domain names that target them.
+
+- IP address backlinking
+  Whenever we encounter an IP address which we know to be of some infrastructure, we can link that infrastructure.
+
+  Example situation:
+    - application Abc has domain abc.com linked to it
+    - domain abc.com has A record for x.y.z.t
+    - infrastructure Alpha has tracked its IP to be x.y.z.t (possibly through alpha.org.com, or manually)
+
+  Knowing this, we can link infrastructure Alpha to application Abc!
+
+- Smoother UX for creating new elements
+  All places where you need to select another entity to link to a new entity you're creating now have the ability to create the linked
+  entity at that time. This means all fixed ordering constraints are now gone.
+
+  Previously, when you wanted to create a domain that targets an application, you needed to make sure that the application existed already,
+  since domains require having a target. Now, you can make that application then and there.
+
+
 ## [1.4.5] - 2026-04-28
 
 ### 🐛 Bug Fixes
