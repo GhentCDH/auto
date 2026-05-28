@@ -1,8 +1,8 @@
-//! Infra IP tracking and DNS↔infra reconciliation.
+//! Infra IP tracking and link reconciliation.
 //!
-//! This is the orchestration layer that needs `AppState` (the DNS resolver lives
-//! there). It deliberately sits *above* the pure `&SqlitePool` services so the
-//! name-based cascade (`service::domain`/`service::application`) stays DNS-free.
+//! Link reconciliation refers to the process of linking infra to applications and services
+//! when there is an IP match between a domain that's linked to said application or service and
+//! the tracked IP of the infrastructure.
 
 use std::collections::HashMap;
 
@@ -18,7 +18,7 @@ fn normalize_ip(value: &str) -> String {
 
 /// Resolve and store the domain-sourced IPs for infra that have a domain target.
 ///
-/// `infra_id = Some(_)` syncs one infra; `None` syncs all infra with a domain.
+/// `infra_id = Some(_)` syncs one infra; `None` syncs all infra with a domain IP source.
 /// A domain that fails to resolve is skipped (its previously stored IPs are kept)
 /// rather than wiped. After syncing, link reconciliation runs.
 pub async fn sync_infra_ips(state: &AppState, infra_id: Option<&str>) -> Result<()> {
@@ -59,7 +59,7 @@ pub async fn sync_infra_ips(state: &AppState, infra_id: Option<&str>) -> Result<
                 r#"
                 INSERT INTO infra_ip (infra_id, ip, source, last_synced_at)
                 VALUES (?1, ?2, 'domain', datetime('now'))
-                ON CONFLICT (infra_id, ip) DO UPDATE SET source = 'domain', last_synced_at = datetime('now')
+                ON CONFLICT (infra_id, ip) DO NOTHING
                 "#,
             )
             .bind(&infra_id)
@@ -158,7 +158,7 @@ pub async fn reconcile_infra_links(state: &AppState, domain_id: Option<&str>) ->
                 &state.pool,
                 &app_id,
                 &infra_id,
-                Some(&format!("through {ip}")),
+                Some(&format!("linked through {ip}")),
             )
             .await?;
         }
@@ -186,7 +186,7 @@ pub async fn reconcile_infra_links(state: &AppState, domain_id: Option<&str>) ->
                 &state.pool,
                 &service_id,
                 &infra_id,
-                Some(&format!("through {ip}")),
+                Some(&format!("linked through {ip}")),
             )
             .await?;
         }
