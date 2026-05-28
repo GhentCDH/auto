@@ -152,6 +152,16 @@ impl KumaClient {
         extract_monitor_id(&response, "add")
     }
 
+    async fn resume_monitor(&self, kuma_id: i32) -> Result<i32> {
+        let response = self.call("resumeMonitor", json!({"id": kuma_id})).await?;
+        extract_monitor_id(&response, "resumeMonitor")
+    }
+
+    async fn pause_monitor(&self, kuma_id: i32) -> Result<i32> {
+        let response = self.call("pauseMonitor", json!({"id": kuma_id})).await?;
+        extract_monitor_id(&response, "pauseMonitor")
+    }
+
     async fn disconnect(self) -> Result<()> {
         self.socket
             .disconnect()
@@ -243,33 +253,44 @@ pub async fn sync_healthcheck_to_kuma(state: AppState, id: &str) -> Result<()> {
 
     let name = hc.healthcheck.name.clone();
     let kuma_id = hc.healthcheck.kuma_id;
-    let mut monitor = build_monitor_json(&hc);
+    let mut success = false;
 
-    if let Some(kuma_id) = kuma_id {
-        monitor
-            .as_object_mut()
-            .unwrap()
-            .insert("id".into(), json!(kuma_id));
-        debug!("Editing monitor '{name}' (kuma_id: {kuma_id})");
-        client.edit_monitor(monitor).await?;
-    } else {
-        debug!("Adding monitor '{name}'");
-        let new_id = client.add_monitor(monitor).await?;
-        debug!("Created monitor '{name}' with kuma_id: {new_id}");
-        service::healthcheck::update(
-            &state.pool,
-            &hc.healthcheck.id,
-            UpdateHealthcheck {
-                kuma_id: Some(new_id),
-                ..Default::default()
-            },
-        )
-        .await?;
-        debug!("Updated Auto healthcheck's kuma_id");
+    if hc.healthcheck.is_enabled {
+        let mut monitor = build_monitor_json(&hc);
+        if let Some(kuma_id) = kuma_id {
+            monitor
+                .as_object_mut()
+                .unwrap()
+                .insert("id".into(), json!(kuma_id));
+            debug!("Editing monitor '{name}' (kuma_id: {kuma_id})");
+            client.edit_monitor(monitor).await?;
+            client.resume_monitor(kuma_id).await?;
+        } else {
+            debug!("Adding monitor '{name}'");
+            let new_id = client.add_monitor(monitor).await?;
+            debug!("Created monitor '{name}' with kuma_id: {new_id}");
+            service::healthcheck::update(
+                &state.pool,
+                &hc.healthcheck.id,
+                UpdateHealthcheck {
+                    kuma_id: Some(new_id),
+                    ..Default::default()
+                },
+            )
+            .await?;
+            debug!("Updated Auto healthcheck's kuma_id");
+        }
+
+        success = true;
+    } else if let Some(kuma_id) = kuma_id {
+        client.pause_monitor(kuma_id).await?;
+        success = true;
     }
 
-    // Clear dirty flag — this healthcheck is now in sync with Kuma
-    service::healthcheck::clear_kuma_dirty(&state.pool, &hc.healthcheck.id).await?;
+    if success {
+        // Clear dirty flag — this healthcheck is now in sync with Kuma
+        service::healthcheck::clear_kuma_dirty(&state.pool, &hc.healthcheck.id).await?;
+    }
 
     client.disconnect().await?;
     debug!("Kuma sync complete");
@@ -291,33 +312,43 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
         let name = hc.healthcheck.name.clone();
         let hc_id = hc.healthcheck.id.clone();
         let kuma_id = hc.healthcheck.kuma_id;
-        let mut monitor = build_monitor_json(&hc);
+        let mut success = false;
 
-        if let Some(kuma_id) = kuma_id {
-            monitor
-                .as_object_mut()
-                .unwrap()
-                .insert("id".into(), json!(kuma_id));
-            debug!("Editing monitor '{name}' (kuma_id: {kuma_id})");
-            client.edit_monitor(monitor).await?;
-        } else {
-            debug!("Adding monitor '{name}'");
-            let new_id = client.add_monitor(monitor).await?;
-            debug!("Created monitor '{name}' with kuma_id: {new_id}");
-            service::healthcheck::update(
-                &state.pool,
-                &hc_id,
-                UpdateHealthcheck {
-                    kuma_id: Some(new_id),
-                    ..Default::default()
-                },
-            )
-            .await?;
-            debug!("Updated Auto healthcheck's kuma_id");
+        if hc.healthcheck.is_enabled {
+            let mut monitor = build_monitor_json(&hc);
+            if let Some(kuma_id) = kuma_id {
+                monitor
+                    .as_object_mut()
+                    .unwrap()
+                    .insert("id".into(), json!(kuma_id));
+                debug!("Editing monitor '{name}' (kuma_id: {kuma_id})");
+                client.edit_monitor(monitor).await?;
+                client.resume_monitor(kuma_id).await?;
+            } else {
+                debug!("Adding monitor '{name}'");
+                let new_id = client.add_monitor(monitor).await?;
+                debug!("Created monitor '{name}' with kuma_id: {new_id}");
+                service::healthcheck::update(
+                    &state.pool,
+                    &hc_id,
+                    UpdateHealthcheck {
+                        kuma_id: Some(new_id),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+                debug!("Updated Auto healthcheck's kuma_id");
+            }
+            success = true;
+        } else if let Some(kuma_id) = kuma_id {
+            client.pause_monitor(kuma_id).await?;
+            success = true;
         }
 
-        // Clear dirty flag — this healthcheck is now in sync with Kuma
-        service::healthcheck::clear_kuma_dirty(&state.pool, &hc_id).await?;
+        if success {
+            // Clear dirty flag — this healthcheck is now in sync with Kuma
+            service::healthcheck::clear_kuma_dirty(&state.pool, &hc_id).await?;
+        }
     }
 
     client.disconnect().await?;
