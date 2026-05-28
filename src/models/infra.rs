@@ -91,6 +91,15 @@ pub struct LinkInfra {
     pub notes: Option<String>,
 }
 
+/// Infra list row — Infra plus its IPs, used by the list endpoint so callers
+/// can filter/display IPs without an extra round-trip per row.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct InfraListItem {
+    #[serde(flatten)]
+    pub infra: Infra,
+    pub ips: Vec<InfraIp>,
+}
+
 /// Infra with related entities
 #[derive(Debug, Serialize, ToSchema)]
 pub struct InfraWithRelations {

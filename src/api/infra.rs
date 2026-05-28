@@ -5,7 +5,9 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::{CreateInfra, Infra, InfraWithRelations, PaginationParams, UpdateInfra};
+use crate::models::{
+    CreateInfra, Infra, InfraListItem, InfraWithRelations, PaginationParams, UpdateInfra,
+};
 use crate::service::{infra, infra_sync};
 use crate::{AppState, Result};
 
@@ -16,6 +18,7 @@ pub struct InfraFilters {
     pub search: Option<String>,
     #[serde(rename = "type")]
     pub infra_type: Option<String>,
+    pub ip: Option<String>,
 }
 
 pub fn routes() -> Router<AppState> {
@@ -36,9 +39,10 @@ pub fn routes() -> Router<AppState> {
         ("per_page" = Option<u32>, Query, description = "Items per page (max 100)"),
         ("search" = Option<String>, Query, description = "Search query"),
         ("type" = Option<String>, Query, description = "Filter by infrastructure type"),
+        ("ip" = Option<String>, Query, description = "Filter by stored IP (substring match)"),
     ),
     responses(
-        (status = 200, description = "List of infrastructure", body = inline(crate::models::PaginatedResponse<InfraWithRelations>)),
+        (status = 200, description = "List of infrastructure", body = inline(crate::models::PaginatedResponse<InfraListItem>)),
         (status = 500, description = "Internal server error")
     )
 )]
@@ -51,7 +55,13 @@ async fn list(
         per_page: filters.per_page,
         search: filters.search,
     };
-    let result = infra::list(&state.pool, &params, filters.infra_type.as_deref()).await?;
+    let result = infra::list(
+        &state.pool,
+        &params,
+        filters.infra_type.as_deref(),
+        filters.ip.as_deref(),
+    )
+    .await?;
     Ok(Json(result))
 }
 

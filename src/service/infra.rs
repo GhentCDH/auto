@@ -2,8 +2,8 @@ use sqlx::SqlitePool;
 
 use crate::models::{
     ApplicationInfraRelation, CreateDomain, CreateInfra, Infra, InfraDomainRef, InfraIp,
-    InfraWithRelations, NewInfraDomain, PaginatedResponse, PaginationParams, ServiceInfraRelation,
-    UpdateDomain, UpdateInfra, new_id,
+    InfraListItem, InfraWithRelations, NewInfraDomain, PaginatedResponse, PaginationParams,
+    ServiceInfraRelation, UpdateDomain, UpdateInfra, new_id,
 };
 use crate::{Error, Result, service};
 
@@ -11,23 +11,30 @@ pub async fn list(
     pool: &SqlitePool,
     params: &PaginationParams,
     infra_type: Option<&str>,
-) -> Result<PaginatedResponse<Infra>> {
+    ip: Option<&str>,
+) -> Result<PaginatedResponse<InfraListItem>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
     let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s));
+    let ip_pattern = ip.map(|s| format!("%{}%", s));
 
+    // EXISTS subquery keeps each infra row distinct even when multiple IPs match.
     let items = sqlx::query_as::<_, Infra>(
         r#"
         SELECT id, name, description, type, created_at, updated_at, created_by
         FROM infra
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR type = ?2)
+          AND (?3 IS NULL OR EXISTS (
+              SELECT 1 FROM infra_ip WHERE infra_id = infra.id AND ip LIKE ?3
+          ))
         ORDER BY name COLLATE NOCASE ASC
-        LIMIT ?3 OFFSET ?4
+        LIMIT ?4 OFFSET ?5
         "#,
     )
     .bind(&search_pattern)
     .bind(infra_type)
+    .bind(&ip_pattern)
     .bind(limit)
     .bind(offset)
     .fetch_all(pool)
@@ -39,14 +46,55 @@ pub async fn list(
         FROM infra
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR type = ?2)
+          AND (?3 IS NULL OR EXISTS (
+              SELECT 1 FROM infra_ip WHERE infra_id = infra.id AND ip LIKE ?3
+          ))
         "#,
     )
     .bind(&search_pattern)
     .bind(infra_type)
+    .bind(&ip_pattern)
     .fetch_one(pool)
     .await?;
 
-    Ok(PaginatedResponse::new(items, total, params))
+    let list_items = attach_ips(pool, items).await?;
+    Ok(PaginatedResponse::new(list_items, total, params))
+}
+
+/// Batch-fetch IPs for the given infras and return list rows. One query for the
+/// whole page beats N round-trips; an empty page short-circuits with no query.
+async fn attach_ips(pool: &SqlitePool, items: Vec<Infra>) -> Result<Vec<InfraListItem>> {
+    if items.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
+        "SELECT infra_id, ip, source, last_synced_at FROM infra_ip WHERE infra_id IN (",
+    );
+    let mut sep = qb.separated(", ");
+    for item in &items {
+        sep.push_bind(item.id.clone());
+    }
+    qb.push(") ORDER BY source, ip");
+
+    let rows: Vec<(String, String, String, String)> = qb.build_query_as().fetch_all(pool).await?;
+
+    let mut by_id: std::collections::HashMap<String, Vec<InfraIp>> =
+        std::collections::HashMap::new();
+    for (infra_id, ip, source, last_synced_at) in rows {
+        by_id.entry(infra_id).or_default().push(InfraIp {
+            ip,
+            source,
+            last_synced_at,
+        });
+    }
+
+    Ok(items
+        .into_iter()
+        .map(|infra| {
+            let ips = by_id.remove(&infra.id).unwrap_or_default();
+            InfraListItem { infra, ips }
+        })
+        .collect())
 }
 
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Infra> {
