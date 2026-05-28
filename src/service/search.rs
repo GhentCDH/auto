@@ -126,10 +126,11 @@ async fn search_services(
 async fn search_infra(pool: &SqlitePool, pattern: &str, prefix: &str) -> Result<Vec<SearchResult>> {
     Ok(sqlx::query_as::<_, SearchResult>(
         r#"
-        SELECT id, name, description, 'infra' as entity_type
-        FROM infra
-        WHERE name LIKE ?1 OR description LIKE ?1
-        ORDER BY CASE WHEN name LIKE ?2 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC
+        SELECT i.id, i.name, i.description, 'infra' as entity_type
+        FROM infra i
+        LEFT JOIN infra_ip p ON i.id = p.infra_id
+        WHERE i.name LIKE ?1 OR i.description LIKE ?1 OR p.ip LIKE ?1
+        ORDER BY CASE WHEN i.name LIKE ?2 THEN 0 ELSE 1 END, i.name COLLATE NOCASE ASC
         LIMIT 20
         "#,
     )
