@@ -35,6 +35,7 @@ export interface ShareFilterParams extends PaginationParams {
 
 export interface InfraFilterParams extends PaginationParams {
   type?: string;
+  ip?: string;
 }
 
 export interface DomainFilterParams extends PaginationParams {}
@@ -163,6 +164,8 @@ export interface Infra {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  /** Present on list endpoint responses; absent on lightweight relation payloads. */
+  ips?: InfraIp[];
 }
 
 /** A new domain created alongside an infra. No target — the server points it
