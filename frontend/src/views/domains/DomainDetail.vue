@@ -179,7 +179,7 @@ onMounted(loadDns);
           <thead>
             <tr>
               <th>Type</th>
-              <th class="w-full">Value</th>
+              <th>Value</th>
               <th>Infra</th>
               <th>TTL</th>
               <th>Priority</th>

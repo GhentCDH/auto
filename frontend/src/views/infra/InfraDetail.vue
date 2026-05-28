@@ -181,7 +181,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                 <table class="table table-sm">
                   <thead>
                     <tr>
-                      <th class="w-full">IP</th>
+                      <th>IP</th>
                       <th>Source</th>
                       <th>Synced</th>
                     </tr>
