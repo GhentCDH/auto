@@ -36,15 +36,15 @@ const BULK_CONCURRENCY: usize = 8;
 /// Resolve all queried record types for a single FQDN, using the cache when fresh.
 pub async fn lookup(state: &AppState, fqdn: &str) -> Result<DnsLookup> {
     // Fast path: serve from cache if the entry hasn't expired.
-    if let Some((at, resolved_at, records)) = state.dns_cache.read().await.get(fqdn) {
-        if at.elapsed() < DNS_CACHE_TTL {
-            return Ok(DnsLookup {
-                fqdn: fqdn.to_string(),
-                records: records.clone(),
-                resolved_at: resolved_at.clone(),
-                error: None,
-            });
-        }
+    if let Some((at, resolved_at, records)) = state.dns_cache.read().await.get(fqdn)
+        && at.elapsed() < DNS_CACHE_TTL
+    {
+        return Ok(DnsLookup {
+            fqdn: fqdn.to_string(),
+            records: records.clone(),
+            resolved_at: resolved_at.clone(),
+            error: None,
+        });
     }
 
     let records = resolve_all_types(state, fqdn).await?;
@@ -140,7 +140,7 @@ fn trim_trailing_dot(value: &str) -> String {
     value.strip_suffix('.').unwrap_or(value).to_string()
 }
 
-/// Like [`lookup`], but annotates each A/AAAA record whose IP matches a known
+/// Like ``lookup``, but annotates each A/AAAA record whose IP matches a known
 /// infra IP. The DNS cache stays pure — annotation happens on the returned copy.
 pub async fn lookup_with_infra(state: &AppState, fqdn: &str) -> Result<DnsLookup> {
     let mut lookup = lookup(state, fqdn).await?;
@@ -148,7 +148,7 @@ pub async fn lookup_with_infra(state: &AppState, fqdn: &str) -> Result<DnsLookup
     Ok(lookup)
 }
 
-/// Like [`lookup_all`], but with infra annotation on every record.
+/// Like ``lookup_all``, but with infra annotation on every record.
 pub async fn lookup_all_with_infra(state: &AppState) -> Result<Vec<DnsLookup>> {
     let mut lookups = lookup_all(state).await?;
     for lookup in &mut lookups {
@@ -157,8 +157,8 @@ pub async fn lookup_all_with_infra(state: &AppState) -> Result<Vec<DnsLookup>> {
     Ok(lookups)
 }
 
-/// Fill `DnsRecord.infra` for A/AAAA records whose value matches a stored
-/// `infra_ip`, via a single `IN (...)` query.
+/// Fill ``DnsRecord.infra`` for A/AAAA records whose value matches a stored
+/// ``infra_ip``, via a single `IN (...)` query.
 async fn annotate_infra(pool: &SqlitePool, records: &mut [DnsRecord]) -> Result<()> {
     let ips: Vec<String> = records
         .iter()
