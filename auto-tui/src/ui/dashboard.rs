@@ -200,7 +200,8 @@ fn health_line<'a>(
     if beats.is_empty() {
         spans.push(Span::styled("no data", theme::dim()));
     } else {
-        let bar_capacity = ((width as usize).saturating_sub(NAME_WIDTH + 4) / 2).min(48);
+        // Short bar on the dashboard — recent trend, not the full window.
+        let bar_capacity = ((width as usize).saturating_sub(NAME_WIDTH + 4) / 2).min(20);
         spans.extend(widgets::heartbeat_spans(
             beats,
             bar_capacity,
