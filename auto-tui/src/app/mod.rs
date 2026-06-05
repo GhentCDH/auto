@@ -1,11 +1,12 @@
 pub mod detail;
 pub mod list;
+pub mod search;
 pub mod uptime;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::api::models::{DashboardStats, HealthcheckExecuteResult};
+use crate::api::models::{DashboardStats, DnsLookup, HealthcheckExecuteResult};
 use crate::api::{ApiClient, EntityKind};
 use crate::event::{DataMsg, Event};
 use detail::DetailView;
@@ -79,6 +80,10 @@ pub struct App {
     pub toast: Option<(String, usize)>,
     /// Healthcheck execute result popup (Loading while running).
     pub exec_result: Option<Loadable<HealthcheckExecuteResult>>,
+    /// Global search overlay.
+    pub search: search::SearchState,
+    /// DNS lookup overlay for a domain: (fqdn label, lookup result).
+    pub dns: Option<(String, Loadable<DnsLookup>)>,
 }
 
 impl App {
@@ -96,6 +101,8 @@ impl App {
             uptime: uptime::UptimeState::default(),
             toast: None,
             exec_result: None,
+            search: search::SearchState::default(),
+            dns: None,
         };
         app.refresh();
         app
@@ -128,6 +135,19 @@ impl App {
 
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             self.should_quit = true;
+            return;
+        }
+
+        // Overlays take precedence: search, then DNS view.
+        if self.search.open {
+            self.handle_search_key(key);
+            return;
+        }
+        if self.dns.is_some() {
+            match key.code {
+                KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('q') => self.dns = None,
+                _ => {}
+            }
             return;
         }
 
@@ -164,12 +184,50 @@ impl App {
                 }
             }
             KeyCode::Char('r') => self.refresh(),
+            KeyCode::Char('/') => self.search.open = true,
             _ => {
                 if let Tab::Entity(kind) = self.tab {
                     self.handle_list_key(kind, key);
                 }
             }
         }
+    }
+
+    fn handle_search_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc => self.search.close(),
+            KeyCode::Down => self.search.move_selection(1),
+            KeyCode::Up => self.search.move_selection(-1),
+            KeyCode::Enter => {
+                if let Some((kind, result)) = self.search.flat().get(self.search.selected) {
+                    let (kind, id) = (*kind, result.id.clone());
+                    self.search.close();
+                    self.open_detail(kind, id, None);
+                }
+            }
+            KeyCode::Backspace => {
+                self.search.input.pop();
+                self.fire_search();
+            }
+            KeyCode::Char(c) => {
+                self.search.input.push(c);
+                self.fire_search();
+            }
+            _ => {}
+        }
+    }
+
+    /// Search-as-you-type; results route back via `DataMsg::Search`.
+    fn fire_search(&mut self) {
+        if self.search.input.trim().is_empty() {
+            self.search.results = Loadable::Idle;
+            return;
+        }
+        self.search.results = Loadable::Loading;
+        self.search.selected = 0;
+        let query = self.search.input.clone();
+        let client = self.client.clone();
+        self.spawn(async move { client.search(&query).await.map(DataMsg::Search) });
     }
 
     fn handle_list_key(&mut self, kind: EntityKind, key: KeyEvent) {
@@ -249,6 +307,21 @@ impl App {
                         label: "infra IPs synced".into(),
                     })
                 });
+            }
+            (EntityKind::Domains, KeyCode::Char('d')) => {
+                let Some(id) = id else { return };
+                // Label from the list row or detail view, falling back to id.
+                let label = self
+                    .list(EntityKind::Domains)
+                    .selected_row()
+                    .filter(|row| row.get("id").and_then(serde_json::Value::as_str) == Some(&id))
+                    .or_else(|| self.detail_stack.last().and_then(DetailView::value))
+                    .map(list::row_label)
+                    .unwrap_or(&id)
+                    .to_string();
+                self.dns = Some((label, Loadable::Loading));
+                let client = self.client.clone();
+                self.spawn(async move { client.dns(&id).await.map(DataMsg::Dns) });
             }
             (EntityKind::Infra, KeyCode::Char('S')) => {
                 let client = self.client.clone();
@@ -436,6 +509,16 @@ impl App {
                     view.data = Loadable::Ready(value);
                 }
             }
+            DataMsg::Search(results) => {
+                if self.search.open {
+                    self.search.results = Loadable::Ready(results);
+                }
+            }
+            DataMsg::Dns(lookup) => {
+                if let Some((_, slot)) = self.dns.as_mut() {
+                    *slot = Loadable::Ready(lookup);
+                }
+            }
             DataMsg::ExecResult(result) => {
                 if self.exec_result.is_some() {
                     self.exec_result = Some(Loadable::Ready(result));
@@ -466,6 +549,14 @@ impl App {
         }
         if matches!(self.exec_result, Some(Loadable::Loading)) {
             self.exec_result = Some(Loadable::Failed(message.to_string()));
+        }
+        if self.search.results.is_loading() {
+            self.search.results = Loadable::Failed(message.to_string());
+        }
+        if let Some((_, slot)) = self.dns.as_mut()
+            && slot.is_loading()
+        {
+            *slot = Loadable::Failed(message.to_string());
         }
     }
 }

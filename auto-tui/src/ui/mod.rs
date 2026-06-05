@@ -1,7 +1,9 @@
 pub mod dashboard;
 pub mod detail;
+pub mod dns;
 pub mod healthchecks;
 pub mod list;
+pub mod search;
 pub mod theme;
 pub mod widgets;
 
@@ -27,6 +29,12 @@ pub fn draw(frame: &mut Frame, app: &App) {
     draw_content(frame, app, content_area);
     draw_footer(frame, app, footer_area);
     draw_exec_popup(frame, app, content_area);
+    if app.dns.is_some() {
+        dns::draw(frame, app, content_area);
+    }
+    if app.search.open {
+        search::draw(frame, app, content_area);
+    }
 }
 
 /// Floating result popup for a healthcheck execution.
@@ -142,6 +150,9 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
                     }
                     Tab::Entity(crate::api::EntityKind::Infra) => {
                         " j/k move · Enter detail · s/S sync IPs · n/p page · f filter · q quit "
+                    }
+                    Tab::Entity(crate::api::EntityKind::Domains) => {
+                        " j/k move · Enter detail · d dns · / search · n/p page · f filter · q quit "
                     }
                     Tab::Entity(_) => {
                         " Tab/1-9 switch · j/k move · Enter detail · n/p page · f filter · r refresh · q quit "
