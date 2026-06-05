@@ -1,9 +1,12 @@
+pub mod list;
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::api::models::DashboardStats;
 use crate::api::{ApiClient, EntityKind};
 use crate::event::{DataMsg, Event};
+use list::{EntityList, PER_PAGE};
 
 /// One slot of remotely-fetched screen data.
 #[derive(Debug, Default)]
@@ -63,6 +66,8 @@ pub struct App {
     /// Transient error shown in the footer until the next keypress.
     pub error: Option<String>,
     pub dashboard: Loadable<DashboardStats>,
+    /// One browsing state per entity tab, indexed like `EntityKind::ALL`.
+    pub lists: [EntityList; 8],
 }
 
 impl App {
@@ -75,6 +80,7 @@ impl App {
             ticks: 0,
             error: None,
             dashboard: Loadable::Idle,
+            lists: Default::default(),
         };
         app.refresh();
         app
@@ -102,6 +108,15 @@ impl App {
             self.should_quit = true;
             return;
         }
+
+        // Filter input line captures all typing while focused.
+        if let Tab::Entity(kind) = self.tab
+            && self.list(kind).filter_input.is_some()
+        {
+            self.handle_filter_key(kind, key);
+            return;
+        }
+
         match key.code {
             KeyCode::Char('q') => self.should_quit = true,
             KeyCode::Tab => self.cycle_tab(1),
@@ -113,8 +128,80 @@ impl App {
                 }
             }
             KeyCode::Char('r') => self.refresh(),
+            _ => {
+                if let Tab::Entity(kind) = self.tab {
+                    self.handle_list_key(kind, key);
+                }
+            }
+        }
+    }
+
+    fn handle_list_key(&mut self, kind: EntityKind, key: KeyEvent) {
+        let list = self.list_mut(kind);
+        match key.code {
+            KeyCode::Char('j') | KeyCode::Down => list.move_selection(1),
+            KeyCode::Char('k') | KeyCode::Up => list.move_selection(-1),
+            KeyCode::Char('g') | KeyCode::Home => list.select_first(),
+            KeyCode::Char('G') | KeyCode::End => list.select_last(),
+            KeyCode::PageDown => list.move_selection(10),
+            KeyCode::PageUp => list.move_selection(-10),
+            KeyCode::Char('f') => list.filter_input = Some(list.filter.clone()),
+            KeyCode::Char('n') | KeyCode::Right => {
+                if list.change_page(1) {
+                    self.fetch_list(kind);
+                }
+            }
+            KeyCode::Char('p') | KeyCode::Left => {
+                if list.change_page(-1) {
+                    self.fetch_list(kind);
+                }
+            }
             _ => {}
         }
+    }
+
+    fn handle_filter_key(&mut self, kind: EntityKind, key: KeyEvent) {
+        let list = self.list_mut(kind);
+        let Some(input) = list.filter_input.as_mut() else {
+            return;
+        };
+        match key.code {
+            KeyCode::Esc => list.filter_input = None,
+            KeyCode::Enter => {
+                list.filter = list.filter_input.take().unwrap_or_default();
+                list.page = 1;
+                list.select_first();
+                self.fetch_list(kind);
+            }
+            KeyCode::Backspace => {
+                input.pop();
+            }
+            KeyCode::Char(c) => input.push(c),
+            _ => {}
+        }
+    }
+
+    pub fn list(&self, kind: EntityKind) -> &EntityList {
+        &self.lists[Self::list_index(kind)]
+    }
+
+    fn list_mut(&mut self, kind: EntityKind) -> &mut EntityList {
+        &mut self.lists[Self::list_index(kind)]
+    }
+
+    fn list_index(kind: EntityKind) -> usize {
+        EntityKind::ALL.iter().position(|k| *k == kind).unwrap_or(0)
+    }
+
+    fn fetch_list(&mut self, kind: EntityKind) {
+        let list = self.list_mut(kind);
+        list.data = Loadable::Loading;
+        let (page, filter) = (list.page.max(1), list.filter.clone());
+        let client = self.client.clone();
+        self.spawn(async move {
+            let resp = client.list(kind, page, PER_PAGE, &filter).await?;
+            Ok(DataMsg::List { entity: kind, resp })
+        });
     }
 
     fn cycle_tab(&mut self, direction: isize) {
@@ -126,7 +213,11 @@ impl App {
     fn switch_tab(&mut self, tab: Tab) {
         self.tab = tab;
         // Lazily load tab data on first visit; keep cached data otherwise.
-        if matches!(self.tab, Tab::Dashboard) && matches!(self.dashboard, Loadable::Idle) {
+        let idle = match self.tab {
+            Tab::Dashboard => matches!(self.dashboard, Loadable::Idle),
+            Tab::Entity(kind) => matches!(self.list(kind).data, Loadable::Idle),
+        };
+        if idle {
             self.refresh();
         }
     }
@@ -139,7 +230,7 @@ impl App {
                 let client = self.client.clone();
                 self.spawn(async move { client.dashboard().await.map(DataMsg::Dashboard) });
             }
-            Tab::Entity(_) => {}
+            Tab::Entity(kind) => self.fetch_list(kind),
         }
     }
 
@@ -162,6 +253,11 @@ impl App {
     fn apply_data(&mut self, msg: DataMsg) {
         match msg {
             DataMsg::Dashboard(stats) => self.dashboard = Loadable::Ready(stats),
+            DataMsg::List { entity, resp } => {
+                let list = self.list_mut(entity);
+                list.selected = list.selected.min(resp.data.len().saturating_sub(1));
+                list.data = Loadable::Ready(resp);
+            }
             _ => {}
         }
     }
@@ -170,6 +266,11 @@ impl App {
     fn on_fetch_failed(&mut self, message: &str) {
         if self.dashboard.is_loading() {
             self.dashboard = Loadable::Failed(message.to_string());
+        }
+        for list in &mut self.lists {
+            if list.data.is_loading() {
+                list.data = Loadable::Failed(message.to_string());
+            }
         }
     }
 }

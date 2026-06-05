@@ -1,4 +1,5 @@
 pub mod dashboard;
+pub mod list;
 pub mod theme;
 pub mod widgets;
 
@@ -43,21 +44,22 @@ fn draw_tabs(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_content(frame: &mut Frame, app: &App, area: Rect) {
     match app.tab {
         Tab::Dashboard => dashboard::draw(frame, app, area),
-        Tab::Entity(_) => {
-            // Placeholder until the per-tab screens land.
-            let message = format!("{} — coming up", app.tab.label());
-            frame.render_widget(
-                Paragraph::new(message).style(theme::dim().bg(theme::BG)),
-                pad(area),
-            );
-        }
+        Tab::Entity(kind) => list::draw(frame, app, kind, area),
     }
 }
 
 fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
     let line = match &app.error {
         Some(error) => Line::from(Span::styled(format!(" {error} "), theme::error())),
-        None => Line::from(Span::styled(" Tab/1-9 switch · q quit ", theme::footer())),
+        None => {
+            let hints = match app.tab {
+                Tab::Dashboard => " Tab/1-9 switch · r refresh · q quit ",
+                Tab::Entity(_) => {
+                    " Tab/1-9 switch · j/k move · n/p page · f filter · r refresh · q quit "
+                }
+            };
+            Line::from(Span::styled(hints, theme::footer()))
+        }
     };
     frame.render_widget(Paragraph::new(line).style(theme::footer()), area);
 }
