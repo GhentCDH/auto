@@ -12,7 +12,7 @@ use futures::{StreamExt, stream};
 use hickory_resolver::net::{DnsError, NetError};
 use hickory_resolver::proto::rr::{RData, RecordType};
 
-use sqlx::SqlitePool;
+use sqlx::{AssertSqlSafe, SqlitePool};
 
 use crate::models::{DnsLookup, DnsRecord, InfraMatch};
 use crate::{AppState, Error, Result};
@@ -157,13 +157,20 @@ pub async fn lookup_all_with_infra(state: &AppState) -> Result<Vec<DnsLookup>> {
     Ok(lookups)
 }
 
+fn is_ip_address(s: &str) -> bool {
+    s.parse::<std::net::IpAddr>().is_ok()
+}
+
 /// Fill ``DnsRecord.infra`` for A/AAAA records whose value matches a stored
 /// ``infra_ip``, via a single `IN (...)` query.
 async fn annotate_infra(pool: &SqlitePool, records: &mut [DnsRecord]) -> Result<()> {
     let ips: Vec<String> = records
         .iter()
         .filter(|r| r.record_type == "A" || r.record_type == "AAAA")
-        .map(|r| r.value.trim().to_lowercase())
+        .filter_map(|r| {
+            let value = r.value.trim().to_lowercase();
+            is_ip_address(&value).then_some(value)
+        })
         .collect();
     if ips.is_empty() {
         return Ok(());
@@ -177,7 +184,8 @@ async fn annotate_infra(pool: &SqlitePool, records: &mut [DnsRecord]) -> Result<
         "SELECT infra_ip.ip, infra.id, infra.name FROM infra_ip \
          JOIN infra ON infra.id = infra_ip.infra_id WHERE infra_ip.ip IN ({placeholders})"
     );
-    let mut query = sqlx::query_as::<_, (String, String, String)>(&sql);
+
+    let mut query = sqlx::query_as::<_, (String, String, String)>(AssertSqlSafe(sql));
     for ip in &ips {
         query = query.bind(ip);
     }
