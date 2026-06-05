@@ -67,29 +67,28 @@ pub fn heartbeat_glyph(beat: &HeartbeatEntry, max_ping: i32) -> &'static str {
 }
 
 /// Marquee a string into a fixed-width window. Short names render padded and
-/// static; long names scroll left one character at a time at a constant
-/// speed (so longer names take proportionally longer), with a pause at the
-/// initial position and another at the end before snapping back. `phase`
-/// staggers the start so neighboring marquees don't move in lockstep.
+/// static; long names scroll left circularly at a constant speed (so longer
+/// names take proportionally longer): the name wraps around — separated from
+/// its own start by a few spaces — until it returns to the initial position,
+/// where it pauses before the next loop. `phase` staggers the start so
+/// neighboring marquees don't move in lockstep.
 pub fn marquee(text: &str, width: usize, ticks: usize, phase: usize) -> String {
     const START_PAUSE: usize = 16; // ticks (250 ms each) ≈ 4 s
-    const END_PAUSE: usize = 8; //                       ≈ 2 s
-    const TICKS_PER_CHAR: usize = 2; //                  ≈ 2 chars/s
+    const TICKS_PER_CHAR: usize = 2; //                   ≈ 2 chars/s
+    const GAP: &str = "   ";
 
-    let chars: Vec<char> = text.chars().collect();
-    if chars.len() <= width {
+    if text.chars().count() <= width {
         return format!("{text:<width$}");
     }
 
-    let overflow = chars.len() - width;
-    let cycle = START_PAUSE + overflow * TICKS_PER_CHAR + END_PAUSE;
+    // Ring buffer of the name plus a gap before it wraps back around.
+    let ring: Vec<char> = text.chars().chain(GAP.chars()).collect();
+    let cycle = START_PAUSE + ring.len() * TICKS_PER_CHAR;
     let t = (ticks + phase) % cycle;
-    let offset = if t < START_PAUSE {
-        0
-    } else {
-        ((t - START_PAUSE) / TICKS_PER_CHAR).min(overflow)
-    };
-    chars[offset..offset + width].iter().collect()
+    let offset = t.saturating_sub(START_PAUSE) / TICKS_PER_CHAR;
+    (0..width)
+        .map(|i| ring[(offset + i) % ring.len()])
+        .collect()
 }
 
 /// Status dot color for the latest heartbeat status (None = no data yet).
