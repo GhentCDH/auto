@@ -61,10 +61,14 @@ impl Config {
             }
             (None, _) => None,
         };
-        Ok(ResolvedConfig {
-            url: url.trim_end_matches('/').to_string(),
-            credentials,
-        })
+        // A bare host like "auto.example.org" is fine — assume https.
+        let url = url.trim_end_matches('/');
+        let url = if url.contains("://") {
+            url.to_string()
+        } else {
+            format!("https://{url}")
+        };
+        Ok(ResolvedConfig { url, credentials })
     }
 }
 
