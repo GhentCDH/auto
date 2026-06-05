@@ -66,6 +66,32 @@ pub fn heartbeat_glyph(beat: &HeartbeatEntry, max_ping: i32) -> &'static str {
     LEVELS[level.min(LEVELS.len() - 1)]
 }
 
+/// Marquee a string into a fixed-width window. Short names render padded and
+/// static; long names scroll left one character at a time at a constant
+/// speed (so longer names take proportionally longer), with a pause at the
+/// initial position and another at the end before snapping back. `phase`
+/// staggers the start so neighboring marquees don't move in lockstep.
+pub fn marquee(text: &str, width: usize, ticks: usize, phase: usize) -> String {
+    const START_PAUSE: usize = 16; // ticks (250 ms each) ≈ 4 s
+    const END_PAUSE: usize = 8; //                       ≈ 2 s
+    const TICKS_PER_CHAR: usize = 2; //                  ≈ 2 chars/s
+
+    let chars: Vec<char> = text.chars().collect();
+    if chars.len() <= width {
+        return format!("{text:<width$}");
+    }
+
+    let overflow = chars.len() - width;
+    let cycle = START_PAUSE + overflow * TICKS_PER_CHAR + END_PAUSE;
+    let t = (ticks + phase) % cycle;
+    let offset = if t < START_PAUSE {
+        0
+    } else {
+        ((t - START_PAUSE) / TICKS_PER_CHAR).min(overflow)
+    };
+    chars[offset..offset + width].iter().collect()
+}
+
 /// Status dot color for the latest heartbeat status (None = no data yet).
 pub fn status_dot(status: Option<i32>) -> Span<'static> {
     let color = status.map(theme::heartbeat_color).unwrap_or(theme::FG_DIM);

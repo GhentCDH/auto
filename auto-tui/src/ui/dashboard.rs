@@ -171,7 +171,10 @@ fn draw_health(
             &entries[start.min(entries.len())..(start + rows_per_column).min(entries.len())];
         let lines: Vec<Line> = chunk
             .iter()
-            .map(|(row, status)| health_line(app, row, *status, column.width))
+            .enumerate()
+            .map(|(row_index, (row, status))| {
+                health_line(app, row, *status, column.width, start + row_index)
+            })
             .collect();
         frame.render_widget(
             Paragraph::new(lines)
@@ -188,14 +191,15 @@ fn health_line<'a>(
     row: &'a serde_json::Value,
     status: Option<i32>,
     width: u16,
+    index: usize,
 ) -> Line<'a> {
-    let name = crate::app::list::row_label(row);
-    let name = if name.chars().count() > NAME_WIDTH {
-        let truncated: String = name.chars().take(NAME_WIDTH - 1).collect();
-        format!("{truncated}…")
-    } else {
-        format!("{name:<NAME_WIDTH$}")
-    };
+    // Long names marquee; the grid index staggers each one's start.
+    let name = widgets::marquee(
+        crate::app::list::row_label(row),
+        NAME_WIDTH,
+        app.ticks,
+        index * 5,
+    );
     let mut spans = vec![
         widgets::status_dot(status),
         Span::styled(format!(" {name}  "), theme::panel()),
