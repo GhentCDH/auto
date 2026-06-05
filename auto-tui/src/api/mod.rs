@@ -1,4 +1,5 @@
 pub mod models;
+pub mod sse;
 
 use base64::Engine;
 use color_eyre::eyre::{Result, eyre};
@@ -146,6 +147,12 @@ impl ApiClient {
             return Err(eyre!("request failed ({status}): {body}"));
         }
         Ok(())
+    }
+
+    /// Request builder for the SSE uptime stream (sent by the SSE task).
+    fn uptime_stream_request(&self) -> reqwest::RequestBuilder {
+        self.request(reqwest::Method::GET, "/healthchecks/uptime/stream")
+            .header(reqwest::header::ACCEPT, "text/event-stream")
     }
 
     pub async fn dashboard(&self) -> Result<DashboardStats> {

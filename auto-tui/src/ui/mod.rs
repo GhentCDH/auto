@@ -1,5 +1,6 @@
 pub mod dashboard;
 pub mod detail;
+pub mod healthchecks;
 pub mod list;
 pub mod theme;
 pub mod widgets;
@@ -49,6 +50,7 @@ fn draw_content(frame: &mut Frame, app: &App, area: Rect) {
     }
     match app.tab {
         Tab::Dashboard => dashboard::draw(frame, app, area),
+        Tab::Entity(crate::api::EntityKind::Healthchecks) => healthchecks::draw(frame, app, area),
         Tab::Entity(kind) => list::draw(frame, app, kind, area),
     }
 }

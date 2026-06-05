@@ -1,5 +1,6 @@
 pub mod detail;
 pub mod list;
+pub mod uptime;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc::UnboundedSender;
@@ -72,6 +73,8 @@ pub struct App {
     pub lists: [EntityList; 8],
     /// Drill-down stack of detail views; non-empty means a detail is shown.
     pub detail_stack: Vec<DetailView>,
+    /// Live Kuma heartbeat state from the SSE stream.
+    pub uptime: uptime::UptimeState,
 }
 
 impl App {
@@ -86,6 +89,7 @@ impl App {
             dashboard: Loadable::Idle,
             lists: Default::default(),
             detail_stack: Vec::new(),
+            uptime: uptime::UptimeState::default(),
         };
         app.refresh();
         app
@@ -97,7 +101,7 @@ impl App {
             Event::Resize => {}
             Event::Tick => self.ticks += 1,
             Event::Data(msg) => self.apply_data(msg),
-            Event::Uptime(_) => {}
+            Event::Uptime(event) => self.uptime.apply(event),
             Event::Error(message) => {
                 self.on_fetch_failed(&message);
                 self.error = Some(message);
