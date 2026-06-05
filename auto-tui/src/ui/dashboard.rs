@@ -157,7 +157,7 @@ fn draw_health(
     let column_count =
         ((grid_area.width + MIN_GAP) / (COLUMN_WIDTH + MIN_GAP)).clamp(1, 3) as usize;
     let columns = Layout::horizontal(vec![Constraint::Length(COLUMN_WIDTH); column_count])
-        .flex(ratatui::layout::Flex::SpaceBetween)
+        .flex(ratatui::layout::Flex::SpaceEvenly)
         .split(grid_area);
 
     // Column-major fill: entries flow down the first column, then the next.
