@@ -61,7 +61,7 @@ fn draw_help(frame: &mut Frame, area: Rect) {
         ("x", "execute healthcheck"),
         ("s / S", "sync one / all (healthchecks → Kuma, infra → IPs)"),
         ("d", "DNS records (domains)"),
-        ("", ""),
+        ("h", "collapse health section (dashboard)"),
     ];
     let mut lines = vec![
         Line::from(Span::styled("Keys", theme::title().bg(theme::BG_PANEL))),
@@ -183,7 +183,9 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
                 " j/k move · Enter drill · Esc back · r refresh · q quit "
             } else {
                 match app.tab {
-                    Tab::Dashboard => " Tab/1-9 switch · r refresh · q quit ",
+                    Tab::Dashboard => {
+                        " Tab/1-9 switch · j/k scroll health · h collapse · r refresh · q quit "
+                    }
                     Tab::Entity(crate::api::EntityKind::Healthchecks) => {
                         " j/k move · Enter detail · x execute · s/S kuma sync · f filter · q quit "
                     }

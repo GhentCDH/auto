@@ -114,25 +114,11 @@ fn draw_monitor(app: &App, kuma_id: i32, width: u16, lines: &mut Vec<Line>) {
     // (slower response = taller bar). Newest on the right.
     let capacity = (width.saturating_sub(2) as usize).div_ceil(2);
     let visible = &heartbeats[heartbeats.len().saturating_sub(capacity)..];
-    let max_ping = visible
-        .iter()
-        .filter_map(|beat| beat.ping)
-        .max()
-        .unwrap_or(0)
-        .max(1);
-    let mut bar: Vec<Span> = Vec::with_capacity(visible.len() * 2);
-    for (index, beat) in visible.iter().enumerate() {
-        if index > 0 {
-            bar.push(Span::styled(" ", theme::panel()));
-        }
-        bar.push(Span::styled(
-            glyph(beat, max_ping),
-            ratatui::style::Style::new()
-                .fg(theme::heartbeat_color(beat.status))
-                .bg(theme::BG_PANEL),
-        ));
-    }
-    lines.push(Line::from(bar));
+    lines.push(Line::from(super::widgets::heartbeat_spans(
+        heartbeats,
+        capacity,
+        theme::BG_PANEL,
+    )));
 
     // Time axis: oldest timestamp left, beat count centered, newest right.
     let oldest = clock(&visible[0].time);
@@ -158,21 +144,6 @@ fn draw_monitor(app: &App, kuma_id: i32, width: u16, lines: &mut Vec<Line>) {
     {
         lines.push(Line::from(Span::styled(msg.clone(), theme::dim())));
     }
-}
-
-/// Pick a bottom-aligned block glyph for one heartbeat: height tracks the
-/// ping relative to the window's slowest response; down beats are always a
-/// full block so they stand out.
-fn glyph(beat: &crate::api::models::HeartbeatEntry, max_ping: i32) -> &'static str {
-    const LEVELS: [&str; 8] = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
-    if beat.status == 0 {
-        return "█";
-    }
-    let Some(ping) = beat.ping else {
-        return "▁";
-    };
-    let level = (ping.max(0) as usize * (LEVELS.len() - 1)) / max_ping.max(1) as usize;
-    LEVELS[level.min(LEVELS.len() - 1)]
 }
 
 /// `HH:MM` out of a `YYYY-MM-DD HH:MM:SS…` timestamp.

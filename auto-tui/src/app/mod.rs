@@ -86,6 +86,9 @@ pub struct App {
     pub dns: Option<(String, Loadable<DnsLookup>)>,
     /// Help overlay toggle (`?`).
     pub show_help: bool,
+    /// Dashboard health section: collapsed toggle (`h`) and scroll offset.
+    pub health_collapsed: bool,
+    pub health_scroll: u16,
 }
 
 impl App {
@@ -106,6 +109,8 @@ impl App {
             search: search::SearchState::default(),
             dns: None,
             show_help: false,
+            health_collapsed: false,
+            health_scroll: 0,
         };
         app.refresh();
         app
@@ -195,11 +200,28 @@ impl App {
             KeyCode::Char('r') => self.refresh(),
             KeyCode::Char('/') => self.search.open = true,
             KeyCode::Char('?') => self.show_help = true,
-            _ => {
-                if let Tab::Entity(kind) = self.tab {
-                    self.handle_list_key(kind, key);
-                }
+            _ => match self.tab {
+                Tab::Entity(kind) => self.handle_list_key(kind, key),
+                Tab::Dashboard => self.handle_dashboard_key(key),
+            },
+        }
+    }
+
+    fn handle_dashboard_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Char('h') => {
+                self.health_collapsed = !self.health_collapsed;
+                self.health_scroll = 0;
             }
+            KeyCode::Char('j') | KeyCode::Down => {
+                // Upper bound enforced at draw time against the line count.
+                let max = self.list(EntityKind::Healthchecks).rows().len() as u16;
+                self.health_scroll = (self.health_scroll + 1).min(max);
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                self.health_scroll = self.health_scroll.saturating_sub(1);
+            }
+            _ => {}
         }
     }
 
@@ -475,6 +497,13 @@ impl App {
                 self.dashboard = Loadable::Loading;
                 let client = self.client.clone();
                 self.spawn(async move { client.dashboard().await.map(DataMsg::Dashboard) });
+                // The health section reuses the healthchecks tab data.
+                if matches!(
+                    self.list(EntityKind::Healthchecks).data,
+                    Loadable::Idle | Loadable::Failed(_)
+                ) {
+                    self.fetch_list(EntityKind::Healthchecks);
+                }
             }
             Tab::Entity(kind) => self.fetch_list(kind),
         }
