@@ -17,63 +17,45 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_stats(frame: &mut Frame, app: &App, stats: &DashboardStats, area: Rect) {
+    let entries = health_entries(app);
+    let down: Vec<&str> = alert_names(&entries, 0);
+    let pending: Vec<&str> = alert_names(&entries, 2);
+    let alert_height = (!down.is_empty() as u16) + (!pending.is_empty() as u16);
+
     // Cards render 3 text lines inside two layers of padding (row + card).
     // The health section is flexible and scrolls internally; collapsed it
-    // shrinks to its header line.
+    // shrinks to its header line. spacing(1) leaves base-bg gap rows between
+    // the panel backgrounds so the sections stay visually separated.
     let health_constraint = if app.health_collapsed {
         Constraint::Length(2)
     } else {
         Constraint::Min(6)
     };
-    let [counts_area, health_area, lower_area] = Layout::vertical([
+    let [alerts_area, counts_area, health_area, lower_area] = Layout::vertical([
+        Constraint::Length(alert_height),
         Constraint::Length(7),
         health_constraint,
         Constraint::Length(10),
     ])
+    .spacing(1)
     .areas(area);
 
+    draw_alerts(frame, &down, &pending, alerts_area);
     draw_counts(frame, stats, counts_area);
-    draw_health(frame, app, health_area);
+    draw_health(frame, app, &entries, health_area);
 
     let [activity_area, domains_area] =
         Layout::horizontal([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .spacing(1)
             .areas(lower_area);
     draw_activity(frame, stats, activity_area);
     draw_expiring(frame, stats, domains_area);
 }
 
-/// Live health grid, mirroring the web dashboard: status dot, check name and
-/// a heartbeat sparkline per healthcheck. Scrollable (`j/k`) and collapsible
-/// (`h`).
-fn draw_health(frame: &mut Frame, app: &App, area: Rect) {
-    frame.render_widget(Block::new().style(theme::panel()), area);
-    let inner = pad(area);
-
+/// Enabled healthchecks with their live status, sorted by severity
+/// (down, pending, no-data/maintenance, up) like the web dashboard.
+fn health_entries(app: &App) -> Vec<(&serde_json::Value, Option<i32>)> {
     let rows = app.list(crate::api::EntityKind::Healthchecks).rows();
-    let header_hint = if app.health_collapsed {
-        format!("Health ({})  ·  h expand", rows.len())
-    } else {
-        "Health  ·  j/k scroll · h collapse".to_string()
-    };
-    let mut lines = vec![Line::from(Span::styled(
-        header_hint,
-        theme::title().bg(theme::BG_PANEL),
-    ))];
-    if app.health_collapsed {
-        frame.render_widget(Paragraph::new(lines).style(theme::panel()), inner);
-        return;
-    }
-
-    if rows.is_empty() {
-        lines.push(Line::from(Span::styled(
-            "loading healthchecks…",
-            theme::dim(),
-        )));
-        frame.render_widget(Paragraph::new(lines).style(theme::panel()), inner);
-        return;
-    }
-
-    // Sort like the web alerts: down first, then pending, unknown, up.
     let mut entries: Vec<(&serde_json::Value, Option<i32>)> = rows
         .iter()
         .filter(|row| row.get("is_enabled") != Some(&serde_json::Value::Bool(false)))
@@ -91,48 +73,141 @@ fn draw_health(frame: &mut Frame, app: &App, area: Rect) {
         None | Some(3) => 2,
         _ => 3,
     });
+    entries
+}
 
-    const NAME_WIDTH: usize = 28;
-    let bar_capacity = ((inner.width as usize).saturating_sub(NAME_WIDTH + 4) / 2).min(48);
-    for (row, status) in &entries {
-        let name = crate::app::list::row_label(row);
-        let name = if name.chars().count() > NAME_WIDTH {
-            let truncated: String = name.chars().take(NAME_WIDTH - 1).collect();
-            format!("{truncated}…")
-        } else {
-            format!("{name:<NAME_WIDTH$}")
-        };
-        let mut spans = vec![
-            widgets::status_dot(*status),
-            Span::styled(format!(" {name}  "), theme::panel()),
-        ];
-        let beats = row
-            .get("kuma_id")
-            .and_then(serde_json::Value::as_i64)
-            .map(|id| app.uptime.heartbeats(id as i32))
-            .unwrap_or(&[]);
-        if beats.is_empty() {
-            spans.push(Span::styled("no data", theme::dim()));
-        } else {
-            spans.extend(widgets::heartbeat_spans(
-                beats,
-                bar_capacity,
-                theme::BG_PANEL,
-            ));
-        }
-        lines.push(Line::from(spans));
+fn alert_names<'a>(entries: &[(&'a serde_json::Value, Option<i32>)], status: i32) -> Vec<&'a str> {
+    entries
+        .iter()
+        .filter(|(_, s)| *s == Some(status))
+        .map(|(row, _)| crate::app::list::row_label(row))
+        .collect()
+}
+
+/// Down/pending banner strips at the top, like the web dashboard alerts.
+fn draw_alerts(frame: &mut Frame, down: &[&str], pending: &[&str], area: Rect) {
+    if area.height == 0 {
+        return;
+    }
+    let mut lines = Vec::new();
+    if !down.is_empty() {
+        lines.push(Line::from(Span::styled(
+            format!(" ▼ {} down: {} ", down.len(), down.join(", ")),
+            theme::error(),
+        )));
+    }
+    if !pending.is_empty() {
+        lines.push(Line::from(Span::styled(
+            format!(" ▲ {} pending: {} ", pending.len(), pending.join(", ")),
+            ratatui::style::Style::new()
+                .fg(theme::BG)
+                .bg(theme::STATUS_PENDING)
+                .add_modifier(ratatui::style::Modifier::BOLD),
+        )));
+    }
+    frame.render_widget(Paragraph::new(lines), area);
+}
+
+/// Live health grid, mirroring the web dashboard: status dot, check name and
+/// a heartbeat sparkline per healthcheck. Lays out 1-3 columns depending on
+/// width. Scrollable (`j/k`) and collapsible (`h`).
+fn draw_health(
+    frame: &mut Frame,
+    app: &App,
+    entries: &[(&serde_json::Value, Option<i32>)],
+    area: Rect,
+) {
+    frame.render_widget(Block::new().style(theme::panel()), area);
+    let inner = pad(area);
+
+    let header_hint = if app.health_collapsed {
+        format!("Health ({})  ·  h expand", entries.len())
+    } else {
+        "Health  ·  j/k scroll · h collapse".to_string()
+    };
+    let header = Line::from(Span::styled(
+        header_hint,
+        theme::title().bg(theme::BG_PANEL),
+    ));
+    let [header_area, grid_area] =
+        Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(inner);
+    frame.render_widget(Paragraph::new(header).style(theme::panel()), header_area);
+    if app.health_collapsed {
+        return;
     }
 
-    // Clamp the scroll so the last line stays visible.
-    let visible = inner.height.saturating_sub(1) as usize;
-    let max_scroll = lines.len().saturating_sub(visible) as u16;
+    if entries.is_empty() {
+        frame.render_widget(
+            Paragraph::new(Span::styled("loading healthchecks…", theme::dim()))
+                .style(theme::panel()),
+            grid_area,
+        );
+        return;
+    }
+
+    // 1-3 columns, ~55 cells each like the web's responsive grid.
+    let column_count = ((grid_area.width / 55).clamp(1, 3)) as usize;
+    let columns = Layout::horizontal(vec![Constraint::Fill(1); column_count])
+        .spacing(2)
+        .split(grid_area);
+
+    // Column-major fill: entries flow down the first column, then the next.
+    let rows_per_column = entries.len().div_ceil(column_count);
+    let max_scroll = rows_per_column.saturating_sub(grid_area.height as usize) as u16;
     let scroll = app.health_scroll.min(max_scroll);
-    frame.render_widget(
-        Paragraph::new(lines)
-            .style(theme::panel())
-            .scroll((scroll, 0)),
-        inner,
-    );
+
+    for (column_index, column) in columns.iter().enumerate() {
+        let start = column_index * rows_per_column;
+        let chunk =
+            &entries[start.min(entries.len())..(start + rows_per_column).min(entries.len())];
+        let lines: Vec<Line> = chunk
+            .iter()
+            .map(|(row, status)| health_line(app, row, *status, column.width))
+            .collect();
+        frame.render_widget(
+            Paragraph::new(lines)
+                .style(theme::panel())
+                .scroll((scroll, 0)),
+            *column,
+        );
+    }
+}
+
+/// One grid cell: dot, fixed-width name, heartbeat bar sized to the column.
+fn health_line<'a>(
+    app: &App,
+    row: &'a serde_json::Value,
+    status: Option<i32>,
+    width: u16,
+) -> Line<'a> {
+    const NAME_WIDTH: usize = 24;
+    let name = crate::app::list::row_label(row);
+    let name = if name.chars().count() > NAME_WIDTH {
+        let truncated: String = name.chars().take(NAME_WIDTH - 1).collect();
+        format!("{truncated}…")
+    } else {
+        format!("{name:<NAME_WIDTH$}")
+    };
+    let mut spans = vec![
+        widgets::status_dot(status),
+        Span::styled(format!(" {name}  "), theme::panel()),
+    ];
+    let beats = row
+        .get("kuma_id")
+        .and_then(serde_json::Value::as_i64)
+        .map(|id| app.uptime.heartbeats(id as i32))
+        .unwrap_or(&[]);
+    if beats.is_empty() {
+        spans.push(Span::styled("no data", theme::dim()));
+    } else {
+        let bar_capacity = ((width as usize).saturating_sub(NAME_WIDTH + 4) / 2).min(48);
+        spans.extend(widgets::heartbeat_spans(
+            beats,
+            bar_capacity,
+            theme::BG_PANEL,
+        ));
+    }
+    Line::from(spans)
 }
 
 /// Row of count cards, one per entity type — each its own background block.
