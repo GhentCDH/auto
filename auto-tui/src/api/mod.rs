@@ -60,21 +60,6 @@ impl EntityKind {
             EntityKind::Healthchecks => "Healthchecks",
         }
     }
-
-    /// Map the backend's `entity_type` discriminator to a kind.
-    pub fn from_entity_type(entity_type: &str) -> Option<Self> {
-        Some(match entity_type {
-            "application" => EntityKind::Applications,
-            "service" => EntityKind::Services,
-            "infra" => EntityKind::Infra,
-            "domain" => EntityKind::Domains,
-            "person" => EntityKind::People,
-            "network_share" => EntityKind::Shares,
-            "stack" => EntityKind::Stacks,
-            "healthcheck" => EntityKind::Healthchecks,
-            _ => return None,
-        })
-    }
 }
 
 /// HTTP client for the auto API. Cheap to clone; carries the precomputed

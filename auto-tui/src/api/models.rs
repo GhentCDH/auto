@@ -4,6 +4,10 @@
 //! Entity list/detail bodies are kept as `serde_json::Value` and rendered
 //! generically, so only the typed responses used directly by the UI are
 //! mirrored here.
+//!
+//! Mirrors stay field-complete to match the wire format even where the UI
+//! doesn't read every field yet.
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 

@@ -35,6 +35,45 @@ pub fn draw(frame: &mut Frame, app: &App) {
     if app.search.open {
         search::draw(frame, app, content_area);
     }
+    if app.show_help {
+        draw_help(frame, content_area);
+    }
+}
+
+fn draw_help(frame: &mut Frame, area: Rect) {
+    let popup = widgets::popup_area(area, 64, 20);
+    frame.render_widget(ratatui::widgets::Clear, popup);
+    frame.render_widget(Block::new().style(theme::panel()), popup);
+
+    let entries: [(&str, &str); 16] = [
+        ("Tab / Shift-Tab", "next / previous tab"),
+        ("1-9", "jump to tab"),
+        ("/", "global search"),
+        ("r", "refresh current view"),
+        ("?", "this help"),
+        ("q / Ctrl-C", "quit"),
+        ("j/k or arrows", "move selection"),
+        ("g / G", "first / last row"),
+        ("n / p", "next / previous page"),
+        ("f", "filter list (Enter apply, Esc cancel)"),
+        ("Enter", "open detail / drill into relation"),
+        ("Esc / Backspace", "back / close overlay"),
+        ("x", "execute healthcheck"),
+        ("s / S", "sync one / all (healthchecks → Kuma, infra → IPs)"),
+        ("d", "DNS records (domains)"),
+        ("", ""),
+    ];
+    let mut lines = vec![
+        Line::from(Span::styled("Keys", theme::title().bg(theme::BG_PANEL))),
+        Line::default(),
+    ];
+    lines.extend(entries.iter().map(|(key, action)| {
+        Line::from(vec![
+            Span::styled(format!("  {key:<16}"), theme::selected()),
+            Span::styled(format!("  {action}"), theme::panel()),
+        ])
+    }));
+    frame.render_widget(Paragraph::new(lines).style(theme::panel()), pad(popup));
 }
 
 /// Floating result popup for a healthcheck execution.

@@ -84,6 +84,8 @@ pub struct App {
     pub search: search::SearchState,
     /// DNS lookup overlay for a domain: (fqdn label, lookup result).
     pub dns: Option<(String, Loadable<DnsLookup>)>,
+    /// Help overlay toggle (`?`).
+    pub show_help: bool,
 }
 
 impl App {
@@ -103,6 +105,7 @@ impl App {
             exec_result: None,
             search: search::SearchState::default(),
             dns: None,
+            show_help: false,
         };
         app.refresh();
         app
@@ -135,6 +138,12 @@ impl App {
 
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             self.should_quit = true;
+            return;
+        }
+
+        // Help overlay: any key closes it.
+        if self.show_help {
+            self.show_help = false;
             return;
         }
 
@@ -185,6 +194,7 @@ impl App {
             }
             KeyCode::Char('r') => self.refresh(),
             KeyCode::Char('/') => self.search.open = true,
+            KeyCode::Char('?') => self.show_help = true,
             _ => {
                 if let Tab::Entity(kind) = self.tab {
                     self.handle_list_key(kind, key);
@@ -528,7 +538,6 @@ impl App {
                 // Toast for ~3 seconds (ticks are 250 ms).
                 self.toast = Some((label, self.ticks + 12));
             }
-            _ => {}
         }
     }
 

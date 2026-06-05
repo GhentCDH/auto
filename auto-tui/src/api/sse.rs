@@ -20,7 +20,7 @@ pub fn spawn(client: ApiClient, tx: UnboundedSender<Event>) {
                 // Channel closed: the app is shutting down.
                 Err(StreamError::ChannelClosed) => return,
                 // Connection dropped or failed: retry with backoff.
-                Err(StreamError::Connection(_)) | Ok(()) => {}
+                Err(StreamError::Connection) | Ok(()) => {}
             }
             tokio::time::sleep(std::time::Duration::from_secs(backoff_secs)).await;
             backoff_secs = (backoff_secs * 2).min(30);
@@ -29,7 +29,7 @@ pub fn spawn(client: ApiClient, tx: UnboundedSender<Event>) {
 }
 
 enum StreamError {
-    Connection(String),
+    Connection,
     ChannelClosed,
 }
 
@@ -38,12 +38,9 @@ async fn stream_once(client: &ApiClient, tx: &UnboundedSender<Event>) -> Result<
         .uptime_stream_request()
         .send()
         .await
-        .map_err(|e| StreamError::Connection(e.to_string()))?;
+        .map_err(|_| StreamError::Connection)?;
     if !response.status().is_success() {
-        return Err(StreamError::Connection(format!(
-            "uptime stream failed: {}",
-            response.status()
-        )));
+        return Err(StreamError::Connection);
     }
 
     let mut bytes = response.bytes_stream();
@@ -51,7 +48,7 @@ async fn stream_once(client: &ApiClient, tx: &UnboundedSender<Event>) -> Result<
     let mut data = String::new();
 
     while let Some(chunk) = bytes.next().await {
-        let chunk = chunk.map_err(|e| StreamError::Connection(e.to_string()))?;
+        let chunk = chunk.map_err(|_| StreamError::Connection)?;
         buffer.push_str(&String::from_utf8_lossy(&chunk));
 
         // Process every complete line currently in the buffer.

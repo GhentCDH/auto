@@ -41,9 +41,4 @@ impl UptimeState {
             .map(Vec::as_slice)
             .unwrap_or(&[])
     }
-
-    /// Latest status for a monitor: 1=up, 0=down, 2=pending, 3=maintenance.
-    pub fn status(&self, kuma_id: i32) -> Option<i32> {
-        self.heartbeats(kuma_id).last().map(|entry| entry.status)
-    }
 }
