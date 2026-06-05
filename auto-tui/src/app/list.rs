@@ -38,6 +38,13 @@ impl EntityList {
         self.rows().get(self.selected)
     }
 
+    pub fn selected_id(&self) -> Option<String> {
+        self.selected_row()?
+            .get("id")
+            .and_then(Value::as_str)
+            .map(String::from)
+    }
+
     pub fn move_selection(&mut self, delta: isize) {
         let len = self.rows().len();
         if len == 0 {

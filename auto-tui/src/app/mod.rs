@@ -5,7 +5,7 @@ pub mod uptime;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::api::models::DashboardStats;
+use crate::api::models::{DashboardStats, HealthcheckExecuteResult};
 use crate::api::{ApiClient, EntityKind};
 use crate::event::{DataMsg, Event};
 use detail::DetailView;
@@ -75,6 +75,10 @@ pub struct App {
     pub detail_stack: Vec<DetailView>,
     /// Live Kuma heartbeat state from the SSE stream.
     pub uptime: uptime::UptimeState,
+    /// Transient success message with its expiry tick.
+    pub toast: Option<(String, usize)>,
+    /// Healthcheck execute result popup (Loading while running).
+    pub exec_result: Option<Loadable<HealthcheckExecuteResult>>,
 }
 
 impl App {
@@ -90,6 +94,8 @@ impl App {
             lists: Default::default(),
             detail_stack: Vec::new(),
             uptime: uptime::UptimeState::default(),
+            toast: None,
+            exec_result: None,
         };
         app.refresh();
         app
@@ -99,7 +105,14 @@ impl App {
         match event {
             Event::Key(key) => self.handle_key(key),
             Event::Resize => {}
-            Event::Tick => self.ticks += 1,
+            Event::Tick => {
+                self.ticks += 1;
+                if let Some((_, expires)) = &self.toast
+                    && self.ticks >= *expires
+                {
+                    self.toast = None;
+                }
+            }
             Event::Data(msg) => self.apply_data(msg),
             Event::Uptime(event) => self.uptime.apply(event),
             Event::Error(message) => {
@@ -115,6 +128,14 @@ impl App {
 
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             self.should_quit = true;
+            return;
+        }
+
+        // An open execute-result popup swallows the next keypress.
+        if self.exec_result.is_some() {
+            if !matches!(self.exec_result, Some(Loadable::Loading)) {
+                self.exec_result = None;
+            }
             return;
         }
 
@@ -182,6 +203,62 @@ impl App {
                     self.fetch_list(kind);
                 }
             }
+            _ => self.handle_action_key(kind, key, self.list(kind).selected_id()),
+        }
+    }
+
+    /// Safe actions: healthcheck execute / kuma sync, infra sync.
+    fn handle_action_key(&mut self, kind: EntityKind, key: KeyEvent, id: Option<String>) {
+        match (kind, key.code) {
+            (EntityKind::Healthchecks, KeyCode::Char('x')) => {
+                let Some(id) = id else { return };
+                self.exec_result = Some(Loadable::Loading);
+                let client = self.client.clone();
+                self.spawn(async move {
+                    client
+                        .execute_healthcheck(&id)
+                        .await
+                        .map(DataMsg::ExecResult)
+                });
+            }
+            (EntityKind::Healthchecks, KeyCode::Char('s')) => {
+                let Some(id) = id else { return };
+                let client = self.client.clone();
+                self.spawn(async move {
+                    client.kuma_sync_one(&id).await?;
+                    Ok(DataMsg::ActionDone {
+                        label: "healthcheck synced to Kuma".into(),
+                    })
+                });
+            }
+            (EntityKind::Healthchecks, KeyCode::Char('S')) => {
+                let client = self.client.clone();
+                self.spawn(async move {
+                    client.kuma_sync_all().await?;
+                    Ok(DataMsg::ActionDone {
+                        label: "all healthchecks synced to Kuma".into(),
+                    })
+                });
+            }
+            (EntityKind::Infra, KeyCode::Char('s')) => {
+                let Some(id) = id else { return };
+                let client = self.client.clone();
+                self.spawn(async move {
+                    client.infra_sync_one(&id).await?;
+                    Ok(DataMsg::ActionDone {
+                        label: "infra IPs synced".into(),
+                    })
+                });
+            }
+            (EntityKind::Infra, KeyCode::Char('S')) => {
+                let client = self.client.clone();
+                self.spawn(async move {
+                    client.infra_sync_all().await?;
+                    Ok(DataMsg::ActionDone {
+                        label: "all infra IPs synced".into(),
+                    })
+                });
+            }
             _ => {}
         }
     }
@@ -237,7 +314,13 @@ impl App {
                     self.fetch_detail(kind, id);
                 }
             }
-            _ => {}
+            _ => {
+                // Context actions on the detailed entity itself.
+                if let Some(view) = self.detail_stack.last() {
+                    let (kind, id) = (view.kind, view.id.clone());
+                    self.handle_action_key(kind, key, Some(id));
+                }
+            }
         }
     }
 
@@ -353,6 +436,15 @@ impl App {
                     view.data = Loadable::Ready(value);
                 }
             }
+            DataMsg::ExecResult(result) => {
+                if self.exec_result.is_some() {
+                    self.exec_result = Some(Loadable::Ready(result));
+                }
+            }
+            DataMsg::ActionDone { label } => {
+                // Toast for ~3 seconds (ticks are 250 ms).
+                self.toast = Some((label, self.ticks + 12));
+            }
             _ => {}
         }
     }
@@ -371,6 +463,9 @@ impl App {
             && view.data.is_loading()
         {
             view.data = Loadable::Failed(message.to_string());
+        }
+        if matches!(self.exec_result, Some(Loadable::Loading)) {
+            self.exec_result = Some(Loadable::Failed(message.to_string()));
         }
     }
 }

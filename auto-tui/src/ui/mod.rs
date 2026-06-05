@@ -26,6 +26,76 @@ pub fn draw(frame: &mut Frame, app: &App) {
     draw_tabs(frame, app, tabs_area);
     draw_content(frame, app, content_area);
     draw_footer(frame, app, footer_area);
+    draw_exec_popup(frame, app, content_area);
+}
+
+/// Floating result popup for a healthcheck execution.
+fn draw_exec_popup(frame: &mut Frame, app: &App, area: Rect) {
+    let Some(result) = &app.exec_result else {
+        return;
+    };
+    let popup = widgets::popup_area(area, 60, 9);
+    frame.render_widget(ratatui::widgets::Clear, popup);
+    frame.render_widget(Block::new().style(theme::panel()), popup);
+    let inner = pad(popup);
+
+    let lines: Vec<Line> = match result {
+        crate::app::Loadable::Loading => vec![Line::from(Span::styled(
+            format!("{} executing healthcheck…", widgets::spinner(app.ticks)),
+            theme::dim(),
+        ))],
+        crate::app::Loadable::Failed(message) => vec![
+            Line::from(Span::styled(" execute failed ", theme::error())),
+            Line::default(),
+            Line::from(Span::raw(message.clone())),
+            Line::default(),
+            Line::from(Span::styled("any key to close", theme::dim())),
+        ],
+        crate::app::Loadable::Ready(result) => {
+            let (label, style) = if result.success {
+                (" SUCCESS ", theme::success())
+            } else {
+                (" FAILED ", theme::error())
+            };
+            let mut lines = vec![
+                Line::from(vec![
+                    Span::styled(label, style),
+                    Span::styled(
+                        format!(
+                            "  {}  {} ms",
+                            result
+                                .status_code
+                                .map(|c| c.to_string())
+                                .unwrap_or_else(|| "—".into()),
+                            result.response_time_ms
+                        ),
+                        theme::panel(),
+                    ),
+                ]),
+                Line::default(),
+                Line::from(Span::styled(result.url.clone(), theme::dim())),
+            ];
+            if let Some(error) = &result.error {
+                lines.push(Line::from(Span::styled(
+                    error.clone(),
+                    ratatui::style::Style::new()
+                        .fg(theme::STATUS_DOWN)
+                        .bg(theme::BG_PANEL),
+                )));
+            }
+            if let Some(body_match) = result.body_match {
+                lines.push(Line::from(Span::styled(
+                    format!("body match: {}", if body_match { "yes" } else { "no" }),
+                    theme::dim(),
+                )));
+            }
+            lines.push(Line::default());
+            lines.push(Line::from(Span::styled("any key to close", theme::dim())));
+            lines
+        }
+        crate::app::Loadable::Idle => return,
+    };
+    frame.render_widget(Paragraph::new(lines).style(theme::panel()), inner);
 }
 
 fn draw_tabs(frame: &mut Frame, app: &App, area: Rect) {
@@ -56,14 +126,23 @@ fn draw_content(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
-    let line = match &app.error {
-        Some(error) => Line::from(Span::styled(format!(" {error} "), theme::error())),
-        None => {
+    let line = match (&app.error, &app.toast) {
+        (Some(error), _) => Line::from(Span::styled(format!(" {error} "), theme::error())),
+        (None, Some((message, _))) => {
+            Line::from(Span::styled(format!(" ✓ {message} "), theme::success()))
+        }
+        (None, None) => {
             let hints = if !app.detail_stack.is_empty() {
                 " j/k move · Enter drill · Esc back · r refresh · q quit "
             } else {
                 match app.tab {
                     Tab::Dashboard => " Tab/1-9 switch · r refresh · q quit ",
+                    Tab::Entity(crate::api::EntityKind::Healthchecks) => {
+                        " j/k move · Enter detail · x execute · s/S kuma sync · f filter · q quit "
+                    }
+                    Tab::Entity(crate::api::EntityKind::Infra) => {
+                        " j/k move · Enter detail · s/S sync IPs · n/p page · f filter · q quit "
+                    }
                     Tab::Entity(_) => {
                         " Tab/1-9 switch · j/k move · Enter detail · n/p page · f filter · r refresh · q quit "
                     }
