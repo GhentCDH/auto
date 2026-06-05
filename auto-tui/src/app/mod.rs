@@ -1,3 +1,4 @@
+pub mod detail;
 pub mod list;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -6,6 +7,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use crate::api::models::DashboardStats;
 use crate::api::{ApiClient, EntityKind};
 use crate::event::{DataMsg, Event};
+use detail::DetailView;
 use list::{EntityList, PER_PAGE};
 
 /// One slot of remotely-fetched screen data.
@@ -68,6 +70,8 @@ pub struct App {
     pub dashboard: Loadable<DashboardStats>,
     /// One browsing state per entity tab, indexed like `EntityKind::ALL`.
     pub lists: [EntityList; 8],
+    /// Drill-down stack of detail views; non-empty means a detail is shown.
+    pub detail_stack: Vec<DetailView>,
 }
 
 impl App {
@@ -81,6 +85,7 @@ impl App {
             error: None,
             dashboard: Loadable::Idle,
             lists: Default::default(),
+            detail_stack: Vec::new(),
         };
         app.refresh();
         app
@@ -117,6 +122,12 @@ impl App {
             return;
         }
 
+        // An open detail view takes over navigation keys.
+        if !self.detail_stack.is_empty() {
+            self.handle_detail_key(key);
+            return;
+        }
+
         match key.code {
             KeyCode::Char('q') => self.should_quit = true,
             KeyCode::Tab => self.cycle_tab(1),
@@ -146,6 +157,17 @@ impl App {
             KeyCode::PageDown => list.move_selection(10),
             KeyCode::PageUp => list.move_selection(-10),
             KeyCode::Char('f') => list.filter_input = Some(list.filter.clone()),
+            KeyCode::Enter => {
+                if let Some(row) = list.selected_row() {
+                    let id = row
+                        .get("id")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or_default()
+                        .to_string();
+                    let seed = row.clone();
+                    self.open_detail(kind, id, Some(seed));
+                }
+            }
             KeyCode::Char('n') | KeyCode::Right => {
                 if list.change_page(1) {
                     self.fetch_list(kind);
@@ -179,6 +201,60 @@ impl App {
             KeyCode::Char(c) => input.push(c),
             _ => {}
         }
+    }
+
+    fn handle_detail_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::Backspace => {
+                self.detail_stack.pop();
+            }
+            KeyCode::Char('q') => self.should_quit = true,
+            KeyCode::Char('j') | KeyCode::Down => {
+                if let Some(view) = self.detail_stack.last_mut() {
+                    view.move_selection(1);
+                }
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                if let Some(view) = self.detail_stack.last_mut() {
+                    view.move_selection(-1);
+                }
+            }
+            KeyCode::Enter => {
+                // Drill into the selected related entity.
+                if let Some(item) = self.detail_stack.last().and_then(DetailView::selected_item)
+                    && let (Some(kind), Some(id)) = (item.kind, item.id)
+                {
+                    self.open_detail(kind, id, None);
+                }
+            }
+            KeyCode::Char('r') => {
+                if let Some(view) = self.detail_stack.last() {
+                    let (kind, id) = (view.kind, view.id.clone());
+                    self.fetch_detail(kind, id);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn open_detail(&mut self, kind: EntityKind, id: String, seed: Option<serde_json::Value>) {
+        if id.is_empty() {
+            return;
+        }
+        self.detail_stack
+            .push(DetailView::new(kind, id.clone(), seed));
+        self.fetch_detail(kind, id);
+    }
+
+    fn fetch_detail(&mut self, kind: EntityKind, id: String) {
+        let client = self.client.clone();
+        self.spawn(async move {
+            let value = client.detail(kind, &id).await?;
+            Ok(DataMsg::Detail {
+                entity: kind,
+                value,
+            })
+        });
     }
 
     pub fn list(&self, kind: EntityKind) -> &EntityList {
@@ -258,6 +334,21 @@ impl App {
                 list.selected = list.selected.min(resp.data.len().saturating_sub(1));
                 list.data = Loadable::Ready(resp);
             }
+            DataMsg::Detail { entity, value } => {
+                let id = value
+                    .get("id")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default();
+                // Route to the matching stack entry (usually the top).
+                if let Some(view) = self
+                    .detail_stack
+                    .iter_mut()
+                    .rev()
+                    .find(|view| view.kind == entity && view.id == id)
+                {
+                    view.data = Loadable::Ready(value);
+                }
+            }
             _ => {}
         }
     }
@@ -271,6 +362,11 @@ impl App {
             if list.data.is_loading() {
                 list.data = Loadable::Failed(message.to_string());
             }
+        }
+        if let Some(view) = self.detail_stack.last_mut()
+            && view.data.is_loading()
+        {
+            view.data = Loadable::Failed(message.to_string());
         }
     }
 }

@@ -1,4 +1,5 @@
 pub mod dashboard;
+pub mod detail;
 pub mod list;
 pub mod theme;
 pub mod widgets;
@@ -42,6 +43,10 @@ fn draw_tabs(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_content(frame: &mut Frame, app: &App, area: Rect) {
+    if !app.detail_stack.is_empty() {
+        detail::draw(frame, app, area);
+        return;
+    }
     match app.tab {
         Tab::Dashboard => dashboard::draw(frame, app, area),
         Tab::Entity(kind) => list::draw(frame, app, kind, area),
@@ -52,10 +57,14 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
     let line = match &app.error {
         Some(error) => Line::from(Span::styled(format!(" {error} "), theme::error())),
         None => {
-            let hints = match app.tab {
-                Tab::Dashboard => " Tab/1-9 switch · r refresh · q quit ",
-                Tab::Entity(_) => {
-                    " Tab/1-9 switch · j/k move · n/p page · f filter · r refresh · q quit "
+            let hints = if !app.detail_stack.is_empty() {
+                " j/k move · Enter drill · Esc back · r refresh · q quit "
+            } else {
+                match app.tab {
+                    Tab::Dashboard => " Tab/1-9 switch · r refresh · q quit ",
+                    Tab::Entity(_) => {
+                        " Tab/1-9 switch · j/k move · Enter detail · n/p page · f filter · r refresh · q quit "
+                    }
                 }
             };
             Line::from(Span::styled(hints, theme::footer()))
