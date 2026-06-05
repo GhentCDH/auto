@@ -8,6 +8,11 @@ use crate::app::{App, Loadable};
 
 use super::{pad, theme, widgets};
 
+/// Health grid cell geometry: fixed name column plus a short trend bar
+/// (each beat costs 2 cells: glyph + gap).
+const NAME_WIDTH: usize = 24;
+const BAR_BEATS: usize = 20;
+
 pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     match &app.dashboard {
         Loadable::Idle | Loadable::Loading => widgets::draw_loading(frame, area, app.ticks),
@@ -145,10 +150,14 @@ fn draw_health(
         return;
     }
 
-    // 1-3 columns, ~55 cells each like the web's responsive grid.
-    let column_count = ((grid_area.width / 55).clamp(1, 3)) as usize;
-    let columns = Layout::horizontal(vec![Constraint::Fill(1); column_count])
-        .spacing(2)
+    // Fixed-width columns (name + bar), distributed space-between across the
+    // panel like the web's responsive grid; 1-3 columns depending on width.
+    const COLUMN_WIDTH: u16 = (NAME_WIDTH as u16) + 4 + (2 * BAR_BEATS as u16 - 1);
+    const MIN_GAP: u16 = 4;
+    let column_count =
+        ((grid_area.width + MIN_GAP) / (COLUMN_WIDTH + MIN_GAP)).clamp(1, 3) as usize;
+    let columns = Layout::horizontal(vec![Constraint::Length(COLUMN_WIDTH); column_count])
+        .flex(ratatui::layout::Flex::SpaceBetween)
         .split(grid_area);
 
     // Column-major fill: entries flow down the first column, then the next.
@@ -180,7 +189,6 @@ fn health_line<'a>(
     status: Option<i32>,
     width: u16,
 ) -> Line<'a> {
-    const NAME_WIDTH: usize = 24;
     let name = crate::app::list::row_label(row);
     let name = if name.chars().count() > NAME_WIDTH {
         let truncated: String = name.chars().take(NAME_WIDTH - 1).collect();
@@ -201,7 +209,7 @@ fn health_line<'a>(
         spans.push(Span::styled("no data", theme::dim()));
     } else {
         // Short bar on the dashboard — recent trend, not the full window.
-        let bar_capacity = ((width as usize).saturating_sub(NAME_WIDTH + 4) / 2).min(20);
+        let bar_capacity = ((width as usize).saturating_sub(NAME_WIDTH + 4) / 2).min(BAR_BEATS);
         spans.extend(widgets::heartbeat_spans(
             beats,
             bar_capacity,
