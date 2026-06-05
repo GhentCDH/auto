@@ -19,8 +19,8 @@ impl UptimeState {
             // Snapshot replaces everything (sent on connect and reconnect).
             UptimeEvent::Snapshot { monitors } => {
                 self.monitors = monitors
-                    .into_iter()
-                    .map(|(id, m)| (id, m.heartbeats))
+                    .into_values()
+                    .map(|m| (m.kuma_id, m.heartbeats))
                     .collect();
                 self.connected = true;
             }

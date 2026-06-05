@@ -63,9 +63,12 @@ async fn stream_once(client: &ApiClient, tx: &UnboundedSender<Event>) -> Result<
                 data.push_str(payload.strip_prefix(' ').unwrap_or(payload));
             } else if line.is_empty() && !data.is_empty() {
                 // Blank line terminates one SSE event.
-                if let Ok(event) = serde_json::from_str::<UptimeEvent>(&data)
-                    && tx.send(Event::Uptime(event)).is_err()
-                {
+                let outgoing = match serde_json::from_str::<UptimeEvent>(&data) {
+                    Ok(event) => Event::Uptime(event),
+                    // Surface parse failures instead of waiting forever.
+                    Err(error) => Event::Error(format!("uptime stream parse error: {error}")),
+                };
+                if tx.send(outgoing).is_err() {
                     return Err(StreamError::ChannelClosed);
                 }
                 data.clear();

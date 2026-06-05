@@ -145,14 +145,48 @@ pub struct MonitorUptime {
 
 /// Mirror of `UptimeEvent` (backend `src/models/uptime.rs`), as sent over
 /// the `/healthchecks/uptime/stream` SSE endpoint.
+///
+/// `monitors` keys stay `String`: serde's internally-tagged enum path buffers
+/// the payload and cannot convert JSON object keys to integers, so an
+/// `i32`-keyed map fails to deserialize. Each `MonitorUptime` carries its
+/// own `kuma_id`, so the key is redundant anyway.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UptimeEvent {
     Snapshot {
-        monitors: HashMap<i32, MonitorUptime>,
+        monitors: HashMap<String, MonitorUptime>,
     },
     Update {
         kuma_id: i32,
         entry: HeartbeatEntry,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_snapshot_with_numeric_keys() {
+        let json = r#"{"type":"snapshot","monitors":{"52":{"kuma_id":52,
+            "heartbeats":[{"status":1,"time":"2026-06-05 13:51:02.205Z","ping":55,"msg":"200 - OK"}]}}}"#;
+        let event: UptimeEvent = serde_json::from_str(json).expect("snapshot parses");
+        let UptimeEvent::Snapshot { monitors } = event else {
+            panic!("expected snapshot");
+        };
+        assert_eq!(monitors["52"].kuma_id, 52);
+        assert_eq!(monitors["52"].heartbeats[0].ping, Some(55));
+    }
+
+    #[test]
+    fn parses_update() {
+        let json = r#"{"type":"update","kuma_id":7,
+            "entry":{"status":0,"time":"2026-06-05 14:00:00.000Z","ping":null,"msg":"timeout"}}"#;
+        let event: UptimeEvent = serde_json::from_str(json).expect("update parses");
+        let UptimeEvent::Update { kuma_id, entry } = event else {
+            panic!("expected update");
+        };
+        assert_eq!(kuma_id, 7);
+        assert_eq!(entry.status, 0);
+    }
 }

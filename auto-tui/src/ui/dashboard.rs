@@ -17,8 +17,9 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_stats(frame: &mut Frame, stats: &DashboardStats, area: Rect) {
+    // Cards render 3 text lines inside two layers of padding (row + card).
     let [counts_area, lower_area] =
-        Layout::vertical([Constraint::Length(5), Constraint::Min(0)]).areas(area);
+        Layout::vertical([Constraint::Length(7), Constraint::Min(0)]).areas(area);
 
     draw_counts(frame, stats, counts_area);
 
@@ -48,7 +49,9 @@ fn draw_counts(frame: &mut Frame, stats: &DashboardStats, area: Rect) {
         ),
     ];
 
-    let columns = Layout::horizontal([Constraint::Ratio(1, 7); 7]).split(pad(area));
+    let columns = Layout::horizontal([Constraint::Ratio(1, 7); 7])
+        .spacing(1)
+        .split(pad(area));
     for (index, (label, total, active)) in cards.iter().enumerate() {
         draw_card(
             frame,
