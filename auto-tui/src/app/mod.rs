@@ -1,5 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use tokio::sync::mpsc::UnboundedSender;
 
+use crate::api::models::DashboardStats;
 use crate::api::{ApiClient, EntityKind};
 use crate::event::{DataMsg, Event};
 
@@ -11,6 +13,12 @@ pub enum Loadable<T> {
     Loading,
     Ready(T),
     Failed(String),
+}
+
+impl<T> Loadable<T> {
+    pub fn is_loading(&self) -> bool {
+        matches!(self, Loadable::Loading)
+    }
 }
 
 /// Top-level tabs: dashboard plus one tab per entity kind.
@@ -47,23 +55,29 @@ impl Tab {
 
 pub struct App {
     pub client: ApiClient,
+    tx: UnboundedSender<Event>,
     pub tab: Tab,
     pub should_quit: bool,
     /// Monotonic tick counter driving spinner animation.
     pub ticks: usize,
     /// Transient error shown in the footer until the next keypress.
     pub error: Option<String>,
+    pub dashboard: Loadable<DashboardStats>,
 }
 
 impl App {
-    pub fn new(client: ApiClient) -> Self {
-        Self {
+    pub fn new(client: ApiClient, tx: UnboundedSender<Event>) -> Self {
+        let mut app = Self {
             client,
+            tx,
             tab: Tab::Dashboard,
             should_quit: false,
             ticks: 0,
             error: None,
-        }
+            dashboard: Loadable::Idle,
+        };
+        app.refresh();
+        app
     }
 
     pub fn handle_event(&mut self, event: Event) {
@@ -73,7 +87,10 @@ impl App {
             Event::Tick => self.ticks += 1,
             Event::Data(msg) => self.apply_data(msg),
             Event::Uptime(_) => {}
-            Event::Error(message) => self.error = Some(message),
+            Event::Error(message) => {
+                self.on_fetch_failed(&message);
+                self.error = Some(message);
+            }
         }
     }
 
@@ -92,9 +109,10 @@ impl App {
             KeyCode::Char(c @ '1'..='9') => {
                 let index = c as usize - '1' as usize;
                 if let Some(tab) = Tab::ALL.get(index) {
-                    self.tab = *tab;
+                    self.switch_tab(*tab);
                 }
             }
+            KeyCode::Char('r') => self.refresh(),
             _ => {}
         }
     }
@@ -102,8 +120,56 @@ impl App {
     fn cycle_tab(&mut self, direction: isize) {
         let count = Tab::ALL.len() as isize;
         let next = (self.tab.index() as isize + direction).rem_euclid(count);
-        self.tab = Tab::ALL[next as usize];
+        self.switch_tab(Tab::ALL[next as usize]);
     }
 
-    fn apply_data(&mut self, _msg: DataMsg) {}
+    fn switch_tab(&mut self, tab: Tab) {
+        self.tab = tab;
+        // Lazily load tab data on first visit; keep cached data otherwise.
+        if matches!(self.tab, Tab::Dashboard) && matches!(self.dashboard, Loadable::Idle) {
+            self.refresh();
+        }
+    }
+
+    /// Re-fetch the data behind the current tab.
+    fn refresh(&mut self) {
+        match self.tab {
+            Tab::Dashboard => {
+                self.dashboard = Loadable::Loading;
+                let client = self.client.clone();
+                self.spawn(async move { client.dashboard().await.map(DataMsg::Dashboard) });
+            }
+            Tab::Entity(_) => {}
+        }
+    }
+
+    /// Run an API call in the background and feed the result into the event
+    /// loop; errors land in `Event::Error`.
+    fn spawn<F>(&self, future: F)
+    where
+        F: Future<Output = color_eyre::eyre::Result<DataMsg>> + Send + 'static,
+    {
+        let tx = self.tx.clone();
+        tokio::spawn(async move {
+            let event = match future.await {
+                Ok(msg) => Event::Data(msg),
+                Err(error) => Event::Error(error.to_string()),
+            };
+            let _ = tx.send(event);
+        });
+    }
+
+    fn apply_data(&mut self, msg: DataMsg) {
+        match msg {
+            DataMsg::Dashboard(stats) => self.dashboard = Loadable::Ready(stats),
+            _ => {}
+        }
+    }
+
+    /// Demote any in-flight slot to Failed so spinners don't run forever.
+    fn on_fetch_failed(&mut self, message: &str) {
+        if self.dashboard.is_loading() {
+            self.dashboard = Loadable::Failed(message.to_string());
+        }
+    }
 }

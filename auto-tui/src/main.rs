@@ -29,7 +29,7 @@ async fn run(mut terminal: ratatui::DefaultTerminal, client: api::ApiClient) -> 
     let (tx, mut rx) = mpsc::unbounded_channel::<Event>();
     event::spawn_producers(tx.clone());
 
-    let mut app = App::new(client);
+    let mut app = App::new(client, tx);
     loop {
         terminal.draw(|frame| ui::draw(frame, &app))?;
         let Some(event) = rx.recv().await else {

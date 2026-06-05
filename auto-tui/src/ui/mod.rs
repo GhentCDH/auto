@@ -1,4 +1,6 @@
+pub mod dashboard;
 pub mod theme;
+pub mod widgets;
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -39,12 +41,17 @@ fn draw_tabs(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_content(frame: &mut Frame, app: &App, area: Rect) {
-    // Placeholder until the per-tab screens land.
-    let message = format!("{} — coming up", app.tab.label());
-    frame.render_widget(
-        Paragraph::new(message).style(theme::dim().bg(theme::BG)),
-        pad(area),
-    );
+    match app.tab {
+        Tab::Dashboard => dashboard::draw(frame, app, area),
+        Tab::Entity(_) => {
+            // Placeholder until the per-tab screens land.
+            let message = format!("{} — coming up", app.tab.label());
+            frame.render_widget(
+                Paragraph::new(message).style(theme::dim().bg(theme::BG)),
+                pad(area),
+            );
+        }
+    }
 }
 
 fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
