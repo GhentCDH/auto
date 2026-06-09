@@ -168,14 +168,16 @@ impl KumaClient {
         extract_monitor_id(&response, "add")
     }
 
-    async fn resume_monitor(&self, kuma_id: i32) -> Result<i32> {
-        let response = self.call("resumeMonitor", json!({"id": kuma_id})).await?;
-        extract_monitor_id(&response, "resumeMonitor")
+    async fn resume_monitor(&self, kuma_id: i32) -> Result<()> {
+        // Kuma's resumeMonitor handler takes the id as a bare scalar, not an object.
+        let response = self.call("resumeMonitor", json!(kuma_id)).await?;
+        check_ok(&response, "resumeMonitor")
     }
 
-    async fn pause_monitor(&self, kuma_id: i32) -> Result<i32> {
-        let response = self.call("pauseMonitor", json!({"id": kuma_id})).await?;
-        extract_monitor_id(&response, "pauseMonitor")
+    async fn pause_monitor(&self, kuma_id: i32) -> Result<()> {
+        // Kuma's pauseMonitor handler takes the id as a bare scalar, not an object.
+        let response = self.call("pauseMonitor", json!(kuma_id)).await?;
+        check_ok(&response, "pauseMonitor")
     }
 
     async fn disconnect(self) -> Result<()> {
@@ -185,6 +187,18 @@ impl KumaClient {
             .map_err(|e| Error::KumaError(format!("Disconnect failed: {e}")))?;
         Ok(())
     }
+}
+
+/// Validate an ack that only reports success (no monitorID), e.g. pauseMonitor/resumeMonitor.
+fn check_ok(response: &Value, event: &str) -> Result<()> {
+    if response.get("ok").and_then(|v| v.as_bool()) != Some(true) {
+        let msg = response
+            .get("msg")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Unknown error");
+        return Err(Error::KumaError(format!("{event} failed: {msg}")));
+    }
+    Ok(())
 }
 
 fn extract_monitor_id(response: &Value, event: &str) -> Result<i32> {
@@ -217,11 +231,9 @@ fn build_monitor_json(
         _ => "json",
     };
 
-    let monitor_type = if hc.expected_body.is_some() {
-        "keyword"
-    } else {
-        "http"
-    };
+    // Treat an empty keyword as "no keyword" so cleared bodies revert to a plain http check.
+    let keyword = hc.expected_body.as_deref().filter(|s| !s.trim().is_empty());
+    let monitor_type = if keyword.is_some() { "keyword" } else { "http" };
 
     let mut monitor = json!({
         "type": monitor_type,
@@ -249,7 +261,7 @@ fn build_monitor_json(
     if let Some(ref headers) = hc.headers {
         obj.insert("headers".into(), json!(headers));
     }
-    if let Some(ref keyword) = hc.expected_body {
+    if let Some(keyword) = keyword {
         obj.insert("keyword".into(), json!(keyword));
     }
     if let Some(notification_handler_id) = notification_handler_id {
@@ -345,50 +357,75 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
 
     let notification_handler_id = state.get_kuma_notification_handler_id().await;
 
+    let mut failures = 0usize;
+
     for hc in healthchecks {
         let name = hc.healthcheck.name.clone();
         let hc_id = hc.healthcheck.id.clone();
         let kuma_id = hc.healthcheck.kuma_id;
-        let mut success = false;
 
-        if hc.healthcheck.is_enabled {
-            let mut monitor = build_monitor_json(&hc, notification_handler_id);
-            if let Some(kuma_id) = kuma_id {
-                monitor
-                    .as_object_mut()
-                    .unwrap()
-                    .insert("id".into(), json!(kuma_id));
-                debug!("Editing monitor '{name}' (kuma_id: {kuma_id})");
-                client.edit_monitor(monitor).await?;
-                client.resume_monitor(kuma_id).await?;
+        // Sync one healthcheck. A failure here must not abort the whole batch —
+        // otherwise one bad monitor blocks every later one from syncing.
+        let result: Result<bool> = async {
+            if hc.healthcheck.is_enabled {
+                let mut monitor = build_monitor_json(&hc, notification_handler_id);
+                if let Some(kuma_id) = kuma_id {
+                    monitor
+                        .as_object_mut()
+                        .unwrap()
+                        .insert("id".into(), json!(kuma_id));
+                    debug!("Editing monitor '{name}' (kuma_id: {kuma_id})");
+                    client.edit_monitor(monitor).await?;
+                    client.resume_monitor(kuma_id).await?;
+                } else {
+                    debug!("Adding monitor '{name}'");
+                    let new_id = client.add_monitor(monitor).await?;
+                    debug!("Created monitor '{name}' with kuma_id: {new_id}");
+                    service::healthcheck::update(
+                        &state.pool,
+                        &hc_id,
+                        UpdateHealthcheck {
+                            kuma_id: Some(new_id),
+                            ..Default::default()
+                        },
+                    )
+                    .await?;
+                    debug!("Updated Auto healthcheck's kuma_id");
+                }
+                Ok(true)
+            } else if let Some(kuma_id) = kuma_id {
+                client.pause_monitor(kuma_id).await?;
+                Ok(true)
             } else {
-                debug!("Adding monitor '{name}'");
-                let new_id = client.add_monitor(monitor).await?;
-                debug!("Created monitor '{name}' with kuma_id: {new_id}");
-                service::healthcheck::update(
-                    &state.pool,
-                    &hc_id,
-                    UpdateHealthcheck {
-                        kuma_id: Some(new_id),
-                        ..Default::default()
-                    },
-                )
-                .await?;
-                debug!("Updated Auto healthcheck's kuma_id");
+                Ok(false)
             }
-            success = true;
-        } else if let Some(kuma_id) = kuma_id {
-            client.pause_monitor(kuma_id).await?;
-            success = true;
         }
+        .await;
 
-        if success {
+        match result {
             // Clear dirty flag — this healthcheck is now in sync with Kuma
-            service::healthcheck::clear_kuma_dirty(&state.pool, &hc_id).await?;
+            Ok(true) => {
+                if let Err(e) = service::healthcheck::clear_kuma_dirty(&state.pool, &hc_id).await {
+                    warn!("Failed to clear kuma_dirty for '{name}': {e}");
+                    failures += 1;
+                }
+            }
+            Ok(false) => {}
+            Err(e) => {
+                warn!("Failed to sync healthcheck '{name}' to Kuma: {e}");
+                failures += 1;
+            }
         }
     }
 
     client.disconnect().await?;
+
+    if failures > 0 {
+        return Err(Error::KumaError(format!(
+            "{failures} healthcheck(s) failed to sync to Kuma"
+        )));
+    }
+
     debug!("Kuma sync complete");
     Ok(())
 }

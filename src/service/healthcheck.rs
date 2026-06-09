@@ -82,7 +82,7 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Healthcheck> {
                expected_body, timeout_seconds, interval, is_enabled, notes,
                retry, retry_interval, request_body_encoding, request_body,
                http_auth_user, http_auth_pass, kuma_id, kuma_dirty,
-               created_at, updated_at, created_by, h.notifications
+               created_at, updated_at, created_by, notifications
         FROM healthcheck
         WHERE id = ?1
         "#,
@@ -101,7 +101,7 @@ pub async fn get_all(pool: &SqlitePool) -> Result<Vec<Healthcheck>> {
                expected_body, timeout_seconds, interval, is_enabled, notes,
                retry, retry_interval, request_body_encoding, request_body,
                http_auth_user, http_auth_pass, kuma_id, kuma_dirty,
-               created_at, updated_at, created_by, h.notifications
+               created_at, updated_at, created_by, notifications
         FROM healthcheck
         "#,
     )
@@ -228,7 +228,7 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
     .bind(&input.method)
     .bind(&input.headers)
     .bind(input.expected_status)
-    .bind(&input.expected_body)
+    .bind(input.expected_body.as_deref().filter(|s| !s.trim().is_empty()))
     .bind(input.timeout_seconds)
     .bind(input.interval)
     .bind(input.is_enabled)
@@ -286,7 +286,18 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     let path = input.path.unwrap_or(existing.path);
     let method = input.method.unwrap_or(existing.method);
     let expected_status = input.expected_status.unwrap_or(existing.expected_status);
-    let expected_body = input.expected_body.or(existing.expected_body);
+    // Distinguish "field provided as empty" (explicit clear) from "field omitted" (keep existing).
+    // An empty string clears the keyword so the Kuma monitor reverts to a plain http check.
+    let expected_body = match input.expected_body {
+        Some(s) => {
+            if s.trim().is_empty() {
+                None
+            } else {
+                Some(s)
+            }
+        }
+        None => existing.expected_body,
+    };
     let timeout_seconds = input.timeout_seconds.unwrap_or(existing.timeout_seconds);
     let interval = input.interval.unwrap_or(existing.interval);
     let is_enabled = input.is_enabled.unwrap_or(existing.is_enabled);
@@ -587,7 +598,7 @@ pub async fn get_for_service(
 ) -> Result<Vec<HealthcheckRelation>> {
     sqlx::query_as::<_, HealthcheckRelation>(
         r#"
-        SELECT h.id, h.name, h.protocol, d.fqdn as domain_fqdn, h.notifictations,
+        SELECT h.id, h.name, h.protocol, d.fqdn as domain_fqdn, h.notifications,
                h.path, h.expected_status, h.is_enabled, h.kuma_id, h.kuma_dirty
         FROM healthcheck h
         JOIN domain d ON h.domain_id = d.id
