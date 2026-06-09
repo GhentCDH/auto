@@ -1,32 +1,73 @@
+## [1.6.0] - 2026-06-09
+
+### 🚀 Features
+
+- *(backend)* Pause / resume kuma monitors based on enabled/disabled setting of auto by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Scaffold auto-tui crate with config loading by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Api client with basic auth and typed models by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Event loop and terminal scaffolding by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Dashboard view by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Paginated entity list views with filtering by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Entity detail view with relation drill-down by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Live uptime healthchecks view via sse by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Healthcheck execute and sync actions by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Global search and domain dns views by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Help overlay and clippy cleanup by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Ping-scaled separated heartbeat bar with time axis by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Live health grid on dashboard with collapse and scroll by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Dashboard alert banners, multi-column health grid and section gaps by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Shorter heartbeat bars in dashboard health grid by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Space-between fixed-width columns in health grid by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Staggered marquee for long names in health grid by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Space-evenly column distribution in health grid by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Circular marquee with wrap gap in health grid by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Faster marquee scrolling by [@mielpeeters](https://github.com/mielpeeters)
+- *(database)* Healthcheck notifications migration by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Service layer for healthchecks with notifications by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Handle notificationList from kuma and send along with updates by [@mielpeeters](https://github.com/mielpeeters)
+- *(frontend)* Healthcheck notifications UI by [@mielpeeters](https://github.com/mielpeeters)
+
+### 🐛 Bug Fixes
+
+- *(tui)* Assume https scheme for bare config urls by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Uptime snapshot deserialization and dashboard card sizing by [@mielpeeters](https://github.com/mielpeeters)
+- *(frontend)* Keep websocket for longer between pages by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Kuma monitors pause/resume logic ([#119](https://github.com/GhentCDH/auto/pull/119)) by [@mielpeeters](https://github.com/mielpeeters)
+
+### ⚙️ Miscellaneous Tasks
+
+- Upgrade dependencies by [@mielpeeters](https://github.com/mielpeeters)
+- Convert repo to cargo workspace by [@mielpeeters](https://github.com/mielpeeters)
+- *(tui)* Bump ratatui to 0.30 and crossterm to 0.29 by [@mielpeeters](https://github.com/mielpeeters)
 ## [1.5.0] - 2026-05-28
 
-### Features
+### 🚀 Features
 
-- DNS records for domains
-  A new card has been added to the domains detail page which shows all relevant DNS records that the server could resolve.
+- *(backend)* Hickory-resolver dependency by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Partial ids in application api by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Dns resolving using hickory-resolver by [@mielpeeters](https://github.com/mielpeeters)
+- *(frontend)* Show dns records for domain detail page by [@mielpeeters](https://github.com/mielpeeters)
+- *(database)* Infra_ip and domain_target_infra migrations by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Track infra IP address through resolving domain names or manual entry by [@mielpeeters](https://github.com/mielpeeters)
+- *(frontend)* Show infra IP and matched infra on domain names by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Fix circular creation timing dependency with atomic dual creation by [@mielpeeters](https://github.com/mielpeeters)
+- *(frontend)* Common EntityPicker component for seamless creation of entities when selecting links by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Search resolves ip address matches on infra by [@mielpeeters](https://github.com/mielpeeters)
+- *(backend)* Infra list shows ip and can filter on it by [@mielpeeters](https://github.com/mielpeeters)
+- *(frontend)* Infra list shows ips and can filter on them by [@mielpeeters](https://github.com/mielpeeters)
 
-- Infrastructure IP addresses
-  Infrastructure entries now keep track of their IP address. This is done either manually, or automatically through
-  domain names that target them.
+### 🐛 Bug Fixes
 
-- IP address backlinking
-  Whenever we encounter an IP address which we know to be of some infrastructure, we can link that infrastructure.
+- *(backend)* Don't overwrite manual IP entries when targeting domain is found by [@mielpeeters](https://github.com/mielpeeters)
+- *(frontend)* Remove w-full from dns table and ip table headers ([#118](https://github.com/GhentCDH/auto/pull/118)) by [@mielpeeters](https://github.com/mielpeeters)
 
-  Example situation:
-    - application Abc has domain abc.com linked to it
-    - domain abc.com has A record for x.y.z.t
-    - infrastructure Alpha has tracked its IP to be x.y.z.t (possibly through alpha.org.com, or manually)
+### 📚 Documentation
 
-  Knowing this, we can link infrastructure Alpha to application Abc!
+- *(backend)* Small styling changes by [@mielpeeters](https://github.com/mielpeeters)
 
-- Smoother UX for creating new elements
-  All places where you need to select another entity to link to a new entity you're creating now have the ability to create the linked
-  entity at that time. This means all fixed ordering constraints are now gone.
+### ⚙️ Miscellaneous Tasks
 
-  Previously, when you wanted to create a domain that targets an application, you needed to make sure that the application existed already,
-  since domains require having a target. Now, you can make that application then and there.
-
-
+- Update dev.env by [@mielpeeters](https://github.com/mielpeeters)
 ## [1.4.5] - 2026-04-28
 
 ### 🐛 Bug Fixes

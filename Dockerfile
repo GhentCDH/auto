@@ -23,8 +23,11 @@ WORKDIR /app
 
 FROM chef AS planner
 
+# Workspace root resolves every member manifest, even though we only build the
+# `auto` package. Copy auto-tui so cargo can parse the workspace graph.
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
+COPY auto-tui ./auto-tui
 
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -32,14 +35,16 @@ FROM chef AS builder
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig curl
 
 COPY --from=planner /app/recipe.json .
-RUN cargo chef cook --release
+# -p auto: cook only the auto package's deps, skip auto-tui's.
+RUN cargo chef cook --release -p auto
 
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
+COPY auto-tui ./auto-tui
 COPY migrations ./migrations
 COPY --from=frontend-builder /app/frontend-dist /app/frontend-dist
 
-RUN SKIP_FRONTEND_BUILD=1 cargo build --release
+RUN SKIP_FRONTEND_BUILD=1 cargo build --release -p auto
 RUN mv target/release/auto app
 
 FROM alpine:3.23 AS runtime
