@@ -12,6 +12,7 @@ pub struct Config {
     pub kuma_url: Url,
     pub kuma_username: String,
     pub kuma_password: String,
+    pub kuma_notification_name: Option<String>,
     pub outline_url: Option<Url>,
     pub outline_api_key: Option<String>,
     /// How many days before an infra's domain-resolved IPs are considered stale
@@ -55,6 +56,7 @@ impl Config {
             kuma_url: Url::parse(&var("KUMA_URL")).expect("KUMA_URL should be a valid URL"),
             kuma_username: var("KUMA_USERNAME"),
             kuma_password: var("KUMA_PASSWORD"),
+            kuma_notification_name: std::env::var("KUMA_NOTIFICATION_NAME").ok(),
             outline_url,
             outline_api_key,
             infra_ip_refresh_days,

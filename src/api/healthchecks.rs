@@ -280,7 +280,7 @@ async fn uptime_stream(
     let snapshot = {
         let read = state.uptime_state.read().await;
         UptimeEvent::Snapshot {
-            monitors: read.clone(),
+            monitors: read.uptimes.clone(),
         }
     };
 

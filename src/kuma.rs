@@ -20,6 +20,7 @@ use rust_socketio::{
     Payload,
     asynchronous::{Client as SocketClient, ClientBuilder},
 };
+use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::{RwLock, broadcast, mpsc, watch};
 use tracing::{debug, error, info, trace, warn};
@@ -35,8 +36,23 @@ use crate::{
 
 // ── Public type aliases ────────────────────────────────────────────
 
-pub type UptimeState = Arc<RwLock<HashMap<i32, MonitorUptime>>>;
+pub struct UptimeStateInner {
+    pub uptimes: HashMap<i32, MonitorUptime>,
+    pub notification_handlers: HashMap<i32, String>,
+}
+
+pub type UptimeState = Arc<RwLock<UptimeStateInner>>;
 pub type UptimeTx = broadcast::Sender<UptimeEvent>;
+
+impl UptimeStateInner {
+    pub async fn find_notification_handler(&self, name: &str) -> Option<i32> {
+        self.notification_handlers
+            .iter()
+            .find(|(_, s)| s.to_lowercase() == name.to_lowercase())
+            .map(|(k, _)| k)
+            .copied()
+    }
+}
 
 // ── KumaClient (unchanged) ────────────────────────────────────────
 
@@ -188,7 +204,10 @@ fn extract_monitor_id(response: &Value, event: &str) -> Result<i32> {
 
 // ── Monitor JSON builder ────────────────────────────────────────────
 
-fn build_monitor_json(hc_with_relations: &HealthcheckWithRelations) -> Value {
+fn build_monitor_json(
+    hc_with_relations: &HealthcheckWithRelations,
+    notification_handler_id: Option<i32>,
+) -> Value {
     let url = hc_with_relations.url();
     let hc = &hc_with_relations.healthcheck;
 
@@ -198,8 +217,14 @@ fn build_monitor_json(hc_with_relations: &HealthcheckWithRelations) -> Value {
         _ => "json",
     };
 
+    let monitor_type = if hc.expected_body.is_some() {
+        "keyword"
+    } else {
+        "http"
+    };
+
     let mut monitor = json!({
-        "type": "http",
+        "type": monitor_type,
         "name": hc.name,
         "interval": hc.interval,
         "active": hc.is_enabled,
@@ -210,7 +235,7 @@ fn build_monitor_json(hc_with_relations: &HealthcheckWithRelations) -> Value {
         "method": hc.method,
         "httpBodyEncoding": encoding,
         "accepted_statuscodes": [hc.expected_status.to_string()],
-        "conditions": "[]"
+        "conditions": "[]",
     });
 
     let obj = monitor.as_object_mut().unwrap();
@@ -223,6 +248,15 @@ fn build_monitor_json(hc_with_relations: &HealthcheckWithRelations) -> Value {
     }
     if let Some(ref headers) = hc.headers {
         obj.insert("headers".into(), json!(headers));
+    }
+    if let Some(ref keyword) = hc.expected_body {
+        obj.insert("keyword".into(), json!(keyword));
+    }
+    if let Some(notification_handler_id) = notification_handler_id {
+        obj.insert(
+            "notificationIDList".into(),
+            json!({notification_handler_id.to_string(): hc.notifications}),
+        );
     }
 
     // Authentication
@@ -256,7 +290,8 @@ pub async fn sync_healthcheck_to_kuma(state: AppState, id: &str) -> Result<()> {
     let mut success = false;
 
     if hc.healthcheck.is_enabled {
-        let mut monitor = build_monitor_json(&hc);
+        let notification_handler_id = state.get_kuma_notification_handler_id().await;
+        let mut monitor = build_monitor_json(&hc, notification_handler_id);
         if let Some(kuma_id) = kuma_id {
             monitor
                 .as_object_mut()
@@ -308,6 +343,8 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
 
     let healthchecks = service::healthcheck::get_all_with_relations(&state.pool).await?;
 
+    let notification_handler_id = state.get_kuma_notification_handler_id().await;
+
     for hc in healthchecks {
         let name = hc.healthcheck.name.clone();
         let hc_id = hc.healthcheck.id.clone();
@@ -315,7 +352,7 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
         let mut success = false;
 
         if hc.healthcheck.is_enabled {
-            let mut monitor = build_monitor_json(&hc);
+            let mut monitor = build_monitor_json(&hc, notification_handler_id);
             if let Some(kuma_id) = kuma_id {
                 monitor
                     .as_object_mut()
@@ -457,8 +494,9 @@ async fn connect_and_poll(
     let tx_for_hb_list = uptime_tx.clone();
     let state_for_hb = uptime_state.clone();
     let tx_for_hb = uptime_tx.clone();
+    let state_for_nf_list = uptime_state.clone();
 
-    let socket = ClientBuilder::new(config.kuma_url.as_str())
+    let mut client_builder = ClientBuilder::new(config.kuma_url.as_str())
         .on_any(move |event, _payload, _client| {
             let ready = ready_signal.clone();
             async move {
@@ -486,7 +524,21 @@ async fn connect_and_poll(
                 }
             }
             .boxed()
-        })
+        });
+
+    if config.kuma_notification_name.is_some() {
+        client_builder = client_builder.on("notificationList", move |payload: Payload, _client| {
+            let state = state_for_nf_list.clone();
+            async move {
+                if let Payload::Text(values) = payload {
+                    handle_notification_list(values, state).await;
+                }
+            }
+            .boxed()
+        });
+    }
+
+    let socket = client_builder
         .connect()
         .await
         .map_err(|e| Error::KumaError(format!("Poller connection failed: {e}")))?;
@@ -600,7 +652,7 @@ async fn handle_heartbeat_list(values: Vec<Value>, state: UptimeState, tx: Uptim
     let import_length = heartbeats.len();
 
     let mut write = state.write().await;
-    write.insert(
+    write.uptimes.insert(
         kuma_id,
         MonitorUptime {
             kuma_id,
@@ -612,7 +664,7 @@ async fn handle_heartbeat_list(values: Vec<Value>, state: UptimeState, tx: Uptim
     // Broadcast snapshot to all connected SSE clients
     let snapshot = {
         let read = state.read().await;
-        read.clone()
+        read.uptimes.clone()
     };
     let _ = tx.send(UptimeEvent::Snapshot { monitors: snapshot });
 
@@ -620,6 +672,36 @@ async fn handle_heartbeat_list(values: Vec<Value>, state: UptimeState, tx: Uptim
         "Kuma poller: received heartbeat list for id {} ({} heartbeats)",
         kuma_id, import_length
     );
+}
+
+#[derive(Deserialize, Debug)]
+struct NotificationHandler {
+    id: i32,
+    name: String,
+}
+
+async fn handle_notification_list(values: Vec<Value>, state: UptimeState) {
+    let data = match values.into_iter().next() {
+        Some(v) => v,
+        None => return,
+    };
+
+    let Some(notification_handlers): Option<Vec<NotificationHandler>> =
+        serde_json::from_value(data).ok()
+    else {
+        return;
+    };
+
+    let mut write = state.write().await;
+
+    for nfh in notification_handlers {
+        write
+            .notification_handlers
+            .entry(nfh.id)
+            .insert_entry(nfh.name);
+    }
+
+    info!("Kuma poller: received notification handler list");
 }
 
 /// Processes `heartbeat` — a single real-time heartbeat from Kuma.
@@ -643,7 +725,7 @@ async fn handle_heartbeat(values: Vec<Value>, state: UptimeState, tx: UptimeTx) 
 
     let is_new = {
         let mut write = state.write().await;
-        let monitor = write.entry(kuma_id).or_insert(MonitorUptime {
+        let monitor = write.uptimes.entry(kuma_id).or_insert(MonitorUptime {
             kuma_id,
             heartbeats: Vec::new(),
         });

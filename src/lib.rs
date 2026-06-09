@@ -28,6 +28,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 use kuma::{UptimeState, UptimeTx};
 use models::{DnsRecord, UptimeEvent};
 
+use crate::kuma::UptimeStateInner;
+
 /// Shared cache of live DNS lookups, keyed by FQDN.
 /// Holds the monotonic fill instant (for TTL), the RFC3339 wall-clock resolve time
 /// (for display), and the records, so [`service::dns`] can honor a short TTL.
@@ -77,7 +79,10 @@ impl AppState {
         let pool = SqlitePool::connect(&config.database_url).await?;
 
         let (uptime_tx, _) = broadcast::channel::<UptimeEvent>(64);
-        let uptime_state: UptimeState = Arc::new(RwLock::new(HashMap::new()));
+        let uptime_state: UptimeState = Arc::new(RwLock::new(UptimeStateInner {
+            uptimes: HashMap::new(),
+            notification_handlers: HashMap::new(),
+        }));
         let (kuma_refresh_tx, _) = watch::channel(());
 
         info!("Building DNS resolver from system config");
@@ -112,5 +117,17 @@ impl AppState {
         };
 
         Ok(state)
+    }
+
+    pub async fn get_kuma_notification_handler_id(&self) -> Option<i32> {
+        if let Some(n) = &self.config.kuma_notification_name {
+            self.uptime_state
+                .read()
+                .await
+                .find_notification_handler(n)
+                .await
+        } else {
+            None
+        }
     }
 }
