@@ -74,7 +74,7 @@ pub fn heartbeat_glyph(beat: &HeartbeatEntry, max_ping: i32) -> &'static str {
 /// neighboring marquees don't move in lockstep.
 pub fn marquee(text: &str, width: usize, ticks: usize, phase: usize) -> String {
     const START_PAUSE: usize = 16; // ticks (250 ms each) ≈ 4 s
-    const TICKS_PER_CHAR: usize = 2; //                   ≈ 2 chars/s
+    const TICKS_PER_CHAR: usize = 1; //                   ≈ 1 chars/s
     const GAP: &str = "   ";
 
     if text.chars().count() <= width {

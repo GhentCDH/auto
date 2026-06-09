@@ -137,4 +137,4 @@ just docker-run env-file=prod.env    # Run with custom env file
 
 **Backend:** Rust, Axum, SQLx, SQLite, rust-embed
 
-**Frontend:** Vue 3, TypeScript, Tailwind CSS, DaisyUI, Vite
+**Frontend:** Vue 3, TypeScript, TailwindCSS, DaisyUI, Vite
