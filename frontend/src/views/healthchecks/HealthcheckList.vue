@@ -8,6 +8,7 @@ import StatusBadge from '@/components/common/StatusBadge.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 import ImportWizard from '@/components/import/ImportWizard.vue';
 import HealthStats from '@/components/common/HealthStats.vue';
+import { Bell } from 'lucide-vue-next';
 
 const syncLoading = ref(false);
 
@@ -99,6 +100,9 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
       <td class="font-medium">
         <span class="flex items-center gap-1.5">
           {{ item.name }}
+          <span v-if="item.notifications" title="Notifications enabled" class="inline-flex">
+            <Bell class="w-3.5 h-3.5 text-primary shrink-0" />
+          </span>
           <span
             v-if="item.kuma_dirty"
             class="inline-block w-2 h-2 rounded-full bg-warning shrink-0"

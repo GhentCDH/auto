@@ -10,6 +10,7 @@ import EntityDetail from '@/components/common/EntityDetail.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
+import { Bell } from 'lucide-vue-next';
 
 const syncLoading = ref(false);
 
@@ -98,13 +99,22 @@ async function goToKuma() {
     :delete-fn="healthchecksApi.delete"
   >
     <template #status="{ entity }">
-      <StatusBadge
-        :status="
-          (entity as HealthcheckWithRelations).is_enabled
-            ? 'active'
-            : 'inactive'
-        "
-      />
+      <span class="flex items-center gap-2">
+        <StatusBadge
+          :status="
+            (entity as HealthcheckWithRelations).is_enabled
+              ? 'active'
+              : 'inactive'
+          "
+        />
+        <span
+          v-if="(entity as HealthcheckWithRelations).notifications"
+          title="Notifications enabled"
+          class="inline-flex"
+        >
+          <Bell class="w-4 h-4 text-primary" />
+        </span>
+      </span>
     </template>
 
     <template #details="{ entity }">

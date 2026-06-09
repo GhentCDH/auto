@@ -49,6 +49,7 @@ const form = ref<CreateHealthcheck>({
   timeout_seconds: 1,
   interval: 60,
   is_enabled: true,
+  notifications: false,
   notes: '',
   retry: 0,
   retry_interval: 20,
@@ -109,6 +110,7 @@ watch(
         timeout_seconds: hc.timeout_seconds,
         interval: hc.interval,
         is_enabled: hc.is_enabled,
+        notifications: hc.notifications,
         notes: hc.notes || '',
         retry: hc.retry,
         retry_interval: hc.retry_interval,
@@ -161,7 +163,7 @@ function handleSubmit() {
     application_id: form.value.application_id || undefined,
     service_id: form.value.service_id || undefined,
     kuma_id: form.value.kuma_id || undefined,
-    expected_body: form.value.expected_body || undefined,
+    expected_body: form.value.expected_body || '',
     notes: form.value.notes || undefined,
     request_body: form.value.request_body || undefined,
     http_auth_user: form.value.http_auth_user || undefined,
@@ -562,6 +564,18 @@ watch(
             class="toggle toggle-primary"
           />
           <span>{{ form.is_enabled ? 'Enabled' : 'Disabled' }}</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset md:col-span-2">
+        <legend class="fieldset-legend">Notifications</legend>
+        <label class="label cursor-pointer justify-start gap-4">
+          <input
+            type="checkbox"
+            v-model="form.notifications"
+            class="toggle toggle-primary"
+          />
+          <span>{{ form.notifications ? 'Enabled' : 'Disabled' }}</span>
         </label>
       </fieldset>
     </div>

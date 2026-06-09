@@ -21,7 +21,7 @@ import ServiceForm from '@/components/forms/ServiceForm.vue';
 import InfraForm from '@/components/forms/InfraForm.vue';
 import LinkInfraForm from '@/components/forms/LinkInfraForm.vue';
 import { infraTypes } from '@/values';
-import { Plus, Edit, Link2Off, Package } from 'lucide-vue-next';
+import { Plus, Edit, Link2Off, Package, Bell } from 'lucide-vue-next';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
 import ImageRefBadge from '@/components/common/ImageRefBadge.vue';
@@ -425,7 +425,16 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                   @click="router.push(`/healthchecks/${h.id}`)"
                 >
                   <div class="flex-1 min-w-0">
-                    <span class="font-medium">{{ h.name }}</span>
+                    <span class="font-medium inline-flex items-center gap-1.5">
+                      {{ h.name }}
+                      <span
+                        v-if="h.notifications"
+                        title="Notifications enabled"
+                        class="inline-flex"
+                      >
+                        <Bell class="w-3.5 h-3.5 text-primary shrink-0" />
+                      </span>
+                    </span>
                     <div class="text-xs text-base-content/70 font-mono">
                       {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
                     </div>

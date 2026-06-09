@@ -6,6 +6,7 @@ import type { ComponentPublicInstance } from 'vue';
 import { useUptime } from '@/composables/useUptime';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
+import { Bell } from 'lucide-vue-next';
 
 const stats = ref<DashboardStats | null>(null);
 const healthchecks = ref<Healthcheck[]>([]);
@@ -339,6 +340,13 @@ onMounted(() => {
                     toTitleCase(item.healthcheck.name)
                   }}</span>
                 </router-link>
+                <span
+                  v-if="item.healthcheck.notifications"
+                  title="Notifications enabled"
+                  class="inline-flex shrink-0"
+                >
+                  <Bell class="w-3.5 h-3.5 text-primary" />
+                </span>
               </div>
 
               <!-- Sparkline -->

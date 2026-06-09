@@ -62,7 +62,7 @@ import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
 import { infraTypes } from '@/values';
 import type { ImageRef } from '@/types';
-import { Pin, ExternalLink, Plus, Edit, Link2Off } from 'lucide-vue-next';
+import { Pin, ExternalLink, Plus, Edit, Link2Off, Bell } from 'lucide-vue-next';
 import HealthcheckForm from '@/components/forms/HealthcheckForm.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
 import ImageRefBadge from '@/components/common/ImageRefBadge.vue';
@@ -1057,7 +1057,18 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                       class="cursor-pointer hover:bg-base-300"
                       @click="router.push(`/healthchecks/${h.id}`)"
                     >
-                      <td>{{ h.name }}</td>
+                      <td>
+                        <span class="flex items-center gap-1.5">
+                          {{ h.name }}
+                          <span
+                            v-if="h.notifications"
+                            title="Notifications enabled"
+                            class="inline-flex"
+                          >
+                            <Bell class="w-3.5 h-3.5 text-primary shrink-0" />
+                          </span>
+                        </span>
+                      </td>
                       <td class="font-mono text-xs truncate max-w-50">
                         {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
                       </td>

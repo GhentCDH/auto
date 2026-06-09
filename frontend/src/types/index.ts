@@ -614,6 +614,7 @@ export interface Healthcheck {
   request_body: string | null;
   http_auth_user: string | null;
   http_auth_pass: string | null;
+  notifications: boolean;
   kuma_dirty: boolean;
   created_at: string;
   updated_at: string;
@@ -642,6 +643,7 @@ export interface CreateHealthcheck {
   request_body?: string;
   http_auth_user?: string;
   http_auth_pass?: string;
+  notifications?: boolean;
 }
 
 export interface UpdateHealthcheck {
@@ -666,6 +668,7 @@ export interface UpdateHealthcheck {
   request_body?: string;
   http_auth_user?: string;
   http_auth_pass?: string;
+  notifications?: boolean;
 }
 
 export interface HealthcheckWithRelations extends Healthcheck {
@@ -683,6 +686,7 @@ export interface HealthcheckRelation {
   path: string;
   expected_status: number;
   is_enabled: boolean;
+  notifications: boolean;
   kuma_id: number | null;
   kuma_dirty: boolean;
 }
