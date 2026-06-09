@@ -29,6 +29,7 @@ pub struct Healthcheck {
     pub http_auth_user: Option<String>,
     pub http_auth_pass: Option<String>,
     pub kuma_dirty: bool,
+    pub notifications: bool,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -68,6 +69,7 @@ pub struct CreateHealthcheck {
     pub request_body: Option<String>,
     pub http_auth_user: Option<String>,
     pub http_auth_pass: Option<String>,
+    pub notifications: bool,
 }
 
 /// DTO for updating a healthcheck
@@ -94,6 +96,7 @@ pub struct UpdateHealthcheck {
     pub request_body: Option<String>,
     pub http_auth_user: Option<String>,
     pub http_auth_pass: Option<String>,
+    pub notifications: Option<bool>,
 }
 
 fn default_protocol() -> String {
@@ -161,6 +164,7 @@ pub struct HealthcheckRelation {
     pub is_enabled: bool,
     pub kuma_id: Option<i32>,
     pub kuma_dirty: bool,
+    pub notifications: bool,
 }
 
 /// Result of executing a healthcheck

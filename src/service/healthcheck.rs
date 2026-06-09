@@ -30,7 +30,7 @@ pub async fn list(
                h.expected_body, h.timeout_seconds, h.interval, h.is_enabled, h.notes,
                h.retry, h.retry_interval, h.request_body_encoding, h.request_body,
                h.http_auth_user, h.http_auth_pass, h.kuma_id, h.kuma_dirty,
-               h.created_at, h.updated_at, h.created_by
+               h.created_at, h.updated_at, h.created_by, h.notifications
         FROM healthcheck h
         WHERE (?1 IS NULL OR h.name LIKE ?1)
           AND (?2 IS NULL OR h.application_id = ?2)
@@ -82,7 +82,7 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Healthcheck> {
                expected_body, timeout_seconds, interval, is_enabled, notes,
                retry, retry_interval, request_body_encoding, request_body,
                http_auth_user, http_auth_pass, kuma_id, kuma_dirty,
-               created_at, updated_at, created_by
+               created_at, updated_at, created_by, h.notifications
         FROM healthcheck
         WHERE id = ?1
         "#,
@@ -101,7 +101,7 @@ pub async fn get_all(pool: &SqlitePool) -> Result<Vec<Healthcheck>> {
                expected_body, timeout_seconds, interval, is_enabled, notes,
                retry, retry_interval, request_body_encoding, request_body,
                http_auth_user, http_auth_pass, kuma_id, kuma_dirty,
-               created_at, updated_at, created_by
+               created_at, updated_at, created_by, h.notifications
         FROM healthcheck
         "#,
     )
@@ -213,8 +213,8 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
                                  protocol, path, method, headers, expected_status,
                                  expected_body, timeout_seconds, interval, is_enabled, notes,
                                  retry, retry_interval, request_body_encoding, request_body,
-                                 http_auth_user, http_auth_pass, kuma_dirty)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, 1)
+                                 http_auth_user, http_auth_pass, notifications, kuma_dirty)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, 1)
         "#,
     )
     .bind(&id)
@@ -239,6 +239,7 @@ pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healt
     .bind(&input.request_body)
     .bind(&input.http_auth_user)
     .bind(&input.http_auth_pass)
+    .bind(input.notifications)
     .execute(pool)
     .await?;
 
@@ -299,6 +300,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     let http_auth_user = input.http_auth_user.or(existing.http_auth_user);
     let http_auth_pass = input.http_auth_pass.or(existing.http_auth_pass);
     let kuma_id = input.kuma_id.or(existing.kuma_id);
+    let notifications = input.notifications.unwrap_or(existing.notifications);
 
     sqlx::query(
         r#"
@@ -308,7 +310,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
             expected_status = ?9, expected_body = ?10, timeout_seconds = ?11,
             is_enabled = ?12, notes = ?13, retry = ?14, retry_interval = ?15,
             request_body_encoding = ?16, request_body = ?17, interval = ?22,
-            http_auth_user = ?18, http_auth_pass = ?19, kuma_id = ?21,
+            http_auth_user = ?18, http_auth_pass = ?19, kuma_id = ?21, notifications = ?23,
             kuma_dirty = 1, updated_at = datetime('now')
         WHERE id = ?20
         "#,
@@ -335,6 +337,7 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateHealthcheck) -> Re
     .bind(id)
     .bind(kuma_id)
     .bind(interval)
+    .bind(notifications)
     .execute(pool)
     .await?;
 
@@ -507,7 +510,7 @@ pub async fn export_kuma(pool: &SqlitePool) -> Result<Vec<KumaMonitor>> {
                protocol, path, method, headers, expected_status,
                expected_body, timeout_seconds, interval, is_enabled, notes,
                retry, retry_interval, request_body_encoding, request_body,
-               http_auth_user, http_auth_pass, kuma_id, kuma_dirty,
+               http_auth_user, http_auth_pass, kuma_id, kuma_dirty, notifications,
                created_at, updated_at, created_by
         FROM healthcheck
         WHERE is_enabled = 1
@@ -564,7 +567,7 @@ pub async fn get_for_application(
     sqlx::query_as::<_, HealthcheckRelation>(
         r#"
         SELECT h.id, h.name, h.protocol, h.kuma_id, d.fqdn as domain_fqdn,
-               h.path, h.expected_status, h.is_enabled, h.kuma_dirty
+               h.path, h.expected_status, h.is_enabled, h.kuma_dirty, h.notifications
         FROM healthcheck h
         JOIN domain d ON h.domain_id = d.id
         WHERE h.application_id = ?1
@@ -584,7 +587,7 @@ pub async fn get_for_service(
 ) -> Result<Vec<HealthcheckRelation>> {
     sqlx::query_as::<_, HealthcheckRelation>(
         r#"
-        SELECT h.id, h.name, h.protocol, d.fqdn as domain_fqdn,
+        SELECT h.id, h.name, h.protocol, d.fqdn as domain_fqdn, h.notifictations,
                h.path, h.expected_status, h.is_enabled, h.kuma_id, h.kuma_dirty
         FROM healthcheck h
         JOIN domain d ON h.domain_id = d.id
