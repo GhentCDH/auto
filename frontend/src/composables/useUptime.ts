@@ -20,7 +20,17 @@ type UptimeEvent =
 const monitors = ref<Map<number, MonitorData>>(new Map());
 let eventSource: EventSource | null = null;
 let consumerCount = 0;
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
 const HEARTBEAT_WINDOW_SIZE = 120;
+// Grace period before tearing down the stream once the last consumer unmounts.
+// Bridges route navigations (old component unmounts before the new one mounts)
+// so the long-lived connection survives instead of reconnecting every page hop.
+const CLOSE_GRACE_MS = 5000;
+
+// Registered once for the app lifetime, not per-connection.
+window.addEventListener('beforeunload', () => {
+  if (eventSource) eventSource.close();
+});
 
 function openConnection() {
   if (eventSource) return;
@@ -63,10 +73,6 @@ function openConnection() {
     // EventSource handles reconnect automatically.
     // On reconnect, the backend sends a fresh snapshot.
   };
-
-  window.addEventListener('beforeunload', () => {
-    if (eventSource) eventSource.close();
-  });
 }
 
 function closeConnection() {
@@ -77,15 +83,22 @@ function closeConnection() {
 }
 
 export function useUptime() {
-  consumerCount++;
-  if (consumerCount === 1) {
-    openConnection();
+  // A new consumer arrived — cancel any pending teardown so navigation
+  // between uptime views reuses the existing connection.
+  if (closeTimer !== null) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
   }
+  consumerCount++;
+  openConnection();
 
   onUnmounted(() => {
     consumerCount--;
-    if (consumerCount === 0) {
-      closeConnection();
+    if (consumerCount === 0 && closeTimer === null) {
+      closeTimer = setTimeout(() => {
+        closeTimer = null;
+        if (consumerCount === 0) closeConnection();
+      }, CLOSE_GRACE_MS);
     }
   });
 
