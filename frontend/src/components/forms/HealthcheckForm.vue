@@ -99,7 +99,7 @@ watch(
         name: hc.name,
         application_id: hc.application_id || '',
         service_id: hc.service_id || '',
-        kuma_id: hc.kuma_id || 0,
+        kuma_id: hc.kuma_id || undefined,
         domain_id: hc.domain_id,
         protocol: hc.protocol,
         path: hc.path,
