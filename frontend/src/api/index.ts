@@ -2,6 +2,7 @@ import type {
   Application,
   ApplicationFilterParams,
   ApplicationWithRelations,
+  PublicConfig,
   CreateApplication,
   CreateDomain,
   CreateHealthcheck,
@@ -445,6 +446,11 @@ export const resolveApi = {
 // Version API
 export const versionApi = {
   get: () => request<{ version: string }>('/version'),
+};
+
+// Config API — server-provided form defaults and dropdown options
+export const configApi = {
+  get: () => request<PublicConfig>('/config'),
 };
 
 // Outline Sync API

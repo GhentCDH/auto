@@ -769,3 +769,87 @@ export interface ImportMapping {
   domain_target_name: string;
   skip: boolean;
 }
+
+// --- Server-provided configuration (GET /api/config) ---
+// Mirrors the backend `PublicConfig`: form defaults + dropdown option lists.
+
+export interface ApplicationDefaults {
+  environment: string;
+  status: string;
+}
+
+export interface ServiceDefaults {
+  environment: string;
+  status: string;
+}
+
+export interface HealthcheckDefaults {
+  protocol: string;
+  path: string;
+  method: string;
+  expected_status: number;
+  timeout_seconds: number;
+  interval: number;
+  is_enabled: boolean;
+  notifications: boolean;
+  retry: number;
+  retry_interval: number;
+  request_body_encoding: string;
+}
+
+export interface NoteDefaults {
+  note_type: string;
+}
+
+export interface PersonDefaults {
+  department: string;
+  email_domain: string;
+  contribution_type: string;
+  is_active: boolean;
+}
+
+export interface ShareDefaults {
+  path_prefix: string;
+  server: string;
+  share_type: string;
+  status: string;
+  usage: string;
+  permissions: string;
+}
+
+export interface InfraDefaults {
+  vm_name_prefix: string;
+}
+
+export interface DomainDefaults {
+  target_type: string;
+}
+
+export interface Defaults {
+  application: ApplicationDefaults;
+  service: ServiceDefaults;
+  healthcheck: HealthcheckDefaults;
+  note: NoteDefaults;
+  person: PersonDefaults;
+  share: ShareDefaults;
+  infra: InfraDefaults;
+  domain: DomainDefaults;
+}
+
+// Ordered value -> label maps for dropdowns.
+export interface Options {
+  statuses: Record<string, string>;
+  environments: Record<string, string>;
+  infra_types: Record<string, string>;
+  share_usages: Record<string, string>;
+  share_types: Record<string, string>;
+  domain_types: Record<string, string>;
+  domain_status: Record<string, string>;
+  contribution_types: Record<string, string>;
+  note_types: Record<string, string>;
+}
+
+export interface PublicConfig {
+  defaults: Defaults;
+  options: Options;
+}
