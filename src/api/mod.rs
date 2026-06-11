@@ -24,6 +24,7 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/health", get(healthcheck))
         .route("/version", get(version))
+        .route("/config", get(config))
         .nest("/applications", applications::routes())
         .nest("/services", services::routes())
         .nest("/infra", infra::routes())
@@ -64,6 +65,18 @@ async fn version() -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "version": env!("CARGO_PKG_VERSION")
     }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/config",
+    tag = "config",
+    responses(
+        (status = 200, description = "Configurable defaults and dropdown options", body = crate::config::PublicConfig)
+    )
+)]
+async fn config(State(state): State<AppState>) -> Json<crate::config::PublicConfig> {
+    Json(crate::config::PublicConfig::from(&state.config))
 }
 
 #[utoipa::path(

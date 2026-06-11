@@ -12,6 +12,7 @@ use utoipa::{Modify, OpenApi};
         // Health endpoints
         crate::api::healthcheck,
         crate::api::version,
+        crate::api::config,
         crate::api::resolve_id,
 
         // Applications
@@ -112,6 +113,19 @@ use utoipa::{Modify, OpenApi};
     ),
     components(
         schemas(
+            // Config
+            crate::config::PublicConfig,
+            crate::config::Defaults,
+            crate::config::ApplicationDefaults,
+            crate::config::ServiceDefaults,
+            crate::config::HealthcheckDefaults,
+            crate::config::NoteDefaults,
+            crate::config::PersonDefaults,
+            crate::config::ShareDefaults,
+            crate::config::InfraDefaults,
+            crate::config::DomainDefaults,
+            crate::config::Options,
+
             // Common models
             crate::models::PaginationParams,
             crate::models::PaginatedResponse<crate::models::Application>,
@@ -227,6 +241,7 @@ use utoipa::{Modify, OpenApi};
     ),
     tags(
         (name = "health", description = "Health check endpoints"),
+        (name = "config", description = "Configurable defaults and options"),
         (name = "applications", description = "Application management"),
         (name = "services", description = "Service management"),
         (name = "infra", description = "Infrastructure management"),
