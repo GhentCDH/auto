@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import MascotViewer from '../common/MascotViewer.vue';
 
@@ -14,7 +14,11 @@ function updateWindowSize() {
   windowHeight.value = window.innerHeight;
 }
 
+onMounted(() => window.addEventListener('resize', updateWindowSize));
 onUnmounted(() => window.removeEventListener('resize', updateWindowSize));
+
+// md breakpoint = 768px (Tailwind default)
+const isMdUp = computed(() => windowWidth.value >= 768);
 
 const proximityRadius = computed(() => {
   const diagonal = Math.sqrt(windowWidth.value ** 2 + windowHeight.value ** 2);
@@ -34,6 +38,27 @@ const navItems = [
 ];
 
 const searchInput = ref<HTMLInputElement>();
+const searchOpen = ref(false);
+
+// Input visible inline from md up; on sm only once opened via the trigger.
+const showInput = computed(() => isMdUp.value || searchOpen.value);
+// Icon-only trigger shown on sm while the input is collapsed.
+const showTrigger = computed(() => !isMdUp.value && !searchOpen.value);
+
+async function openSearch() {
+  searchOpen.value = true;
+  await nextTick();
+  searchInput.value?.focus();
+}
+
+function closeSearch() {
+  searchOpen.value = false;
+}
+
+function onSearchBlur() {
+  // Collapse only on small screens, and keep open if a query is typed.
+  if (!isMdUp.value && !searchQuery.value.trim()) closeSearch();
+}
 
 function handleSearch() {
   if (searchQuery.value.trim()) {
@@ -51,7 +76,9 @@ function handleGlobalKeydown(e: KeyboardEvent) {
     return;
   if (e.key === '/') {
     e.preventDefault();
-    searchInput.value?.focus();
+    // On sm the input is collapsed — open it before focusing.
+    if (!isMdUp.value) openSearch();
+    else searchInput.value?.focus();
   }
 }
 
@@ -63,7 +90,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
   <div class="navbar bg-base-200 shadow-sm">
     <div class="navbar-start">
       <div class="dropdown">
-        <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+        <div tabindex="0" role="button" class="btn px-2 btn-ghost lg:hidden">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-5 w-5"
@@ -93,7 +120,9 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
         class="btn btn-ghost text-2xl inline-flex items-center gap-3 wallefont font-black"
       >
         <Suspense>
-          <MascotViewer :size="40" :proximity-radius="proximityRadius" />
+          <span class="hidden md:block"
+            ><MascotViewer :size="40" :proximity-radius="proximityRadius"
+          /></span>
           <template #fallback>
             <span class="loading loading-spinner loading-xs"></span>
           </template>
@@ -110,17 +139,53 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
         </li>
       </ul>
     </div>
-    <div class="navbar-end">
-      <form @submit.prevent="handleSearch" class="form-control">
-        <div class="input-group">
+    <div class="navbar-end relative">
+      <!-- sm: icon-only trigger that expands the search input -->
+      <button
+        v-if="showTrigger"
+        type="button"
+        @click="openSearch"
+        aria-label="Open search"
+        class="btn btn-sm btn-square"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+      </button>
+
+      <!-- search input: inline from md up, overlay on sm once opened -->
+      <form
+        v-show="showInput"
+        @submit.prevent="handleSearch"
+        class="form-control"
+        :class="
+          !isMdUp
+            ? 'absolute inset-y-0 right-0 z-20 flex items-center bg-base-200 pl-2'
+            : ''
+        "
+      >
+        <div class="input-group flex">
           <input
             ref="searchInput"
             v-model="searchQuery"
             type="text"
             placeholder="Search..."
-            class="input input-bordered input-sm md:input-md w-40 md:w-64"
+            class="input input-bordered input-sm md:input-md w-44 md:w-64"
+            @blur="onSearchBlur"
+            @keydown.esc="closeSearch"
           />
-          <button type="submit" class="btn input-sm md:btn-md btn-square">
+          <button type="submit" class="btn btn-sm md:btn-md btn-square">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-4 w-4"
