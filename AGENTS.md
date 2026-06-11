@@ -91,12 +91,34 @@ Custom Socket.IO client for Uptime Kuma (replaces kuma-client crate due to float
 
 ## Configuration
 
-Environment variables (loaded from `.env`, falls back to `dev.env`):
+Config is loaded by `Config::load()` (`src/config.rs`) via `figment`, layering:
+**built-in defaults < `auto.toml` < environment** (env wins). `.env` (falling back
+to `dev.env`) is loaded into the process environment first.
 
-- `DOMAIN` - Server bind address (default: `0.0.0.0:8080`)
+Environment variables / core keys:
+
+- `HOST` / `PORT` - Server bind address (default: `0.0.0.0:8080`)
 - `DATABASE_URL` - SQLite connection (default: `sqlite://data/data.db`)
 - `KUMA_URL` - Uptime Kuma instance URL
 - `KUMA_USERNAME` / `KUMA_PASSWORD` - Kuma authentication credentials
+
+### Configurable defaults & options (`auto.toml`)
+
+`Config.defaults` and `Config.options` (see `src/config.rs`) make the app
+portable across organizations. `[defaults.*]` are the **single source of truth**
+for entity-creation defaults: backend create handlers fill omitted fields from
+them (so `POST {name}` works), and the same values are served at `GET /api/config`.
+`[options.*]` are dropdown value→label maps (order-preserving `IndexMap`).
+
+The frontend fetches `/api/config` once at boot (`composables/useConfig.ts`,
+gated in `App.vue`) — forms pre-fill from `defaults`, dropdowns from `options`
+(via `values/index.ts`). There is no bundled fallback; the server is authoritative.
+See `auto.example.toml` for the full schema. Built-in defaults reproduce prior
+behavior, so a missing `auto.toml` changes nothing.
+
+When adding a defaultable field or option list, update both `src/config.rs`
+(struct + `Default`) and the frontend `PublicConfig` types in
+`frontend/src/types/index.ts`.
 
 ## Adding a New Entity
 

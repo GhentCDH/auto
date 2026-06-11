@@ -1,0 +1,124 @@
+# Example auto.toml — optional configuration file.
+#
+# Configuration is layered: built-in defaults < auto.toml < environment.
+# That is, this file overrides the built-in defaults, and environment variables
+# (or .env / dev.env) override this file. Copy to `auto.toml` and adjust.
+#
+# Secrets (KUMA_PASSWORD, OUTLINE_API_KEY) are best kept in the environment,
+# not committed here.
+
+# --- Core settings (usually provided via environment / .env) ---
+# host = "0.0.0.0"
+# port = 8080
+# base_url = "https://auto.example.com"
+# database_url = "sqlite://data/data.db"
+# kuma_url = "https://kuma.example.com"
+# kuma_username = "kuma_username"
+# kuma_password = "kuma_password"
+# kuma_notification_name = "Ntfy Example"
+# outline_url = "https://docs.example.com"
+# outline_api_key = "ol_api_..."
+# infra_ip_refresh_days = 10
+
+# --- Entity creation defaults ---
+# Applied server-side when a field is omitted on create, and surfaced to the
+# frontend to pre-fill forms. Omitting a key keeps the built-in value shown here.
+
+[defaults.application]
+environment = "prd"
+status = "active"
+
+[defaults.service]
+environment = "prd"
+status = "active"
+
+[defaults.healthcheck]
+protocol = "https"
+path = "/"
+method = "GET"
+expected_status = 200
+timeout_seconds = 30
+interval = 60
+is_enabled = true
+notifications = true
+retry = 0
+retry_interval = 60
+request_body_encoding = "JSON"
+
+[defaults.note]
+note_type = "general"
+
+[defaults.person]
+department = "GhentCDH"
+email_domain = "ugent.be"
+contribution_type = "developer"
+is_active = true
+
+[defaults.share]
+path_prefix = "/ghentcdh_"
+server = "files.ugent.be"
+share_type = "smb"
+status = "active"
+usage = "data"
+permissions = "read-write"
+
+[defaults.infra]
+# Name prefix that auto-selects the "vm" infra type in the create form.
+vm_name_prefix = "gcdh"
+
+[defaults.domain]
+target_type = "application"
+
+# --- Dropdown option lists (value -> label) ---
+# Order is preserved. Replace these to match your organization's vocabulary.
+
+[options.statuses]
+active = "Active"
+inactive = "Inactive"
+deprecated = "Deprecated"
+archived = "Archived"
+
+[options.environments]
+prd = "Production"
+dev = "Development"
+qas = "Quality Assurance"
+tst = "Testing"
+
+[options.infra_types]
+nomad_cluster = "Nomad Cluster"
+server = "Server"
+vm = "Virtual Machine"
+
+[options.share_usages]
+data = "Data Storage"
+config = "Configuration"
+logs = "Logs"
+backup = "Backup"
+media = "Media"
+
+[options.share_types]
+smb = "SMB"
+nfs = "NFS"
+
+[options.domain_types]
+A = "A"
+AAAA = "AAAA"
+CNAME = "CNAME"
+MX = "MX"
+TXT = "TXT"
+
+[options.domain_status]
+active = "Active"
+inactive = "Inactive"
+expired = "Expired"
+
+[options.contribution_types]
+project_owner = "Project Owner"
+developer = "Developer"
+maintainer = "Maintainer"
+stakeholder = "Stakeholder"
+
+[options.note_types]
+general = "General"
+documentation = "Documentation"
+changelog = "Changelog"
