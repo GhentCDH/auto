@@ -35,6 +35,7 @@ const navItems = [
   { name: 'Storage', path: '/shares' },
   { name: 'Stack', path: '/stack' },
   { name: 'Healthchecks', path: '/healthchecks' },
+  { name: 'Graph', path: '/graph' },
 ];
 
 const searchInput = ref<HTMLInputElement>();

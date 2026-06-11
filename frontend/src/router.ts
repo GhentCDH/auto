@@ -77,6 +77,11 @@ const routes = [
     path: '/healthchecks/:id',
     component: () => import('./views/healthchecks/HealthcheckDetail.vue'),
   },
+  // Org graph
+  {
+    path: '/graph',
+    component: () => import('./views/graph/OrgGraphView.vue'),
+  },
   // Search
   {
     path: '/search',
