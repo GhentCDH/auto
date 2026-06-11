@@ -5,6 +5,7 @@ import type {
   CreateHealthcheck,
   UpdateHealthcheck,
 } from '@/types';
+import { requireConfig } from '@/composables/useConfig';
 import EntityPicker from '../common/EntityPicker.vue';
 
 const target_type = ref<'application' | 'service'>('application');
@@ -34,26 +35,27 @@ if (props.initialTargetName) {
   selectedTargetName.value = props.initialTargetName;
 }
 
+const hcDefaults = requireConfig().defaults.healthcheck;
 const form = ref<CreateHealthcheck>({
   name: props.initialName || '',
   application_id: props.initialApplicationId || '',
   service_id: props.initialServiceId || '',
   kuma_id: undefined,
   domain_id: '',
-  protocol: 'https',
-  path: '/',
-  method: 'GET',
+  protocol: hcDefaults.protocol,
+  path: hcDefaults.path,
+  method: hcDefaults.method,
   headers: '',
-  expected_status: 200,
+  expected_status: hcDefaults.expected_status,
   expected_body: '',
-  timeout_seconds: 1,
-  interval: 60,
-  is_enabled: true,
-  notifications: true,
+  timeout_seconds: hcDefaults.timeout_seconds,
+  interval: hcDefaults.interval,
+  is_enabled: hcDefaults.is_enabled,
+  notifications: hcDefaults.notifications,
   notes: '',
-  retry: 3,
-  retry_interval: 20,
-  request_body_encoding: 'JSON',
+  retry: hcDefaults.retry,
+  retry_interval: hcDefaults.retry_interval,
+  request_body_encoding: hcDefaults.request_body_encoding,
   request_body: '',
   http_auth_user: '',
   http_auth_pass: '',

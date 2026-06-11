@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue';
 import type { Domain, CreateDomain, UpdateDomain } from '@/types';
+import { requireConfig } from '@/composables/useConfig';
 import EntityPicker from '../common/EntityPicker.vue';
 
-const target_type = ref<'application' | 'service' | 'infra'>('application');
+const target_type = ref<'application' | 'service' | 'infra'>(
+  requireConfig().defaults.domain.target_type as
+    | 'application'
+    | 'service'
+    | 'infra'
+);
 const selectedName = ref<string | null>(null);
 
 const props = defineProps<{

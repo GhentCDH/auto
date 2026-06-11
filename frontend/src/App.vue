@@ -2,13 +2,25 @@
 import { ref, onMounted } from 'vue';
 import NavBar from './components/layout/NavBar.vue';
 import { versionApi } from './api';
+import { loadConfig } from './composables/useConfig';
 import { Toaster } from 'vue-sonner';
 import 'vue-sonner/style.css';
 import { CircleCheckBig } from 'lucide-vue-next';
 
 const version = ref<string | null>(null);
+// Gate the app on config: form defaults and dropdown options come from the
+// server, so views must not render until the config has loaded.
+const configReady = ref(false);
+const configFailed = ref(false);
 
 onMounted(async () => {
+  try {
+    await loadConfig();
+    configReady.value = true;
+  } catch {
+    configFailed.value = true;
+  }
+
   try {
     const data = await versionApi.get();
     version.value = data.version;
@@ -40,7 +52,16 @@ onMounted(async () => {
   <div class="flex min-h-screen flex-col bg-base-100">
     <NavBar />
     <main class="container mx-auto flex-1">
-      <router-view />
+      <router-view v-if="configReady" />
+      <div
+        v-else-if="configFailed"
+        class="flex h-64 items-center justify-center text-error"
+      >
+        Failed to load configuration. Is the backend reachable?
+      </div>
+      <div v-else class="flex h-64 items-center justify-center">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
     </main>
     <footer class="py-4 text-center text-sm text-base-content/50 font-mono">
       <span v-if="version">v{{ version }}</span>

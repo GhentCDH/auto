@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import type { LinkPerson, PersonRelation } from '@/types';
 import { contributionTypes } from '@/values';
+import { requireConfig } from '@/composables/useConfig';
 import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
@@ -15,7 +16,9 @@ const emit = defineEmits<{
 }>();
 
 const form = ref({
-  contribution_type: props.initial?.contribution_type || 'developer',
+  contribution_type:
+    props.initial?.contribution_type ||
+    requireConfig().defaults.person.contribution_type,
   start_date: props.initial?.start_date || '',
   end_date: props.initial?.end_date || '',
   notes: props.initial?.relation_notes || '',

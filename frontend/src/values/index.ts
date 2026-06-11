@@ -1,76 +1,59 @@
+import { computed } from 'vue';
+import { useConfig } from '@/composables/useConfig';
+
 export function toFilterOptions(
   obj: Record<string, string>
 ): { value: string; label: string }[] {
   return Object.entries(obj).map(([value, label]) => ({ value, label }));
 }
 
-export const statuses = {
-  active: 'Active',
-  inactive: 'Inactive',
-  deprecated: 'Deprecated',
-  archived: 'Archived',
-};
+const { config } = useConfig();
 
-export const environments = {
-  prd: 'Production',
-  dev: 'Development',
-  qas: 'Quality Assurance',
-  tst: 'Testing',
-};
+// Dropdown value -> label maps, sourced from the server config. The app gates
+// rendering on config readiness (see App.vue), so these are populated before any
+// consumer renders; `?? {}` only guards the brief pre-load window.
+export const statuses = computed(() => config.value?.options.statuses ?? {});
+export const environments = computed(
+  () => config.value?.options.environments ?? {}
+);
+export const infraTypes = computed(
+  () => config.value?.options.infra_types ?? {}
+);
+export const shareUsages = computed(
+  () => config.value?.options.share_usages ?? {}
+);
+export const shareTypes = computed(
+  () => config.value?.options.share_types ?? {}
+);
+export const domainTypes = computed(
+  () => config.value?.options.domain_types ?? {}
+);
+export const domainStatus = computed(
+  () => config.value?.options.domain_status ?? {}
+);
+export const contributionTypes = computed(
+  () => config.value?.options.contribution_types ?? {}
+);
+export const noteTypes = computed(() => config.value?.options.note_types ?? {});
 
-export const infraTypes = {
-  nomad_cluster: 'Nomad Cluster',
-  server: 'Server',
-  vm: 'Virtual Machine',
-};
+// Filter options for use in the ColumnFilter component
+export const statusFilterOptions = computed(() =>
+  toFilterOptions(statuses.value)
+);
+export const environmentFilterOptions = computed(() =>
+  toFilterOptions(environments.value)
+);
+export const domainStatusFilterOptions = computed(() =>
+  toFilterOptions(domainStatus.value)
+);
+export const shareTypeFilterOptions = computed(() =>
+  toFilterOptions(shareTypes.value)
+);
+export const infraTypeFilterOptions = computed(() =>
+  toFilterOptions(infraTypes.value)
+);
 
-export const shareUsages = {
-  data: 'Data Storage',
-  config: 'Configuration',
-  logs: 'Logs',
-  backup: 'Backup',
-  media: 'Media',
-};
-
-export const shareTypes = {
-  smb: 'SMB',
-  nfs: 'NFS',
-};
-
-export const domainTypes = {
-  A: 'A',
-  AAAA: 'AAAA',
-  CNAME: 'CNAME',
-  MX: 'MX',
-  TXT: 'TXT',
-};
-
-export const domainStatus = {
-  active: 'Active',
-  inactive: 'Inactive',
-  expired: 'Expired',
-};
-
-export const contributionTypes = {
-  project_owner: 'Project Owner',
-  developer: 'Developer',
-  maintainer: 'Maintainer',
-  stakeholder: 'Stakeholder',
-};
-
-export const noteTypes = {
-  general: 'General',
-  documentation: 'Documentation',
-  changelog: 'Changelog',
-};
-
-// Filter options for use in ColumnFilter component
-export const statusFilterOptions = toFilterOptions(statuses);
-export const environmentFilterOptions = toFilterOptions(environments);
-export const domainStatusFilterOptions = toFilterOptions(domainStatus);
-export const shareTypeFilterOptions = toFilterOptions(shareTypes);
-export const infraTypeFilterOptions = toFilterOptions(infraTypes);
-
+// Not config-driven: a fixed boolean facet, not an entity option list.
 export const personActiveFilterOptions = [
   { value: 'true', label: 'Active' },
   { value: 'false', label: 'Inactive' },

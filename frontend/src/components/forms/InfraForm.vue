@@ -9,6 +9,7 @@ import type {
   CreateDomain,
 } from '@/types';
 import { infraTypes } from '@/values';
+import { requireConfig } from '@/composables/useConfig';
 import SelectWithCustom from '../common/SelectWithCustom.vue';
 import EntityPicker from '../common/EntityPicker.vue';
 
@@ -68,10 +69,11 @@ watch(
   { immediate: true }
 );
 
+const infraDefaults = requireConfig().defaults.infra;
 watch(
   () => form.value.name,
   (name) => {
-    if (name.startsWith('gcdh')) form.value.type = 'vm';
+    if (name.startsWith(infraDefaults.vm_name_prefix)) form.value.type = 'vm';
   },
   { immediate: true }
 );

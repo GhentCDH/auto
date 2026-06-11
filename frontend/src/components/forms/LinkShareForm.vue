@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import type { LinkNetworkShare, NetworkShareRelation } from '@/types';
 import { shareUsages } from '@/values';
+import { requireConfig } from '@/composables/useConfig';
 import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
@@ -14,10 +15,11 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
+const shareDefaults = requireConfig().defaults.share;
 const form = ref({
-  usage: props.initial?.usage || 'data',
+  usage: props.initial?.usage || shareDefaults.usage,
   mount_point: props.initial?.mount_point || '',
-  permissions: props.initial?.permissions || 'read-write',
+  permissions: props.initial?.permissions || shareDefaults.permissions,
   notes: props.initial?.relation_notes || '',
 } satisfies LinkNetworkShare);
 

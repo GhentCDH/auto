@@ -6,6 +6,7 @@ import type {
   UpdateNetworkShare,
 } from '@/types';
 import { shareTypes } from '@/values';
+import { requireConfig } from '@/composables/useConfig';
 import SelectWithCustom from '../common/SelectWithCustom.vue';
 
 const props = defineProps<{
@@ -24,13 +25,14 @@ function markPathChanged() {
   pathChanged = true;
 }
 
+const shareDefaults = requireConfig().defaults.share;
 const form = ref({
   name: props.initialName || '',
-  path: '/ghentcdh_',
-  share_type: 'smb',
-  server: 'files.ugent.be',
+  path: shareDefaults.path_prefix,
+  share_type: shareDefaults.share_type,
+  server: shareDefaults.server,
   purpose: '',
-  status: 'active',
+  status: shareDefaults.status,
   notes: '',
 } satisfies CreateNetworkShare);
 
@@ -60,7 +62,7 @@ watch(
   () => form.value.name,
   (name) => {
     if (!pathChanged) {
-      form.value.path = `/ghentcdh_${name}`;
+      form.value.path = `${shareDefaults.path_prefix}${name}`;
     }
   },
   { immediate: true }

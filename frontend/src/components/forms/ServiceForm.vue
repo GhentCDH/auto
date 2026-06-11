@@ -2,6 +2,7 @@
 import { ref, watch, onMounted } from 'vue';
 import type { Service, CreateService, ImageRef, UpdateService } from '@/types';
 import { environments, statuses } from '@/values';
+import { requireConfig } from '@/composables/useConfig';
 import { Plus, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -15,12 +16,13 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
+const svcDefaults = requireConfig().defaults.service;
 const form = ref<CreateService>({
   name: props.initialName || '',
   description: '',
   repository_url: '',
-  environment: 'prd',
-  status: 'active',
+  environment: svcDefaults.environment,
+  status: svcDefaults.status,
   outline_url: '',
 });
 

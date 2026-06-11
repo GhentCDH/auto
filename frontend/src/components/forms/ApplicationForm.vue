@@ -7,6 +7,7 @@ import type {
   UpdateApplication,
 } from '@/types';
 import { environments, statuses } from '@/values';
+import { requireConfig } from '@/composables/useConfig';
 import { Plus, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -20,13 +21,14 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
+const appDefaults = requireConfig().defaults.application;
 const form = ref<CreateApplication>({
   name: props.initialName || '',
   description: '',
   repository_url: '',
-  environment: 'prd',
+  environment: appDefaults.environment,
   url: '',
-  status: 'active',
+  status: appDefaults.status,
   outline_url: '',
 });
 

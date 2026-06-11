@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import type { Note, CreateNote, UpdateNote } from '@/types';
 import { noteTypes } from '@/values';
+import { requireConfig } from '@/composables/useConfig';
 import MarkdownRenderer from '../common/MarkdownRenderer.vue';
 import { Eye, EyeOff } from 'lucide-vue-next';
 
@@ -18,7 +19,9 @@ const emit = defineEmits<{
 
 const title = ref(props.note?.title || '');
 const content = ref(props.note?.content || '');
-const note_type = ref(props.note?.note_type || 'general');
+const note_type = ref(
+  props.note?.note_type || requireConfig().defaults.note.note_type
+);
 const url = ref(props.note?.url || '');
 const is_pinned = ref(props.note?.is_pinned || false);
 const showPreview = ref(false);

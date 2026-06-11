@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import type { Person, CreatePerson, UpdatePerson } from '@/types';
+import { requireConfig } from '@/composables/useConfig';
 
 const props = defineProps<{
   person?: Person;
@@ -12,13 +13,14 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
+const personDefaults = requireConfig().defaults.person;
 const form = ref<CreatePerson>({
   name: props.initialName || '',
   email: '',
   role: '',
-  department: 'GhentCDH',
+  department: personDefaults.department,
   phone: '',
-  is_active: true,
+  is_active: personDefaults.is_active,
   notes: '',
 });
 
@@ -60,10 +62,10 @@ function first_and_last(name: string): { first?: string; last?: string } {
   };
 }
 
-function to_ugent_mail(name: string): string {
+function to_org_mail(name: string): string {
   const { first, last } = first_and_last(name);
 
-  return `${first}.${last ?? 'surname'}@ugent.be`;
+  return `${first}.${last ?? 'surname'}@${personDefaults.email_domain}`;
 }
 
 watch(
@@ -71,7 +73,7 @@ watch(
   (name) => {
     if (!emailEdited) {
       if (name) {
-        form.value.email = to_ugent_mail(name);
+        form.value.email = to_org_mail(name);
       } else {
         form.value.email = '';
       }
