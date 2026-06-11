@@ -91,6 +91,24 @@ pub struct LinkInfra {
     pub notes: Option<String>,
 }
 
+/// Healthcheck from a linked application or service, for infra detail views.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct InfraHealthcheckRelation {
+    pub id: String,
+    pub name: String,
+    pub protocol: String,
+    pub domain_fqdn: String,
+    pub path: String,
+    pub expected_status: i32,
+    pub is_enabled: bool,
+    pub kuma_id: Option<i32>,
+    pub kuma_dirty: bool,
+    pub notifications: bool,
+    pub parent_type: String,
+    pub parent_id: String,
+    pub parent_name: String,
+}
+
 /// Infra list row — Infra plus its IPs, used by the list endpoint so callers
 /// can filter/display IPs without an extra round-trip per row.
 #[derive(Debug, Serialize, ToSchema)]
@@ -98,6 +116,8 @@ pub struct InfraListItem {
     #[serde(flatten)]
     pub infra: Infra,
     pub ips: Vec<InfraIp>,
+    /// Kuma monitor IDs for enabled healthchecks on linked apps/services.
+    pub healthcheck_kuma_ids: Vec<i32>,
 }
 
 /// Infra with related entities
@@ -110,6 +130,7 @@ pub struct InfraWithRelations {
     pub domain: Option<InfraDomainRef>,
     pub applications: Vec<ApplicationInfraRelation>,
     pub services: Vec<ServiceInfraRelation>,
+    pub healthchecks: Vec<InfraHealthcheckRelation>,
 }
 
 /// Application relation for infra detail view

@@ -7,8 +7,8 @@ use sqlx::SqlitePool;
 
 use crate::models::{
     CreateHealthcheck, Healthcheck, HealthcheckExecuteResult, HealthcheckRelation,
-    HealthcheckWithRelations, KumaMonitor, PaginatedResponse, PaginationParams, UpdateHealthcheck,
-    new_id,
+    HealthcheckWithRelations, InfraHealthcheckRelation, KumaMonitor, PaginatedResponse,
+    PaginationParams, UpdateHealthcheck, new_id,
 };
 use crate::{Error, Result};
 
@@ -610,6 +610,93 @@ pub async fn get_for_service(
     .fetch_all(pool)
     .await
     .map_err(Into::into)
+}
+
+/// Get enabled healthcheck relations for all apps/services linked to an infra.
+pub async fn get_for_infra(
+    pool: &SqlitePool,
+    infra_id: &str,
+) -> Result<Vec<InfraHealthcheckRelation>> {
+    sqlx::query_as::<_, InfraHealthcheckRelation>(
+        r#"
+        SELECT * FROM (
+            SELECT h.id, h.name, h.protocol, d.fqdn AS domain_fqdn,
+                   h.path, h.expected_status, h.is_enabled, h.kuma_id, h.kuma_dirty, h.notifications,
+                   'application' AS parent_type, a.id AS parent_id, a.name AS parent_name
+            FROM healthcheck h
+            JOIN domain d ON h.domain_id = d.id
+            JOIN application a ON h.application_id = a.id
+            JOIN application_infra ai ON a.id = ai.application_id
+            WHERE ai.infra_id = ?1 AND h.is_enabled = 1
+
+            UNION ALL
+
+            SELECT h.id, h.name, h.protocol, d.fqdn AS domain_fqdn,
+                   h.path, h.expected_status, h.is_enabled, h.kuma_id, h.kuma_dirty, h.notifications,
+                   'service' AS parent_type, s.id AS parent_id, s.name AS parent_name
+            FROM healthcheck h
+            JOIN domain d ON h.domain_id = d.id
+            JOIN service s ON h.service_id = s.id
+            JOIN service_infra si ON s.id = si.service_id
+            WHERE si.infra_id = ?1 AND h.is_enabled = 1
+        )
+        ORDER BY parent_name COLLATE NOCASE, name COLLATE NOCASE
+        "#,
+    )
+    .bind(infra_id)
+    .fetch_all(pool)
+    .await
+    .map_err(Into::into)
+}
+
+/// Batch-fetch Kuma monitor IDs for enabled healthchecks on linked apps/services.
+pub async fn get_kuma_ids_for_infras(
+    pool: &SqlitePool,
+    infra_ids: &[String],
+) -> Result<HashMap<String, Vec<i32>>> {
+    if infra_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
+        r#"
+        SELECT ai.infra_id, h.kuma_id
+        FROM healthcheck h
+        JOIN application a ON h.application_id = a.id
+        JOIN application_infra ai ON a.id = ai.application_id
+        WHERE ai.infra_id IN (
+        "#,
+    );
+    let mut sep = qb.separated(", ");
+    for id in infra_ids {
+        sep.push_bind(id.clone());
+    }
+    qb.push(
+        r#"
+        ) AND h.is_enabled = 1 AND h.kuma_id IS NOT NULL
+
+        UNION ALL
+
+        SELECT si.infra_id, h.kuma_id
+        FROM healthcheck h
+        JOIN service s ON h.service_id = s.id
+        JOIN service_infra si ON s.id = si.service_id
+        WHERE si.infra_id IN (
+        "#,
+    );
+    let mut sep2 = qb.separated(", ");
+    for id in infra_ids {
+        sep2.push_bind(id.clone());
+    }
+    qb.push(") AND h.is_enabled = 1 AND h.kuma_id IS NOT NULL");
+
+    let rows: Vec<(String, i32)> = qb.build_query_as().fetch_all(pool).await?;
+
+    let mut by_id: HashMap<String, Vec<i32>> = HashMap::new();
+    for (infra_id, kuma_id) in rows {
+        by_id.entry(infra_id).or_default().push(kuma_id);
+    }
+    Ok(by_id)
 }
 
 /// Clear the kuma_dirty flag after a successful sync to Kuma

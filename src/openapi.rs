@@ -147,6 +147,7 @@ use utoipa::{Modify, OpenApi};
             crate::models::LinkInfra,
             crate::models::InfraWithRelations,
             crate::models::InfraListItem,
+            crate::models::InfraHealthcheckRelation,
             crate::models::ApplicationInfraRelation,
             crate::models::ServiceInfraRelation,
             crate::models::InfraIp,

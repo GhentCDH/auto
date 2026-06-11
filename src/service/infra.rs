@@ -57,42 +57,51 @@ pub async fn list(
     .fetch_one(pool)
     .await?;
 
-    let list_items = attach_ips(pool, items).await?;
+    let list_items = attach_list_data(pool, items).await?;
     Ok(PaginatedResponse::new(list_items, total, params))
 }
 
-/// Batch-fetch IPs for the given infras and return list rows. One query for the
-/// whole page beats N round-trips; an empty page short-circuits with no query.
-async fn attach_ips(pool: &SqlitePool, items: Vec<Infra>) -> Result<Vec<InfraListItem>> {
+/// Batch-fetch IPs and healthcheck Kuma IDs for list rows.
+async fn attach_list_data(pool: &SqlitePool, items: Vec<Infra>) -> Result<Vec<InfraListItem>> {
     if items.is_empty() {
         return Ok(Vec::new());
     }
+
+    let ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
+
     let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
         "SELECT infra_id, ip, source, last_synced_at FROM infra_ip WHERE infra_id IN (",
     );
     let mut sep = qb.separated(", ");
-    for item in &items {
-        sep.push_bind(item.id.clone());
+    for id in &ids {
+        sep.push_bind(id.clone());
     }
     qb.push(") ORDER BY source, ip");
 
     let rows: Vec<(String, String, String, String)> = qb.build_query_as().fetch_all(pool).await?;
 
-    let mut by_id: std::collections::HashMap<String, Vec<InfraIp>> =
+    let mut ips_by_id: std::collections::HashMap<String, Vec<InfraIp>> =
         std::collections::HashMap::new();
     for (infra_id, ip, source, last_synced_at) in rows {
-        by_id.entry(infra_id).or_default().push(InfraIp {
+        ips_by_id.entry(infra_id).or_default().push(InfraIp {
             ip,
             source,
             last_synced_at,
         });
     }
 
+    let kuma_ids_by_id = service::healthcheck::get_kuma_ids_for_infras(pool, &ids).await?;
+
     Ok(items
         .into_iter()
         .map(|infra| {
-            let ips = by_id.remove(&infra.id).unwrap_or_default();
-            InfraListItem { infra, ips }
+            let ips = ips_by_id.remove(&infra.id).unwrap_or_default();
+            let healthcheck_kuma_ids = kuma_ids_by_id.get(&infra.id).cloned().unwrap_or_default();
+            InfraListItem {
+                infra,
+                ips,
+                healthcheck_kuma_ids,
+            }
         })
         .collect())
 }
@@ -161,12 +170,15 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<InfraWith
     .fetch_all(pool)
     .await?;
 
+    let healthchecks = service::healthcheck::get_for_infra(pool, id).await?;
+
     Ok(InfraWithRelations {
         infra,
         ips,
         domain,
         applications,
         services,
+        healthchecks,
     })
 }
 
