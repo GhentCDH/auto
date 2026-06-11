@@ -1,6 +1,6 @@
 use figment::{
     Figment,
-    providers::{Env, Format, Toml},
+    providers::{Env, Format, Serialized, Toml},
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -341,7 +341,12 @@ impl Config {
             }
         }
 
+        // Seed the defaults/options trees as the base layer so a *partial*
+        // `[defaults.application]` table in auto.toml deep-merges over the
+        // built-in values instead of having to redeclare every field.
         Figment::new()
+            .merge(Serialized::default("defaults", Defaults::default()))
+            .merge(Serialized::default("options", Options::default()))
             .merge(Toml::file("auto.toml"))
             .merge(Env::raw())
             .extract()
