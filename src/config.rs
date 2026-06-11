@@ -66,7 +66,7 @@ impl From<&Config> for PublicConfig {
 // missing `auto.toml` changes nothing.
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
 pub struct Defaults {
     #[serde(default)]
     pub application: ApplicationDefaults,
@@ -84,21 +84,6 @@ pub struct Defaults {
     pub infra: InfraDefaults,
     #[serde(default)]
     pub domain: DomainDefaults,
-}
-
-impl Default for Defaults {
-    fn default() -> Self {
-        Self {
-            application: ApplicationDefaults::default(),
-            service: ServiceDefaults::default(),
-            healthcheck: HealthcheckDefaults::default(),
-            note: NoteDefaults::default(),
-            person: PersonDefaults::default(),
-            share: ShareDefaults::default(),
-            infra: InfraDefaults::default(),
-            domain: DomainDefaults::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

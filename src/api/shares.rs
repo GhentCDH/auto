@@ -96,8 +96,9 @@ async fn get_one(
 )]
 async fn create(
     State(state): State<AppState>,
-    Json(input): Json<CreateNetworkShare>,
+    Json(mut input): Json<CreateNetworkShare>,
 ) -> Result<impl axum::response::IntoResponse> {
+    input.apply_defaults(&state.config.defaults.share);
     let result = network_share::create(&state.pool, input).await?;
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }

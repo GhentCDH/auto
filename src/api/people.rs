@@ -85,8 +85,9 @@ async fn get_one(
 )]
 async fn create(
     State(state): State<AppState>,
-    Json(input): Json<CreatePerson>,
+    Json(mut input): Json<CreatePerson>,
 ) -> Result<impl axum::response::IntoResponse> {
+    input.apply_defaults(&state.config.defaults.person);
     let result = person::create(&state.pool, input).await?;
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }

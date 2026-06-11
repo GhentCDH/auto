@@ -108,8 +108,9 @@ async fn get_one(
 )]
 async fn create(
     State(state): State<AppState>,
-    Json(input): Json<CreateHealthcheck>,
+    Json(mut input): Json<CreateHealthcheck>,
 ) -> Result<impl axum::response::IntoResponse> {
+    input.apply_defaults(&state.config.defaults.healthcheck);
     let result = healthcheck::create(&state.pool, input).await?;
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }

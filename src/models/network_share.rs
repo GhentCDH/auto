@@ -23,13 +23,19 @@ pub struct NetworkShare {
 pub struct CreateNetworkShare {
     pub name: String,
     pub path: String,
-    #[serde(default = "default_share_type")]
-    pub share_type: String,
+    pub share_type: Option<String>,
     pub server: Option<String>,
     pub purpose: Option<String>,
-    #[serde(default = "default_status")]
-    pub status: String,
+    pub status: Option<String>,
     pub notes: Option<String>,
+}
+
+impl CreateNetworkShare {
+    /// Fill omitted defaultable fields from configured defaults.
+    pub fn apply_defaults(&mut self, d: &crate::config::ShareDefaults) {
+        self.share_type.get_or_insert_with(|| d.share_type.clone());
+        self.status.get_or_insert_with(|| d.status.clone());
+    }
 }
 
 /// DTO for updating a network share
@@ -42,14 +48,6 @@ pub struct UpdateNetworkShare {
     pub purpose: Option<String>,
     pub status: Option<String>,
     pub notes: Option<String>,
-}
-
-fn default_share_type() -> String {
-    "smb".to_string()
-}
-
-fn default_status() -> String {
-    "active".to_string()
 }
 
 /// NetworkShare relation for application detail view

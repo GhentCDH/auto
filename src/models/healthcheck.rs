@@ -43,33 +43,41 @@ pub struct CreateHealthcheck {
     pub service_id: Option<String>,
     pub kuma_id: Option<i32>,
     pub domain_id: String,
-    #[serde(default = "default_protocol")]
-    pub protocol: String,
-    #[serde(default = "default_path")]
-    pub path: String,
-    #[serde(default = "default_method")]
-    pub method: String,
+    pub protocol: Option<String>,
+    pub path: Option<String>,
+    pub method: Option<String>,
     pub headers: Option<String>,
-    #[serde(default = "default_expected_status")]
-    pub expected_status: i32,
+    pub expected_status: Option<i32>,
     pub expected_body: Option<String>,
-    #[serde(default = "default_timeout")]
-    pub timeout_seconds: i32,
-    #[serde(default = "default_interval")]
-    pub interval: i32,
-    #[serde(default = "default_enabled")]
-    pub is_enabled: bool,
+    pub timeout_seconds: Option<i32>,
+    pub interval: Option<i32>,
+    pub is_enabled: Option<bool>,
     pub notes: Option<String>,
-    #[serde(default)]
-    pub retry: i32,
-    #[serde(default = "default_retry_interval")]
-    pub retry_interval: i32,
-    #[serde(default = "default_request_body_encoding")]
-    pub request_body_encoding: String,
+    pub retry: Option<i32>,
+    pub retry_interval: Option<i32>,
+    pub request_body_encoding: Option<String>,
     pub request_body: Option<String>,
     pub http_auth_user: Option<String>,
     pub http_auth_pass: Option<String>,
-    pub notifications: bool,
+    pub notifications: Option<bool>,
+}
+
+impl CreateHealthcheck {
+    /// Fill omitted defaultable fields from configured defaults.
+    pub fn apply_defaults(&mut self, d: &crate::config::HealthcheckDefaults) {
+        self.protocol.get_or_insert_with(|| d.protocol.clone());
+        self.path.get_or_insert_with(|| d.path.clone());
+        self.method.get_or_insert_with(|| d.method.clone());
+        self.expected_status.get_or_insert(d.expected_status);
+        self.timeout_seconds.get_or_insert(d.timeout_seconds);
+        self.interval.get_or_insert(d.interval);
+        self.is_enabled.get_or_insert(d.is_enabled);
+        self.retry.get_or_insert(d.retry);
+        self.retry_interval.get_or_insert(d.retry_interval);
+        self.request_body_encoding
+            .get_or_insert_with(|| d.request_body_encoding.clone());
+        self.notifications.get_or_insert(d.notifications);
+    }
 }
 
 /// DTO for updating a healthcheck
@@ -97,42 +105,6 @@ pub struct UpdateHealthcheck {
     pub http_auth_user: Option<String>,
     pub http_auth_pass: Option<String>,
     pub notifications: Option<bool>,
-}
-
-fn default_protocol() -> String {
-    "https".to_string()
-}
-
-fn default_path() -> String {
-    "/".to_string()
-}
-
-fn default_method() -> String {
-    "GET".to_string()
-}
-
-fn default_expected_status() -> i32 {
-    200
-}
-
-fn default_timeout() -> i32 {
-    30
-}
-
-fn default_interval() -> i32 {
-    60
-}
-
-fn default_enabled() -> bool {
-    true
-}
-
-fn default_retry_interval() -> i32 {
-    60
-}
-
-fn default_request_body_encoding() -> String {
-    "JSON".to_string()
 }
 
 /// Healthcheck with resolved relations

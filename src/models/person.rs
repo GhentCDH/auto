@@ -26,9 +26,15 @@ pub struct CreatePerson {
     pub role: Option<String>,
     pub department: Option<String>,
     pub phone: Option<String>,
-    #[serde(default = "default_active")]
-    pub is_active: bool,
+    pub is_active: Option<bool>,
     pub notes: Option<String>,
+}
+
+impl CreatePerson {
+    /// Fill omitted defaultable fields from configured defaults.
+    pub fn apply_defaults(&mut self, d: &crate::config::PersonDefaults) {
+        self.is_active.get_or_insert(d.is_active);
+    }
 }
 
 /// DTO for updating a person
@@ -41,10 +47,6 @@ pub struct UpdatePerson {
     pub phone: Option<String>,
     pub is_active: Option<bool>,
     pub notes: Option<String>,
-}
-
-fn default_active() -> bool {
-    true
 }
 
 /// Person relation for application detail view

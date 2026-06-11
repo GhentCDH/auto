@@ -25,13 +25,20 @@ pub struct CreateApplication {
     pub name: String,
     pub description: Option<String>,
     pub repository_url: Option<String>,
-    #[serde(default = "default_environment")]
-    pub environment: String,
+    pub environment: Option<String>,
     pub url: Option<String>,
-    #[serde(default = "default_status")]
-    pub status: String,
+    pub status: Option<String>,
     pub image_refs: Option<String>,
     pub outline_url: Option<String>,
+}
+
+impl CreateApplication {
+    /// Fill omitted defaultable fields from configured defaults.
+    pub fn apply_defaults(&mut self, d: &crate::config::ApplicationDefaults) {
+        self.environment
+            .get_or_insert_with(|| d.environment.clone());
+        self.status.get_or_insert_with(|| d.status.clone());
+    }
 }
 
 /// DTO for updating an application
@@ -45,14 +52,6 @@ pub struct UpdateApplication {
     pub status: Option<String>,
     pub image_refs: Option<String>,
     pub outline_url: Option<String>,
-}
-
-fn default_environment() -> String {
-    "prd".to_string()
-}
-
-fn default_status() -> String {
-    "active".to_string()
 }
 
 /// Application with all related entities

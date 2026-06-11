@@ -25,11 +25,17 @@ pub struct CreateNote {
     pub entity_id: String,
     pub title: String,
     pub content: Option<String>,
-    #[serde(default = "default_note_type")]
-    pub note_type: String,
+    pub note_type: Option<String>,
     pub url: Option<String>,
     #[serde(default)]
     pub is_pinned: bool,
+}
+
+impl CreateNote {
+    /// Fill omitted defaultable fields from configured defaults.
+    pub fn apply_defaults(&mut self, d: &crate::config::NoteDefaults) {
+        self.note_type.get_or_insert_with(|| d.note_type.clone());
+    }
 }
 
 /// DTO for updating a note
@@ -40,8 +46,4 @@ pub struct UpdateNote {
     pub note_type: Option<String>,
     pub url: Option<String>,
     pub is_pinned: Option<bool>,
-}
-
-fn default_note_type() -> String {
-    "general".to_string()
 }

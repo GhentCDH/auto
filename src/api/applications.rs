@@ -149,8 +149,9 @@ async fn get_overview_md(
 )]
 async fn create(
     State(state): State<AppState>,
-    Json(input): Json<CreateApplication>,
+    Json(mut input): Json<CreateApplication>,
 ) -> Result<impl axum::response::IntoResponse> {
+    input.apply_defaults(&state.config.defaults.application);
     let result = application::create(&state.pool, input).await?;
     Ok((axum::http::StatusCode::CREATED, Json(result)))
 }
