@@ -169,20 +169,17 @@ defineExpose({ loadData, updateFilter, localFilters });
 
 <template>
   <div class="p-6">
-    <!-- Header -->
     <div
-      class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6"
+      class="flex flex-row justify-between items-start sm:items-center gap-4 mb-6"
     >
       <h1 class="text-2xl font-bold">{{ title }}</h1>
       <button class="btn btn-primary" @click="showCreateModal = true">
         {{ addLabel }}
       </button>
     </div>
-
-    <!-- Optional toolbar (extra actions above search) -->
-    <slot name="toolbar" />
-
-    <!-- Search -->
+    <div v-if="$slots.toolbar" class="mb-6">
+      <slot name="toolbar" />
+    </div>
     <div class="mb-4">
       <form @submit.prevent="handleSearch" class="join">
         <input
@@ -202,14 +199,8 @@ defineExpose({ loadData, updateFilter, localFilters });
         Reset filters
       </button>
     </div>
-
-    <!-- Loading -->
     <LoadingSpinner v-if="loading" />
-
-    <!-- Error -->
     <div v-else-if="error" class="alert alert-error">{{ error }}</div>
-
-    <!-- Empty -->
     <div v-else-if="!data?.data.length">
       <EmptyState
         :message="emptyMessage"
@@ -217,8 +208,6 @@ defineExpose({ loadData, updateFilter, localFilters });
         @action="showCreateModal = true"
       />
     </div>
-
-    <!-- Table -->
     <div v-else>
       <div class="overflow-x-auto">
         <table class="table">
@@ -248,8 +237,6 @@ defineExpose({ loadData, updateFilter, localFilters });
         @update:page="handlePageChange"
       />
     </div>
-
-    <!-- Create Modal -->
     <Modal
       :title="modalTitle"
       :open="showCreateModal"

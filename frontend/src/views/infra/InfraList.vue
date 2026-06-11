@@ -92,7 +92,7 @@ function matchesIpFilter(ip: string): boolean {
 
     <template #columns>
       <th>Name</th>
-      <th>Description</th>
+      <th class="hidden md:table-cell">Description</th>
       <th>
         Type
         <ColumnFilter
@@ -119,7 +119,9 @@ function matchesIpFilter(ip: string): boolean {
 
     <template #row="{ item }: { item: Infra }">
       <td class="font-medium">{{ item.name }}</td>
-      <td class="max-w-md truncate">{{ item.description || '-' }}</td>
+      <td class="max-w-md truncate hidden md:table-cell">
+        {{ item.description || '-' }}
+      </td>
       <td>
         {{ infraTypes[item.type as keyof typeof infraTypes] || item.type }}
       </td>

@@ -177,18 +177,18 @@ async function handleDuplicateSubmit(
       </div>
     </template>
     <template #columns>
-      <th class="name-env">
-        Name
-        <div>
+      <th class="flex justify-start">
+        <span class="badge badge-sm badge-neutral">env</span>
+        <div class="ml-4">
+          Name
           <ColumnFilter
             :options="environmentFilterOptions"
             :model-value="filters.environment"
             @update:model-value="onFilterChange('environment', $event)"
           />
-          <span class="ml-2 badge badge-sm badge-neutral">env</span>
         </div>
       </th>
-      <th class="w-full max-w-md">Description</th>
+      <th class="w-full max-w-md hidden md:table-cell">Description</th>
       <th>
         Status
         <ColumnFilter
@@ -197,29 +197,19 @@ async function handleDuplicateSubmit(
           @update:model-value="onFilterChange('status', $event)"
         />
       </th>
-      <th>Repository</th>
       <th></th>
     </template>
 
     <template #row="{ item }: { item: Application }">
-      <td class="font-medium name-env">
-        {{ item.name }}
+      <td class="font-medium flex gap-x-5">
         <EnvironmentBadge :environment="item.environment" />
+        {{ item.name }}
       </td>
-      <td class="max-w-md truncate">{{ item.description || '-' }}</td>
+      <td class="max-w-md truncate hidden md:table-cell">
+        {{ item.description || '-' }}
+      </td>
 
       <td><StatusBadge :status="item.status" /></td>
-      <td>
-        <a
-          v-if="item.repository_url"
-          :href="item.repository_url"
-          target="_blank"
-          class="link link-primary"
-          @click.stop
-          >Link</a
-        >
-        <span v-else>-</span>
-      </td>
       <td>
         <button
           class="group cursor-pointer"

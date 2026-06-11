@@ -90,7 +90,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
   <div class="navbar bg-base-200 shadow-sm">
     <div class="navbar-start">
       <div class="dropdown">
-        <div tabindex="0" role="button" class="btn px-2 btn-ghost lg:hidden">
+        <div tabindex="0" role="button" class="btn px-2 btn-ghost xl:hidden">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-5 w-5"
@@ -120,7 +120,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
         class="btn btn-ghost text-2xl inline-flex items-center gap-3 wallefont font-black"
       >
         <Suspense>
-          <span class="hidden md:block"
+          <span class="hidden md:block mt-2"
             ><MascotViewer :size="40" :proximity-radius="proximityRadius"
           /></span>
           <template #fallback>
@@ -130,7 +130,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
         AUTO
       </router-link>
     </div>
-    <div class="navbar-center hidden lg:flex">
+    <div class="navbar-center hidden xl:flex">
       <ul class="menu menu-horizontal px-1">
         <li v-for="item in navItems" :key="item.path">
           <router-link :to="item.path" class="btn btn-ghost btn-md">{{

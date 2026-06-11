@@ -37,8 +37,8 @@ function onFilterChange(key: string, value: string | null) {
     <template #columns>
       <th>Name</th>
       <th>Email</th>
-      <th>Role</th>
-      <th>Department</th>
+      <th class="hidden md:table-cell">Role</th>
+      <th class="hidden md:table-cell">Department</th>
       <th>
         Status
         <ColumnFilter
@@ -52,8 +52,8 @@ function onFilterChange(key: string, value: string | null) {
     <template #row="{ item }: { item: Person }">
       <td class="font-medium">{{ item.name }}</td>
       <td>{{ item.email || '-' }}</td>
-      <td>{{ item.role || '-' }}</td>
-      <td>{{ item.department || '-' }}</td>
+      <td class="hidden md:table-cell">{{ item.role || '-' }}</td>
+      <td class="hidden md:table-cell">{{ item.department || '-' }}</td>
       <td>
         <span
           class="badge"

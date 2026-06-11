@@ -46,8 +46,8 @@ function onFilterChange(key: string, value: string | null) {
           @update:model-value="onFilterChange('share_type', $event)"
         />
       </th>
-      <th>Path</th>
-      <th>Server</th>
+      <th class="hidden md:table-cell">Path</th>
+      <th class="hidden md:table-cell">Server</th>
       <th>
         Status
         <ColumnFilter
@@ -61,8 +61,8 @@ function onFilterChange(key: string, value: string | null) {
     <template #row="{ item }: { item: NetworkShare }">
       <td class="font-medium">{{ item.name }}</td>
       <td>{{ item.share_type.toUpperCase() }}</td>
-      <td class="font-mono text-sm">{{ item.path }}</td>
-      <td>{{ item.server || '-' }}</td>
+      <td class="font-mono text-sm hidden md:table-cell">{{ item.path }}</td>
+      <td class="hidden md:table-cell">{{ item.server || '-' }}</td>
       <td><StatusBadge :status="item.status" /></td>
     </template>
 

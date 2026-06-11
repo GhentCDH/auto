@@ -19,12 +19,12 @@ import StackBadge from '@/components/common/StackBadge.vue';
   >
     <template #columns>
       <th>Name</th>
-      <th>Notes</th>
+      <th class="hidden md:table-cell">Notes</th>
     </template>
 
     <template #row="{ item }: { item: Stack }">
       <td><StackBadge :name="item.name" /></td>
-      <td>{{ item.notes || '-' }}</td>
+      <td class="hidden md:table-cell">{{ item.notes || '-' }}</td>
     </template>
 
     <template #form="{ onSubmit, onCancel }">

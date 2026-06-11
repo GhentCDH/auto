@@ -88,10 +88,10 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
   >
     <template #columns>
       <th>Name</th>
-      <th>URL</th>
+      <th class="hidden md:table-cell">URL</th>
       <th>Target</th>
-      <th>Method</th>
-      <th>Expected</th>
+      <th class="hidden md:table-cell">Method</th>
+      <th class="hidden md:table-cell">Expected</th>
       <th>Uptime</th>
       <th>Status</th>
     </template>
@@ -110,7 +110,7 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
           />
         </span>
       </td>
-      <td class="text-sm font-mono truncate max-w-xs">
+      <td class="text-sm font-mono truncate max-w-xs hidden md:table-cell">
         {{ buildUrl(item as HealthcheckWithRelations) }}
       </td>
       <td>
@@ -131,10 +131,10 @@ function handlePanelChange(isOpen: boolean, widthRem: number) {
           {{ (item as HealthcheckWithRelations).service_name }}
         </router-link>
       </td>
-      <td>
+      <td class="hidden md:table-cell">
         <span class="badge badge-outline badge-sm">{{ item.method }}</span>
       </td>
-      <td>{{ item.expected_status }}</td>
+      <td class="hidden md:table-cell">{{ item.expected_status }}</td>
       <td>
         <HealthStats v-if="item.kuma_id" :kuma-id="item.kuma_id" />
         <span v-else class="text-base-content/30">&mdash;</span>

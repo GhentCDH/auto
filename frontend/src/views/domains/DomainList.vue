@@ -19,15 +19,15 @@ import DomainForm from '@/components/forms/DomainForm.vue';
   >
     <template #columns>
       <th>Domain</th>
-      <th>Registrar</th>
-      <th>Expires</th>
+      <th class="hidden md:table-cell">Registrar</th>
+      <th class="hidden md:table-cell">Expires</th>
       <th>Target</th>
     </template>
 
     <template #row="{ item }: { item: Domain }">
       <td class="font-medium">{{ item.fqdn }}</td>
-      <td>{{ item.registrar || '-' }}</td>
-      <td>{{ item.expires_at || '-' }}</td>
+      <td class="hidden md:table-cell">{{ item.registrar || '-' }}</td>
+      <td class="hidden md:table-cell">{{ item.expires_at || '-' }}</td>
       <td v-if="item.target_application_id">
         <router-link :to="`/applications/${item.target_application_id}`">{{
           item.target_application_name
