@@ -50,7 +50,10 @@ export function useForceGraph(width: number, height: number) {
     });
     const byId = new Map(next.map((n) => [n.id, n]));
     const links = edges
-      .map((e) => ({ source: byId.get(e.source)!, target: byId.get(e.target)! }))
+      .map((e) => ({
+        source: byId.get(e.source)!,
+        target: byId.get(e.target)!,
+      }))
       .filter((e) => e.source && e.target);
 
     simNodes.value = next;
@@ -62,12 +65,15 @@ export function useForceGraph(width: number, height: number) {
         'link',
         forceLink<SimNode, SimEdge>(links)
           .id((d) => d.id)
-          .distance(90)
-          .strength(0.4)
+          .distance(50)
+          .strength(0.2)
       )
-      .force('charge', forceManyBody().strength(-340))
-      .force('center', forceCenter(w / 2, h / 2))
-      .force('collide', forceCollide<SimNode>().radius((d) => d.radius + 8))
+      .force('charge', forceManyBody().strength(-150))
+      .force('center', forceCenter(w / 2, h / 2).strength(1.5))
+      .force(
+        'collide',
+        forceCollide<SimNode>().radius((d) => d.radius + 8)
+      )
       .on('tick', () => {
         tick.value++;
       });
