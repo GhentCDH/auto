@@ -166,6 +166,8 @@ export interface Infra {
   created_by: string | null;
   /** Present on list endpoint responses; absent on lightweight relation payloads. */
   ips?: InfraIp[];
+  /** Kuma monitor IDs for enabled healthchecks on linked apps/services (list endpoint). */
+  healthcheck_kuma_ids?: number[];
 }
 
 /** A new domain created alongside an infra. No target — the server points it
@@ -217,6 +219,7 @@ export interface InfraWithRelations extends Infra {
   domain: { id: string; fqdn: string } | null;
   applications: ApplicationInfraRelation[];
   services: ServiceInfraRelation[];
+  healthchecks: InfraHealthcheckRelation[];
 }
 
 export interface ApplicationInfraRelation {
@@ -689,6 +692,12 @@ export interface HealthcheckRelation {
   notifications: boolean;
   kuma_id: number | null;
   kuma_dirty: boolean;
+}
+
+export interface InfraHealthcheckRelation extends HealthcheckRelation {
+  parent_type: 'application' | 'service';
+  parent_id: string;
+  parent_name: string;
 }
 
 export interface HealthcheckExecuteResult {

@@ -168,7 +168,8 @@ async function goToKuma() {
           <div class="h-6">
             <HealthPlot
               :kuma-id="(entity as HealthcheckWithRelations).kuma_id!"
-              :count="80"
+              :tick-width="6"
+              :max-ticks="80"
             />
           </div>
         </div>

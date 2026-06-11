@@ -3,10 +3,14 @@ import { ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import { infraApi } from '@/api';
 import type { Infra } from '@/types';
+import { useUptime } from '@/composables/useUptime';
 import EntityList from '@/components/common/EntityList.vue';
 import InfraForm from '@/components/forms/InfraForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
+import HealthStats from '@/components/common/HealthStats.vue';
 import { infraTypes, infraTypeFilterOptions } from '@/values';
+
+useUptime();
 
 const entityListRef = ref<{
   updateFilter: (key: string, value: string | null) => void;
@@ -110,6 +114,7 @@ function matchesIpFilter(ip: string): boolean {
           />
         </div>
       </th>
+      <th>Uptime</th>
     </template>
 
     <template #row="{ item }: { item: Infra }">
@@ -133,6 +138,9 @@ function matchesIpFilter(ip: string): boolean {
           </span>
         </div>
         <span v-else class="text-base-content/50">-</span>
+      </td>
+      <td>
+        <HealthStats :kuma-ids="item.healthcheck_kuma_ids ?? []" />
       </td>
     </template>
 

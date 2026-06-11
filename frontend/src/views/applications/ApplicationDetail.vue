@@ -1077,7 +1077,8 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                         <HealthPlot
                           v-if="h.kuma_id"
                           :kuma-id="h.kuma_id"
-                          :count="30"
+                          :tick-width="6"
+                          :max-ticks="30"
                         />
                       </td>
                       <td>

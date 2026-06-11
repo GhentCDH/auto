@@ -352,9 +352,13 @@ onMounted(() => {
               <!-- Sparkline -->
               <div
                 v-if="item.healthcheck.kuma_id"
-                class="col-span-2 max-w-100 md:max-w-50 lg:max-w-80 xl:max-w-80 ml-1 h-4 shrink-0 hidden sm:block"
+                class="col-span-2 max-w-100 md:max-w-50 lg:max-w-80 xl:max-w-80 ml-1 h-4 shrink-0 block"
               >
-                <HealthPlot :kuma-id="item.healthcheck.kuma_id" :count="48" />
+                <HealthPlot
+                  :kuma-id="item.healthcheck.kuma_id"
+                  :tick-width="6"
+                  :max-ticks="48"
+                />
               </div>
             </div>
           </div>

@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { infraApi } from '@/api';
-import type { InfraWithRelations } from '@/types';
+import type { InfraHealthcheckRelation, InfraWithRelations } from '@/types';
+import { useUptime } from '@/composables/useUptime';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
+import HealthPlot from '@/components/common/HealthPlot.vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import InfraForm from '@/components/forms/InfraForm.vue';
 import { infraTypes } from '@/values';
+import { Bell } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -20,6 +23,51 @@ const loading = ref(true);
 const error = ref('');
 const showEditModal = ref(false);
 const showDeleteDialog = ref(false);
+
+const { monitors, getMonitorData } = useUptime();
+
+type HealthStatus = 'up' | 'down' | 'pending' | 'unknown';
+
+const healthcheckStatuses = computed(() => {
+  if (!infra.value) return [];
+  const _ = monitors.value;
+  return infra.value.healthchecks
+    .filter((hc) => hc.kuma_id != null)
+    .map((hc) => {
+      const data = getMonitorData(hc.kuma_id!);
+      let status: HealthStatus = 'unknown';
+      if (data && data.heartbeats.length > 0) {
+        const last = data.heartbeats[data.heartbeats.length - 1];
+        if (last.status === 1) status = 'up';
+        else if (last.status === 0) status = 'down';
+        else status = 'pending';
+      }
+      return { healthcheck: hc, status };
+    });
+});
+
+function statusDotClass(status: HealthStatus): string {
+  switch (status) {
+    case 'up':
+      return 'bg-success';
+    case 'down':
+      return 'bg-error';
+    case 'pending':
+      return 'bg-warning';
+    default:
+      return 'bg-base-content/30';
+  }
+}
+
+function parentRoute(hc: InfraHealthcheckRelation): string {
+  return hc.parent_type === 'application'
+    ? `/applications/${hc.parent_id}`
+    : `/services/${hc.parent_id}`;
+}
+
+function parentLabel(hc: InfraHealthcheckRelation): string {
+  return hc.parent_type === 'application' ? 'App' : 'Service';
+}
 
 const id = route.params.id as string;
 
@@ -206,6 +254,78 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Health Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h2 class="card-title">Health</h2>
+              <div
+                v-if="infra.healthchecks.length === 0"
+                class="text-base-content/70"
+              >
+                No healthchecks from linked applications or services
+              </div>
+              <div v-else class="grid grid-cols-1 gap-y-1">
+                <div
+                  v-for="item in healthcheckStatuses"
+                  :key="item.healthcheck.id"
+                  class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 py-2 border-b border-base-300 last:border-b-0"
+                >
+                  <div
+                    class="flex md:flex-col justify-between md:justify-center gap-1 min-w-0"
+                  >
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span
+                        class="w-2.5 h-2.5 rounded-full shrink-0"
+                        :class="statusDotClass(item.status)"
+                      />
+                      <router-link
+                        :to="`/healthchecks/${item.healthcheck.id}`"
+                        class="link link-hover truncate"
+                      >
+                        {{ item.healthcheck.name }}
+                      </router-link>
+                      <span
+                        v-if="item.healthcheck.notifications"
+                        title="Notifications enabled"
+                        class="inline-flex shrink-0"
+                      >
+                        <Bell class="w-3.5 h-3.5 text-primary" />
+                      </span>
+                    </div>
+                    <div
+                      class="flex max-md:flex-row-reverse items-order items-center gap-2 pl-4"
+                    >
+                      <span class="badge badge-xs badge-outline">{{
+                        parentLabel(item.healthcheck)
+                      }}</span>
+                      <router-link
+                        :to="parentRoute(item.healthcheck)"
+                        class="link link-hover text-xs truncate"
+                      >
+                        {{ item.healthcheck.parent_name }}
+                      </router-link>
+                    </div>
+                  </div>
+                  <div class="h-4 w-full shrink-0">
+                    <HealthPlot
+                      :kuma-id="item.healthcheck.kuma_id!"
+                      :tick-width="6"
+                    />
+                  </div>
+                </div>
+                <div
+                  v-if="
+                    infra.healthchecks.length > 0 &&
+                    healthcheckStatuses.length === 0
+                  "
+                  class="text-base-content/70 text-sm"
+                >
+                  Linked healthchecks are not synced to Kuma yet
+                </div>
               </div>
             </div>
           </div>
