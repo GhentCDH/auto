@@ -30,6 +30,8 @@ pub enum Error {
     KumaConvertError,
     #[error("DnsError: {0}")]
     DnsError(String),
+    #[error("ConfigError: {0}")]
+    ConfigError(#[from] figment::Error),
 }
 
 /// Error response body for API endpoints

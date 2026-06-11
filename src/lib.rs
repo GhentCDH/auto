@@ -53,7 +53,7 @@ pub struct AppState {
 
 impl AppState {
     pub async fn new() -> Result<Self> {
-        let config = Config::from_env()?;
+        let config = Config::load()?;
 
         info!("Running migrations");
 

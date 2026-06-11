@@ -1,36 +1,49 @@
+use figment::{
+    Figment,
+    providers::{Env, Format, Toml},
+};
+use serde::Deserialize;
 use tracing::info;
 use url::Url;
 
 use crate::error::Error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub host: String,
-    pub port: String,
+    pub port: u16,
     pub base_url: String,
     pub database_url: String,
     pub kuma_url: Url,
     pub kuma_username: String,
     pub kuma_password: String,
+    #[serde(default)]
     pub kuma_notification_name: Option<String>,
+    #[serde(default)]
     pub outline_url: Option<Url>,
+    #[serde(default)]
     pub outline_api_key: Option<String>,
     /// How many days before an infra's domain-resolved IPs are considered stale
-    /// and re-resolved on read. Optional env `INFRA_IP_REFRESH_DAYS` (default 10).
+    /// and re-resolved on read. Optional `INFRA_IP_REFRESH_DAYS` (default 10).
+    #[serde(default = "default_infra_ip_refresh_days")]
     pub infra_ip_refresh_days: u64,
 }
 
-/// # Panics
-/// If the environment variable does not exist
-fn var(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|_| panic!("Environment variable `{name}` should be set"))
+fn default_infra_ip_refresh_days() -> u64 {
+    10
 }
 
 impl Config {
-    /// # Panics
-    /// If one of the required environment variables has not been set or has the wrong format.
-    pub fn from_env() -> Result<Self, Error> {
-        info!("loading environment variables from .env");
+    /// Load configuration by layering an optional `auto.toml` file under the
+    /// process environment. Environment variables override TOML on conflict.
+    ///
+    /// `.env` (falling back to `dev.env`) is loaded into the process environment
+    /// first, so file-based secrets keep working.
+    ///
+    /// # Errors
+    /// If a required setting is missing or a value has the wrong format.
+    pub fn load() -> Result<Self, Error> {
+        info!("loading configuration (auto.toml < env)");
         if dotenvy::dotenv().is_err() {
             info!(".env not found, defaulting to dev.env");
             if dotenvy::from_path("dev.env").is_err() {
@@ -38,28 +51,10 @@ impl Config {
             }
         }
 
-        let outline_url = std::env::var("OUTLINE_URL")
-            .ok()
-            .and_then(|u| Url::parse(&u).ok());
-        let outline_api_key = std::env::var("OUTLINE_API_KEY").ok();
-
-        let infra_ip_refresh_days = std::env::var("INFRA_IP_REFRESH_DAYS")
-            .ok()
-            .and_then(|s| s.parse::<u64>().ok())
-            .unwrap_or(10);
-
-        Ok(Self {
-            host: var("HOST"),
-            port: var("PORT"),
-            base_url: var("BASE_URL"),
-            database_url: var("DATABASE_URL"),
-            kuma_url: Url::parse(&var("KUMA_URL")).expect("KUMA_URL should be a valid URL"),
-            kuma_username: var("KUMA_USERNAME"),
-            kuma_password: var("KUMA_PASSWORD"),
-            kuma_notification_name: std::env::var("KUMA_NOTIFICATION_NAME").ok(),
-            outline_url,
-            outline_api_key,
-            infra_ip_refresh_days,
-        })
+        Figment::new()
+            .merge(Toml::file("auto.toml"))
+            .merge(Env::raw())
+            .extract()
+            .map_err(Error::from)
     }
 }
