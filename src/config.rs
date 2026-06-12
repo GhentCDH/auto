@@ -37,10 +37,42 @@ pub struct Config {
     /// frontend. Configured under `[options.*]` in `auto.toml`.
     #[serde(default)]
     pub options: Options,
+    /// Session lifetime in hours (`SESSION_HOURS`, default 168 = 7 days).
+    #[serde(default = "default_session_hours")]
+    pub session_hours: i64,
+    /// Whether username/password login is offered (`AUTH_PASSWORD_ENABLED`).
+    #[serde(default = "default_true")]
+    pub auth_password_enabled: bool,
+    /// Whether OIDC login is offered (`AUTH_OIDC_ENABLED`).
+    #[serde(default)]
+    pub auth_oidc_enabled: bool,
+    /// First-admin seed, applied once on startup when no users exist.
+    #[serde(default)]
+    pub bootstrap_admin_username: Option<String>,
+    #[serde(default)]
+    pub bootstrap_admin_password: Option<String>,
+    /// OIDC provider settings (required when `auth_oidc_enabled`).
+    #[serde(default)]
+    pub oidc_issuer_url: Option<Url>,
+    #[serde(default)]
+    pub oidc_client_id: Option<String>,
+    #[serde(default)]
+    pub oidc_client_secret: Option<String>,
+    /// Absolute URL the IdP redirects back to, e.g. `https://host/api/auth/oidc/callback`.
+    #[serde(default)]
+    pub oidc_redirect_url: Option<Url>,
 }
 
 fn default_infra_ip_refresh_days() -> u64 {
     10
+}
+
+fn default_session_hours() -> i64 {
+    168
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// Non-secret configuration served to the frontend at `GET /api/config`.
@@ -48,6 +80,14 @@ fn default_infra_ip_refresh_days() -> u64 {
 pub struct PublicConfig {
     pub defaults: Defaults,
     pub options: Options,
+    pub auth: PublicAuthConfig,
+}
+
+/// Which auth methods are offered, so the login page renders the right options.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PublicAuthConfig {
+    pub password_enabled: bool,
+    pub oidc_enabled: bool,
 }
 
 impl From<&Config> for PublicConfig {
@@ -55,6 +95,10 @@ impl From<&Config> for PublicConfig {
         Self {
             defaults: c.defaults.clone(),
             options: c.options.clone(),
+            auth: PublicAuthConfig {
+                password_enabled: c.auth_password_enabled,
+                oidc_enabled: c.auth_oidc_enabled,
+            },
         }
     }
 }

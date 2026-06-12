@@ -115,6 +115,7 @@ use utoipa::{Modify, OpenApi};
         schemas(
             // Config
             crate::config::PublicConfig,
+            crate::config::PublicAuthConfig,
             crate::config::Defaults,
             crate::config::ApplicationDefaults,
             crate::config::ServiceDefaults,
