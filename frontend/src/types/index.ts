@@ -849,7 +849,48 @@ export interface Options {
   note_types: Record<string, string>;
 }
 
+export interface PublicAuthConfig {
+  password_enabled: boolean;
+  oidc_enabled: boolean;
+}
+
 export interface PublicConfig {
   defaults: Defaults;
   options: Options;
+  auth: PublicAuthConfig;
+}
+
+// Authentication ----------------------------------------------------------
+
+export type Role = 'admin' | 'editor' | 'viewer';
+
+export type AuthMethod = { type: 'password' } | { type: 'oidc'; issuer: string };
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  email: string | null;
+  role: Role;
+  method: AuthMethod;
+}
+
+export interface UserSummary {
+  id: string;
+  username: string;
+  email: string | null;
+  role: Role;
+  has_password: boolean;
+  created_at: string;
+}
+
+export interface ResetRequestSummary {
+  id: string;
+  user_id: string;
+  username: string;
+  created_at: string;
+}
+
+export interface SetupLink {
+  token: string;
+  url: string;
 }

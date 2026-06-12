@@ -2,7 +2,12 @@ import type {
   Application,
   ApplicationFilterParams,
   ApplicationWithRelations,
+  AuthUser,
   PublicConfig,
+  Role,
+  ResetRequestSummary,
+  SetupLink,
+  UserSummary,
   CreateApplication,
   CreateDomain,
   CreateHealthcheck,
@@ -61,6 +66,9 @@ const BASE_URL = '/api';
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${BASE_URL}${url}`, {
+    // Send the session cookie with every request (same-origin in production,
+    // and through the Vite dev proxy in development).
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -69,6 +77,16 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!response.ok) {
+    // A 401 on a normal request means the session expired or is missing; bounce
+    // to the login page. Auth endpoints (e.g. /auth/me probing) handle their own
+    // 401s, so they are exempt to avoid redirect loops.
+    if (
+      response.status === 401 &&
+      !url.startsWith('/auth/') &&
+      window.location.pathname !== '/login'
+    ) {
+      window.location.assign('/login');
+    }
     const error = await response
       .json()
       .catch(() => ({ message: response.statusText }));
@@ -456,4 +474,60 @@ export const configApi = {
 // Outline Sync API
 export const outlineApi = {
   sync: () => request<void>('/outline/sync'),
+};
+
+// Authentication API
+export const authApi = {
+  login: (username: string, password: string) =>
+    request<AuthUser>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+  logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  me: () => request<AuthUser>('/auth/me'),
+  changePassword: (current_password: string, new_password: string) =>
+    request<void>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password, new_password }),
+    }),
+  setPassword: (token: string, password: string) =>
+    request<void>('/auth/set-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    }),
+  resetRequest: (username: string) =>
+    request<void>('/auth/reset-request', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    }),
+  link: (link_token: string, username: string, password: string) =>
+    request<AuthUser>('/auth/link', {
+      method: 'POST',
+      body: JSON.stringify({ link_token, username, password }),
+    }),
+  // OIDC login is a full-page redirect, not a fetch.
+  oidcStartUrl: '/api/auth/oidc/start',
+};
+
+// Admin user management API
+export const usersApi = {
+  list: () => request<UserSummary[]>('/admin/users'),
+  create: (username: string, email: string | null, role: Role) =>
+    request<UserSummary>('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, email, role }),
+    }),
+  remove: (id: string) =>
+    request<void>(`/admin/users/${id}`, { method: 'DELETE' }),
+  updateRole: (id: string, role: Role) =>
+    request<void>(`/admin/users/${id}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+  setupLink: (id: string) =>
+    request<SetupLink>(`/admin/users/${id}/setup-link`, { method: 'POST' }),
+  revokeSessions: (id: string) =>
+    request<void>(`/admin/users/${id}/revoke-sessions`, { method: 'POST' }),
+  resetRequests: () =>
+    request<ResetRequestSummary[]>('/admin/reset-requests'),
 };
