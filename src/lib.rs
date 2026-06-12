@@ -28,8 +28,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 use kuma::{UptimeState, UptimeTx};
 use models::{DnsRecord, UptimeEvent};
+use tokio::sync::Mutex;
 
 use crate::kuma::UptimeStateInner;
+
+/// Serialises concurrent migration runs across in-process `AppState::new()`
+/// calls (see the migration block in [`AppState::new`]).
+static MIGRATION_LOCK: Mutex<()> = Mutex::const_new(());
 
 /// Shared cache of live DNS lookups, keyed by FQDN.
 /// Holds the monotonic fill instant (for TTL), the RFC3339 wall-clock resolve time
@@ -66,9 +71,15 @@ impl AppState {
         // DELETE cascades/RESTRICT against child tables. foreign_keys is a
         // connection-level pragma (set before any transaction), so disabling it
         // here does not affect the runtime pool below, which keeps FK on.
+        //
+        // The global lock serialises concurrent `AppState::new()` calls (the test
+        // suite builds several in parallel against the same DB); without it, a
+        // pending migration races and fails with "table already exists". In
+        // production there is a single call, so the lock is a no-op.
         {
             use sqlx::{ConnectOptions, Connection};
             use std::str::FromStr;
+            let _guard = MIGRATION_LOCK.lock().await;
             let mut mig_conn = sqlx::sqlite::SqliteConnectOptions::from_str(&config.database_url)?
                 .foreign_keys(false)
                 .connect()
