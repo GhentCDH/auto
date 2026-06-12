@@ -102,6 +102,41 @@ Environment variables / core keys:
 - `KUMA_URL` - Uptime Kuma instance URL
 - `KUMA_USERNAME` / `KUMA_PASSWORD` - Kuma authentication credentials
 
+## Authentication
+
+In-app auth lives in `src/auth/` (types, argon2 password hashing, server-side
+sessions + `HttpOnly` cookie, the `AuthUser` extractor, and session/role
+middleware). It replaces the old reverse-proxy Basic Auth. Both password and
+OIDC logins normalise into an `AuthUser` and a session row; subsequent requests
+carry only the opaque session token. See `AUTHENTICATION.md` for the design.
+
+- **Roles** (`user_roles`, denormalised onto `sessions`): `admin` (all),
+  `editor` (all except `/api/admin/*` user management), `viewer` (read-only).
+- **Route tiers** (wired in `src/api/mod.rs`): public (login, logout,
+  set-password, reset-request, oidc/*, link, config, version, health);
+  session-only any-role (`/auth/me`, `/auth/change-password`); data routes
+  (GET any role, mutations editor+ via `require_role`); admin (`require_admin`).
+- **Accounts** are admin-created only (no self-registration). Users set their own
+  password via a one-time setup link (`password_setup_tokens`); forgotten-password
+  requests (`password_reset_requests`) surface to admins who issue a new link.
+- **First admin** is seeded once on startup from `bootstrap_admin_*` when the
+  `users` table is empty.
+- **OIDC** auto-creates a `viewer` on first login, or routes to account-linking
+  when the email matches an existing password account.
+
+Auth config keys (env names; same keys work in `auto.toml`):
+
+- `SESSION_HOURS` - session lifetime in hours (default 168)
+- `AUTH_PASSWORD_ENABLED` / `AUTH_OIDC_ENABLED` - which login methods are offered
+- `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` - first-admin seed
+- `OIDC_ISSUER_URL` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` - provider + confidential client
+- `OIDC_REDIRECT_URL` - optional; defaults to `base_url` + `auth::oidc::OIDC_CALLBACK_PATH`
+  (`/api/auth/oidc/callback`), so it rarely needs setting
+
+The frontend mirrors auth state in `composables/useAuth.ts` (singleton, like
+`useConfig.ts`); `router.ts` guards routes; `request()` in `api/index.ts` sends
+the cookie and bounces 401s to `/login`.
+
 ### Configurable defaults & options (`auto.toml`)
 
 `Config.defaults` and `Config.options` (see `src/config.rs`) make the app

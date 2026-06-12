@@ -1,4 +1,4 @@
-use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
+use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 
 #[derive(OpenApi)]
@@ -6,7 +6,7 @@ use utoipa::{Modify, OpenApi};
     info(
         title = "Auto API",
         version = "1.0.1",
-        description = "Digital assets management system API\n\n**Authentication:** This API is protected by HTTP Basic Authentication at the reverse proxy level (Caddy). All endpoints require authentication credentials which are validated by the reverse proxy before requests reach this application.",
+        description = "Digital assets management system API\n\n**Authentication:** Session-cookie based. Obtain a session via `POST /api/auth/login` (or the OIDC flow); the server sets an `HttpOnly` `auto_session` cookie that authenticates subsequent requests. Public endpoints (login, config, version, health) need no session.",
     ),
     paths(
         // Health endpoints
@@ -298,21 +298,14 @@ impl Modify for SecurityAddon {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
         if let Some(components) = openapi.components.as_mut() {
             components.add_security_scheme(
-                "http_basic",
-                SecurityScheme::Http(
-                    HttpBuilder::new()
-                        .scheme(HttpAuthScheme::Basic)
-                        .description(Some(
-                            "HTTP Basic Authentication handled by Caddy reverse proxy",
-                        ))
-                        .build(),
-                ),
+                "session_cookie",
+                SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::new("auto_session"))),
             );
         }
 
-        // Apply security globally to all operations
+        // Apply session security globally; public endpoints simply ignore it.
         openapi.security = Some(vec![utoipa::openapi::security::SecurityRequirement::new(
-            "http_basic",
+            "session_cookie",
             Vec::<String>::new(),
         )]);
     }

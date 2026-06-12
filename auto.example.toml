@@ -20,6 +20,27 @@
 # outline_api_key = "ol_api_..."
 # infra_ip_refresh_days = 10
 
+# --- Authentication ---
+# Session lifetime in hours (default 168 = 7 days).
+# session_hours = 168
+# Which login methods are offered (any combination):
+# auth_password_enabled = true
+# auth_oidc_enabled = false
+#
+# First-admin seed: applied once, only when no users exist yet. After the first
+# admin exists this is ignored. Best provided via the environment, not committed.
+# bootstrap_admin_username = "admin"
+# bootstrap_admin_password = "change-me"
+#
+# OIDC provider (required when auth_oidc_enabled = true). The client must be
+# confidential (have a secret) for the server-side code exchange.
+# oidc_issuer_url = "https://idp.example.com/realms/example"
+# oidc_client_id = "auto"
+# oidc_client_secret = "..."
+# The redirect URL is derived as `base_url` + `/api/auth/oidc/callback` and only
+# needs setting for unusual proxy setups where that differs.
+# oidc_redirect_url = "https://auto.example.com/api/auth/oidc/callback"
+
 # --- Entity creation defaults ---
 # Applied server-side when a field is omitted on create, and surfaced to the
 # frontend to pre-fill forms. Omitting a key keeps the built-in value shown here.
