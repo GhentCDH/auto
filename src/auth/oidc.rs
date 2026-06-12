@@ -13,6 +13,11 @@ use openidconnect::{
 use crate::config::Config;
 use crate::{Error, Result};
 
+/// Path the IdP redirects back to. Must match the route registered in
+/// `api::auth` (`/auth/oidc/callback` nested under `/api`). The redirect URL is
+/// derived as `base_url + OIDC_CALLBACK_PATH` unless explicitly overridden.
+pub const OIDC_CALLBACK_PATH: &str = "/api/auth/oidc/callback";
+
 /// A normalised OIDC identity, extracted from a validated ID token.
 #[derive(Debug, Clone)]
 pub struct OidcIdentity {
@@ -38,14 +43,23 @@ impl OidcProvider {
         if !config.auth_oidc_enabled {
             return Ok(None);
         }
-        let (Some(issuer), Some(client_id), Some(redirect)) = (
-            &config.oidc_issuer_url,
-            &config.oidc_client_id,
-            &config.oidc_redirect_url,
-        ) else {
+        let (Some(issuer), Some(client_id)) = (&config.oidc_issuer_url, &config.oidc_client_id)
+        else {
             return Err(Error::InternalError(
-                "AUTH_OIDC_ENABLED is set but OIDC_ISSUER_URL / OIDC_CLIENT_ID / OIDC_REDIRECT_URL are incomplete".to_string(),
+                "AUTH_OIDC_ENABLED is set but OIDC_ISSUER_URL / OIDC_CLIENT_ID are missing"
+                    .to_string(),
             ));
+        };
+
+        // Default the redirect to base_url + the callback route; an explicit
+        // OIDC_REDIRECT_URL overrides it for unusual proxy setups.
+        let redirect = match &config.oidc_redirect_url {
+            Some(u) => u.to_string(),
+            None => format!(
+                "{}{}",
+                config.base_url.trim_end_matches('/'),
+                OIDC_CALLBACK_PATH
+            ),
         };
 
         // Disable redirects on the discovery/token client to mitigate SSRF.
@@ -59,8 +73,8 @@ impl OidcProvider {
         let metadata = CoreProviderMetadata::discover_async(issuer_url, &http)
             .await
             .map_err(|e| Error::InternalError(format!("oidc discovery failed: {e}")))?;
-        let redirect_uri = RedirectUrl::new(redirect.to_string())
-            .map_err(|e| Error::InternalError(format!("invalid OIDC_REDIRECT_URL: {e}")))?;
+        let redirect_uri = RedirectUrl::new(redirect)
+            .map_err(|e| Error::InternalError(format!("invalid OIDC redirect URL: {e}")))?;
 
         Ok(Some(Self {
             metadata,
