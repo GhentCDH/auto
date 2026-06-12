@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 pub mod extractor;
+pub mod middleware;
 pub mod password;
 pub mod session;
 
