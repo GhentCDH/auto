@@ -457,3 +457,38 @@ pub async fn list_reset_requests(pool: &SqlitePool) -> Result<Vec<ResetRequestSu
 pub async fn revoke_sessions(pool: &SqlitePool, user_id: &str) -> Result<()> {
     session::delete_user_sessions(pool, user_id).await
 }
+
+/// Seed the first admin account from config, but only when no users exist yet.
+/// Returns true if an admin was created. Idempotent across restarts.
+pub async fn seed_bootstrap_admin(
+    pool: &SqlitePool,
+    username: &str,
+    password: &str,
+) -> Result<bool> {
+    let count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
+        .fetch_one(pool)
+        .await?;
+    if count > 0 {
+        return Ok(false);
+    }
+
+    let user_id = Uuid::new_v4().to_string();
+    let hash = hash_password(password)?;
+    let mut tx = pool.begin().await?;
+    sqlx::query("INSERT INTO users (id, username) VALUES (?1, ?2)")
+        .bind(&user_id)
+        .bind(username)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("INSERT INTO user_roles (user_id, role) VALUES (?1, 'admin')")
+        .bind(&user_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("INSERT INTO password_credentials (user_id, password_hash) VALUES (?1, ?2)")
+        .bind(&user_id)
+        .bind(&hash)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(true)
+}

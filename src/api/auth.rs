@@ -22,17 +22,24 @@ use crate::{AppState, Error, Result};
 /// OIDC login, replayed when the IdP redirects back to the callback.
 const OIDC_FLOW_COOKIE: &str = "oidc_flow";
 
-pub fn routes() -> Router<AppState> {
+/// Routes reachable without a session: pre-login and self-service-with-token.
+/// `logout` lives here too so it can clear the cookie even on an expired session.
+pub fn public_routes() -> Router<AppState> {
     Router::new()
         .route("/login", post(login))
         .route("/logout", post(logout))
-        .route("/me", get(me))
         .route("/set-password", post(set_password))
-        .route("/change-password", post(change_password))
         .route("/reset-request", post(reset_request))
         .route("/oidc/start", get(oidc_start))
         .route("/oidc/callback", get(oidc_callback))
         .route("/link", post(link))
+}
+
+/// Routes requiring a valid session but no particular role.
+pub fn session_routes() -> Router<AppState> {
+    Router::new()
+        .route("/me", get(me))
+        .route("/change-password", post(change_password))
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

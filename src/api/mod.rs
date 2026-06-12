@@ -1,11 +1,13 @@
 use axum::extract::{Path, Query, Request, State};
 use axum::http::header;
+use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Form, Json, Router};
 use uuid::Uuid;
 
 use crate::AppState;
+use crate::auth::middleware::{auth_middleware, require_admin, require_role};
 
 pub mod applications;
 pub mod auth;
@@ -23,11 +25,21 @@ pub mod stacks;
 pub mod users;
 
 pub fn api_routes(state: AppState) -> Router<AppState> {
-    Router::new()
+    // Public: no authentication. Pre-login, token-based self-service and config.
+    let public = Router::new()
         .route("/health", get(healthcheck))
         .route("/version", get(version))
         .route("/config", get(config))
-        .nest("/auth", auth::routes())
+        .nest("/auth", auth::public_routes());
+
+    // Authenticated, any role: session required but no role gate, so viewers can
+    // read their own identity and change their own password.
+    let session_only = Router::new()
+        .nest("/auth", auth::session_routes())
+        .route_layer(from_fn_with_state(state.clone(), auth_middleware));
+
+    // Data routes: any role may read; only editor/admin may mutate.
+    let data = Router::new()
         .nest("/applications", applications::routes())
         .nest("/services", services::routes())
         .nest("/infra", infra::routes())
@@ -41,6 +53,21 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .nest("/search", search::routes())
         .nest("/outline", outline::routes())
         .route("/resolve/{id}", get(resolve_id))
+        // auth_middleware is added last so it is outermost and runs before
+        // require_role, which reads the AuthUser it inserts.
+        .route_layer(from_fn(require_role))
+        .route_layer(from_fn_with_state(state.clone(), auth_middleware));
+
+    // Admin: user management, admins only.
+    let admin = Router::new()
+        .nest("/admin", users::routes())
+        .route_layer(from_fn(require_admin))
+        .route_layer(from_fn_with_state(state.clone(), auth_middleware));
+
+    public
+        .merge(session_only)
+        .merge(data)
+        .merge(admin)
         .with_state(state)
 }
 

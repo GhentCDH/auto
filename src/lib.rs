@@ -81,6 +81,15 @@ impl AppState {
 
         let pool = SqlitePool::connect(&config.database_url).await?;
 
+        if let (Some(username), Some(password)) = (
+            &config.bootstrap_admin_username,
+            &config.bootstrap_admin_password,
+        ) {
+            if service::user::seed_bootstrap_admin(&pool, username, password).await? {
+                info!("Seeded bootstrap admin account '{username}'");
+            }
+        }
+
         let (uptime_tx, _) = broadcast::channel::<UptimeEvent>(64);
         let uptime_state: UptimeState = Arc::new(RwLock::new(UptimeStateInner {
             uptimes: HashMap::new(),
