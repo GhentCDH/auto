@@ -7,7 +7,7 @@ const routes = [
   {
     path: '/login',
     component: () => import('./views/auth/LoginView.vue'),
-    meta: { public: true },
+    meta: { public: true, fullWidth: true },
   },
   {
     path: '/set-password/:token',

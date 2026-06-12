@@ -109,7 +109,10 @@ async function copyLink() {
     <h1 class="text-2xl font-bold">User management</h1>
 
     <!-- Pending reset requests -->
-    <div v-if="resetRequests.length" class="alert alert-warning flex-col items-start">
+    <div
+      v-if="resetRequests.length"
+      class="alert alert-warning flex-col items-start"
+    >
       <span class="font-semibold"
         >{{ resetRequests.length }} pending password reset request(s)</span
       >
@@ -168,9 +171,9 @@ async function copyLink() {
           <tr>
             <th>Username</th>
             <th>Email</th>
-            <th>Role</th>
+            <th class="min-w-30">Role</th>
             <th>Password</th>
-            <th class="text-right">Actions</th>
+            <th class="text-center md:text-right min-w-30">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -182,7 +185,10 @@ async function copyLink() {
                 class="select select-bordered select-sm"
                 :value="u.role"
                 @change="
-                  changeRole(u, ($event.target as HTMLSelectElement).value as Role)
+                  changeRole(
+                    u,
+                    ($event.target as HTMLSelectElement).value as Role
+                  )
                 "
               >
                 <option v-for="r in roles" :key="r" :value="r">{{ r }}</option>
@@ -195,12 +201,14 @@ async function copyLink() {
                 >{{ u.has_password ? 'set' : 'not set' }}</span
               >
             </td>
-            <td class="text-right space-x-1">
-              <button class="btn btn-xs" @click="generateLink(u.id)">
+            <td
+              class="flex max-md:flex-col md:justify-end text-right gap-x-1 gap-y-1"
+            >
+              <button class="btn btn-sm" @click="generateLink(u.id)">
                 Setup link
               </button>
-              <button class="btn btn-xs" @click="revoke(u)">Revoke</button>
-              <button class="btn btn-xs btn-error" @click="removeUser(u)">
+              <button class="btn btn-sm" @click="revoke(u)">Revoke</button>
+              <button class="btn btn-sm btn-error" @click="removeUser(u)">
                 Delete
               </button>
             </td>

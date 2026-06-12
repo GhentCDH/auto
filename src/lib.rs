@@ -95,10 +95,9 @@ impl AppState {
         if let (Some(username), Some(password)) = (
             &config.bootstrap_admin_username,
             &config.bootstrap_admin_password,
-        ) {
-            if service::user::seed_bootstrap_admin(&pool, username, password).await? {
-                info!("Seeded bootstrap admin account '{username}'");
-            }
+        ) && service::user::seed_bootstrap_admin(&pool, username, password).await?
+        {
+            info!("Seeded bootstrap admin account '{username}'");
         }
 
         let (uptime_tx, _) = broadcast::channel::<UptimeEvent>(64);

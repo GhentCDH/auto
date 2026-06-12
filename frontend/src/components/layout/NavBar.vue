@@ -27,6 +27,11 @@ async function handleLogout() {
   router.push('/login');
 }
 
+// DaisyUI dropdowns are :focus-driven; blurring the focused element closes them.
+function closeUserMenu() {
+  (document.activeElement as HTMLElement | null)?.blur();
+}
+
 // Change-password modal
 const pwModal = ref<HTMLDialogElement>();
 const currentPw = ref('');
@@ -274,6 +279,7 @@ onMounted(refreshPendingResets);
         <ul
           tabindex="0"
           class="menu menu-sm dropdown-content bg-base-100 rounded-box z-10 mt-3 w-56 p-2 shadow"
+          @click="closeUserMenu"
         >
           <li class="menu-title flex flex-row items-center justify-between">
             <span class="truncate">{{ user?.username }}</span>

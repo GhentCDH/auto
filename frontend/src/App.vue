@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import NavBar from './components/layout/NavBar.vue';
 import { versionApi } from './api';
 import { loadConfig } from './composables/useConfig';
@@ -16,6 +17,11 @@ const configFailed = ref(false);
 
 // Show the app chrome when authenticated, or always in open mode (auth off).
 const { isAuthenticated, authEnabled } = useAuth();
+
+// Some routes (e.g. login) opt out of the centered `container` so they can
+// span the full viewport width.
+const route = useRoute();
+const fullWidth = computed(() => route.meta.fullWidth === true);
 
 onMounted(async () => {
   try {
@@ -55,7 +61,7 @@ onMounted(async () => {
   </Toaster>
   <div class="flex min-h-screen flex-col bg-base-100">
     <NavBar v-if="!authEnabled || isAuthenticated" />
-    <main class="container mx-auto flex-1">
+    <main :class="['flex-1', { 'container mx-auto': !fullWidth }]">
       <router-view v-if="configReady" />
       <div
         v-else-if="configFailed"
