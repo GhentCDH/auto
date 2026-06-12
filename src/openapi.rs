@@ -15,6 +15,11 @@ use utoipa::{Modify, OpenApi};
         crate::api::config,
         crate::api::resolve_id,
 
+        // Authentication
+        crate::api::auth::login,
+        crate::api::auth::logout,
+        crate::api::auth::me,
+
         // Applications
         crate::api::applications::list,
         crate::api::applications::get_one,
@@ -116,6 +121,10 @@ use utoipa::{Modify, OpenApi};
             // Config
             crate::config::PublicConfig,
             crate::config::PublicAuthConfig,
+            crate::auth::AuthUser,
+            crate::auth::AuthMethod,
+            crate::auth::Role,
+            crate::api::auth::LoginBody,
             crate::config::Defaults,
             crate::config::ApplicationDefaults,
             crate::config::ServiceDefaults,

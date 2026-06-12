@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::AppState;
 
 pub mod applications;
+pub mod auth;
 pub mod dashboard;
 pub mod domains;
 pub mod healthchecks;
@@ -25,6 +26,7 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .route("/health", get(healthcheck))
         .route("/version", get(version))
         .route("/config", get(config))
+        .nest("/auth", auth::routes())
         .nest("/applications", applications::routes())
         .nest("/services", services::routes())
         .nest("/infra", infra::routes())
