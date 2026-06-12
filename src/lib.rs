@@ -8,6 +8,7 @@ use tokio::sync::{RwLock, broadcast, watch};
 use tracing::info;
 
 mod api;
+pub mod auth;
 mod config;
 mod error;
 pub mod kuma;

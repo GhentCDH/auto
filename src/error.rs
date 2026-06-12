@@ -26,6 +26,10 @@ pub enum Error {
     Conflict(String),
     #[error("{0}")]
     InternalError(String),
+    #[error("{0}")]
+    Unauthorized(String),
+    #[error("{0}")]
+    Forbidden(String),
     #[error("Kuma convert error")]
     KumaConvertError,
     #[error("DnsError: {0}")]
@@ -49,6 +53,8 @@ impl IntoResponse for Error {
                 (StatusCode::BAD_REQUEST, "validation_error", msg.clone())
             }
             Error::Conflict(msg) => (StatusCode::CONFLICT, "conflict", msg.clone()),
+            Error::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "unauthorized", msg.clone()),
+            Error::Forbidden(msg) => (StatusCode::FORBIDDEN, "forbidden", msg.clone()),
             Error::InternalError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
