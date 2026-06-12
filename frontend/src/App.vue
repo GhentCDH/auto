@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import NavBar from './components/layout/NavBar.vue';
 import { versionApi } from './api';
 import { loadConfig } from './composables/useConfig';
+import { useAuth } from './composables/useAuth';
 import { Toaster } from 'vue-sonner';
 import 'vue-sonner/style.css';
 import { CircleCheckBig } from 'lucide-vue-next';
@@ -12,6 +13,9 @@ const version = ref<string | null>(null);
 // server, so views must not render until the config has loaded.
 const configReady = ref(false);
 const configFailed = ref(false);
+
+// NavBar (and its user menu) only makes sense once authenticated.
+const { isAuthenticated } = useAuth();
 
 onMounted(async () => {
   try {
@@ -50,7 +54,7 @@ onMounted(async () => {
     </template>
   </Toaster>
   <div class="flex min-h-screen flex-col bg-base-100">
-    <NavBar />
+    <NavBar v-if="isAuthenticated" />
     <main class="container mx-auto flex-1">
       <router-view v-if="configReady" />
       <div

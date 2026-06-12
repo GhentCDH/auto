@@ -5,6 +5,10 @@ import { toast } from 'vue-sonner';
 import LoadingSpinner from './LoadingSpinner.vue';
 import Modal from './Modal.vue';
 import ConfirmDialog from './ConfirmDialog.vue';
+import { useAuth } from '@/composables/useAuth';
+
+// Viewers are read-only: hide edit/delete actions for them.
+const { canEdit } = useAuth();
 
 type BaseEntity = {
   id: string;
@@ -131,7 +135,7 @@ function nameOrFqdn(entity: BaseEntity): string {
             <slot name="status" :entity="entity" />
           </h1>
         </div>
-        <div class="flex gap-2">
+        <div v-if="canEdit" class="flex gap-2">
           <button class="btn btn-sm" @click="showEditModal = true">Edit</button>
           <button class="btn btn-sm btn-error" @click="showDeleteDialog = true">
             Delete

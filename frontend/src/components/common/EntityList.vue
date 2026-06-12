@@ -7,6 +7,10 @@ import LoadingSpinner from './LoadingSpinner.vue';
 import EmptyState from './EmptyState.vue';
 import Pagination from './Pagination.vue';
 import Modal from './Modal.vue';
+import { useAuth } from '@/composables/useAuth';
+
+// Viewers are read-only: hide create actions for them.
+const { canEdit } = useAuth();
 
 const props = defineProps<{
   title: string;
@@ -173,7 +177,11 @@ defineExpose({ loadData, updateFilter, localFilters });
       class="flex flex-row justify-between items-start sm:items-center gap-4 mb-6"
     >
       <h1 class="text-2xl font-bold">{{ title }}</h1>
-      <button class="btn btn-primary" @click="showCreateModal = true">
+      <button
+        v-if="canEdit"
+        class="btn btn-primary"
+        @click="showCreateModal = true"
+      >
         {{ addLabel }}
       </button>
     </div>
@@ -204,7 +212,7 @@ defineExpose({ loadData, updateFilter, localFilters });
     <div v-else-if="!data?.data.length">
       <EmptyState
         :message="emptyMessage"
-        :action-label="addLabel"
+        :action-label="canEdit ? addLabel : undefined"
         @action="showCreateModal = true"
       />
     </div>

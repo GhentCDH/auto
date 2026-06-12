@@ -1,6 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { initAuth, useAuth } from './composables/useAuth';
 
 const routes = [
+  // Public auth pages
+  {
+    path: '/login',
+    component: () => import('./views/auth/LoginView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/set-password/:token',
+    component: () => import('./views/auth/SetPasswordView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/link-account',
+    component: () => import('./views/auth/LinkAccountView.vue'),
+    meta: { public: true },
+  },
+  // Admin
+  {
+    path: '/admin/users',
+    component: () => import('./views/admin/UserManagementView.vue'),
+    meta: { requiresAdmin: true },
+  },
   {
     path: '/',
     component: () => import('./views/dashboard/DashboardView.vue'),
@@ -97,6 +120,23 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+// Auth guard: resolve the session once (shared promise), then gate routes.
+router.beforeEach(async (to) => {
+  await initAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
+
+  if (!to.meta.public && !isAuthenticated.value) {
+    return { path: '/login' };
+  }
+  if (to.path === '/login' && isAuthenticated.value) {
+    return { path: '/' };
+  }
+  if (to.meta.requiresAdmin && !isAdmin.value) {
+    return { path: '/' };
+  }
+  return true;
 });
 
 export default router;

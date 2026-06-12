@@ -1,10 +1,54 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
+import { toast } from 'vue-sonner';
 import MascotViewer from '../common/MascotViewer.vue';
+import { useAuth } from '../../composables/useAuth';
+import { authApi, usersApi } from '../../api';
 
 const router = useRouter();
 const searchQuery = ref('');
+
+const { user, isAdmin, isAuthenticated, logout } = useAuth();
+
+// Pending password-reset requests, surfaced as a badge for admins.
+const pendingResets = ref(0);
+async function refreshPendingResets() {
+  if (!isAdmin.value) return;
+  try {
+    pendingResets.value = (await usersApi.resetRequests()).length;
+  } catch {
+    // best-effort badge
+  }
+}
+
+async function handleLogout() {
+  await logout();
+  router.push('/login');
+}
+
+// Change-password modal
+const pwModal = ref<HTMLDialogElement>();
+const currentPw = ref('');
+const newPw = ref('');
+const pwSaving = ref(false);
+function openPwModal() {
+  currentPw.value = '';
+  newPw.value = '';
+  pwModal.value?.showModal();
+}
+async function submitChangePassword() {
+  pwSaving.value = true;
+  try {
+    await authApi.changePassword(currentPw.value, newPw.value);
+    toast.success('Password changed');
+    pwModal.value?.close();
+  } catch (e: any) {
+    toast.error(e.message || 'Could not change password');
+  } finally {
+    pwSaving.value = false;
+  }
+}
 
 const windowWidth = ref(window.innerWidth);
 const windowHeight = ref(window.innerHeight);
@@ -85,6 +129,8 @@ function handleGlobalKeydown(e: KeyboardEvent) {
 
 onMounted(() => document.addEventListener('keydown', handleGlobalKeydown));
 onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
+
+onMounted(refreshPendingResets);
 </script>
 
 <template>
@@ -204,6 +250,90 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
           </button>
         </div>
       </form>
+
+      <!-- User menu -->
+      <div v-if="isAuthenticated" class="dropdown dropdown-end ml-2">
+        <div
+          tabindex="0"
+          role="button"
+          class="btn btn-ghost btn-circle avatar placeholder indicator"
+        >
+          <span
+            v-if="isAdmin && pendingResets > 0"
+            class="indicator-item badge badge-error badge-xs"
+            >{{ pendingResets }}</span
+          >
+          <div
+            class="bg-neutral text-neutral-content w-9 rounded-full flex items-center justify-center"
+          >
+            <span class="text-sm uppercase">{{
+              user?.username?.charAt(0) ?? '?'
+            }}</span>
+          </div>
+        </div>
+        <ul
+          tabindex="0"
+          class="menu menu-sm dropdown-content bg-base-100 rounded-box z-10 mt-3 w-56 p-2 shadow"
+        >
+          <li class="menu-title flex flex-row items-center justify-between">
+            <span class="truncate">{{ user?.username }}</span>
+            <span class="badge badge-ghost badge-sm">{{ user?.role }}</span>
+          </li>
+          <li><button @click="openPwModal">Change password</button></li>
+          <li v-if="isAdmin">
+            <router-link to="/admin/users" class="flex justify-between">
+              <span>User management</span>
+              <span
+                v-if="pendingResets > 0"
+                class="badge badge-error badge-sm"
+                >{{ pendingResets }}</span
+              >
+            </router-link>
+          </li>
+          <li><button @click="handleLogout">Log out</button></li>
+        </ul>
+      </div>
     </div>
   </div>
+
+  <!-- Change-password modal -->
+  <dialog ref="pwModal" class="modal">
+    <div class="modal-box">
+      <h3 class="text-lg font-bold">Change password</h3>
+      <form @submit.prevent="submitChangePassword" class="mt-4 space-y-3">
+        <input
+          v-model="currentPw"
+          type="password"
+          required
+          placeholder="Current password"
+          class="input input-bordered w-full"
+          autocomplete="current-password"
+        />
+        <input
+          v-model="newPw"
+          type="password"
+          required
+          minlength="8"
+          placeholder="New password"
+          class="input input-bordered w-full"
+          autocomplete="new-password"
+        />
+        <div class="modal-action">
+          <button
+            type="button"
+            class="btn btn-ghost"
+            @click="pwModal?.close()"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" :disabled="pwSaving">
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
 </template>
