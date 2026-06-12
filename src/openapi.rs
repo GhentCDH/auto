@@ -26,6 +26,15 @@ use utoipa::{Modify, OpenApi};
         crate::api::auth::oidc_callback,
         crate::api::auth::link,
 
+        // Admin user management
+        crate::api::users::list_users,
+        crate::api::users::create_user,
+        crate::api::users::delete_user,
+        crate::api::users::update_role,
+        crate::api::users::create_setup_link,
+        crate::api::users::revoke_sessions,
+        crate::api::users::list_reset_requests,
+
         // Applications
         crate::api::applications::list,
         crate::api::applications::get_one,
@@ -135,6 +144,11 @@ use utoipa::{Modify, OpenApi};
             crate::api::auth::ChangePasswordBody,
             crate::api::auth::ResetRequestBody,
             crate::api::auth::LinkBody,
+            crate::api::users::CreateUserBody,
+            crate::api::users::UpdateRoleBody,
+            crate::api::users::SetupLink,
+            crate::service::user::UserSummary,
+            crate::service::user::ResetRequestSummary,
             crate::config::Defaults,
             crate::config::ApplicationDefaults,
             crate::config::ServiceDefaults,

@@ -20,6 +20,7 @@ pub mod search;
 pub mod services;
 pub mod shares;
 pub mod stacks;
+pub mod users;
 
 pub fn api_routes(state: AppState) -> Router<AppState> {
     Router::new()
