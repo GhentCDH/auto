@@ -22,6 +22,9 @@ use utoipa::{Modify, OpenApi};
         crate::api::auth::set_password,
         crate::api::auth::change_password,
         crate::api::auth::reset_request,
+        crate::api::auth::oidc_start,
+        crate::api::auth::oidc_callback,
+        crate::api::auth::link,
 
         // Applications
         crate::api::applications::list,
@@ -131,6 +134,7 @@ use utoipa::{Modify, OpenApi};
             crate::api::auth::SetPasswordBody,
             crate::api::auth::ChangePasswordBody,
             crate::api::auth::ResetRequestBody,
+            crate::api::auth::LinkBody,
             crate::config::Defaults,
             crate::config::ApplicationDefaults,
             crate::config::ServiceDefaults,

@@ -50,6 +50,8 @@ pub struct AppState {
     pub resolver: Arc<TokioResolver>,
     /// Short-TTL cache of live DNS lookups, keyed by FQDN.
     pub dns_cache: DnsCache,
+    /// OIDC provider, discovered at startup. `None` when OIDC is disabled.
+    pub oidc_client: Option<Arc<auth::oidc::OidcProvider>>,
 }
 
 impl AppState {
@@ -107,6 +109,13 @@ impl AppState {
         });
         let dns_cache: DnsCache = Arc::new(RwLock::new(HashMap::new()));
 
+        let oidc_client = auth::oidc::OidcProvider::discover(&config)
+            .await?
+            .map(Arc::new);
+        if oidc_client.is_some() {
+            info!("OIDC provider discovered");
+        }
+
         let state = Self {
             pool,
             config,
@@ -115,6 +124,7 @@ impl AppState {
             kuma_refresh_tx,
             resolver,
             dns_cache,
+            oidc_client,
         };
 
         Ok(state)
