@@ -47,3 +47,6 @@ itertools = "0.14.0"
 hickory-resolver = "0.26.1"
 figment = { version = "0.10.19", features = ["toml", "env"] }
 indexmap = { version = "2.7.0", features = ["serde"] }
+argon2 = "0.5.3"
+rand = "0.8.5"
+openidconnect = { version = "4.0.1", features = ["reqwest"] }
