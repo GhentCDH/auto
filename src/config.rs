@@ -41,7 +41,8 @@ pub struct Config {
     #[serde(default = "default_session_hours")]
     pub session_hours: i64,
     /// Whether username/password login is offered (`AUTH_PASSWORD_ENABLED`).
-    #[serde(default = "default_true")]
+    /// Off by default: with no login method enabled the app runs unauthenticated.
+    #[serde(default)]
     pub auth_password_enabled: bool,
     /// Whether OIDC login is offered (`AUTH_OIDC_ENABLED`).
     #[serde(default)]
@@ -69,10 +70,6 @@ fn default_infra_ip_refresh_days() -> u64 {
 
 fn default_session_hours() -> i64 {
     168
-}
-
-fn default_true() -> bool {
-    true
 }
 
 /// Non-secret configuration served to the frontend at `GET /api/config`.

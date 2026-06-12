@@ -110,6 +110,13 @@ middleware). It replaces the old reverse-proxy Basic Auth. Both password and
 OIDC logins normalise into an `AuthUser` and a session row; subsequent requests
 carry only the opaque session token. See `AUTHENTICATION.md` for the design.
 
+- **Opt-in.** Auth is enforced only when a login method is enabled
+  (`auth_password_enabled` or `auth_oidc_enabled`); both default to false. With
+  neither enabled, `api_routes` mounts the data routes unauthenticated and skips
+  the session/admin route groups, so the app serves open (proxy-only) as before.
+  The frontend mirrors this via `authEnabled` in `useAuth.ts` (no route guards,
+  everyone `canEdit`).
+
 - **Roles** (`user_roles`, denormalised onto `sessions`): `admin` (all),
   `editor` (all except `/api/admin/*` user management), `viewer` (read-only).
 - **Route tiers** (wired in `src/api/mod.rs`): public (login, logout,

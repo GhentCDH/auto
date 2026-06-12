@@ -25,6 +25,11 @@ pub mod stacks;
 pub mod users;
 
 pub fn api_routes(state: AppState) -> Router<AppState> {
+    // Auth is opt-in: enabling either login method turns enforcement on. With
+    // neither enabled the app serves exactly as before (open, proxy-only), so
+    // upgrading without touching config is non-breaking.
+    let auth_active = state.config.auth_password_enabled || state.config.auth_oidc_enabled;
+
     // Public: no authentication. Pre-login, token-based self-service and config.
     let public = Router::new()
         .route("/health", get(healthcheck))
@@ -32,13 +37,7 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .route("/config", get(config))
         .nest("/auth", auth::public_routes());
 
-    // Authenticated, any role: session required but no role gate, so viewers can
-    // read their own identity and change their own password.
-    let session_only = Router::new()
-        .nest("/auth", auth::session_routes())
-        .route_layer(from_fn_with_state(state.clone(), auth_middleware));
-
-    // Data routes: any role may read; only editor/admin may mutate.
+    // Data routes for the entity APIs.
     let data = Router::new()
         .nest("/applications", applications::routes())
         .nest("/services", services::routes())
@@ -52,23 +51,36 @@ pub fn api_routes(state: AppState) -> Router<AppState> {
         .nest("/dashboard", dashboard::routes())
         .nest("/search", search::routes())
         .nest("/outline", outline::routes())
-        .route("/resolve/{id}", get(resolve_id))
-        // auth_middleware is added last so it is outermost and runs before
-        // require_role, which reads the AuthUser it inserts.
-        .route_layer(from_fn(require_role))
-        .route_layer(from_fn_with_state(state.clone(), auth_middleware));
+        .route("/resolve/{id}", get(resolve_id));
 
-    // Admin: user management, admins only.
-    let admin = Router::new()
-        .nest("/admin", users::routes())
-        .route_layer(from_fn(require_admin))
-        .route_layer(from_fn_with_state(state.clone(), auth_middleware));
+    let protected = if auth_active {
+        // Session required but no role gate (viewers may read their own identity
+        // and change their own password).
+        let session_only = Router::new()
+            .nest("/auth", auth::session_routes())
+            .route_layer(from_fn_with_state(state.clone(), auth_middleware));
 
-    public
-        .merge(session_only)
-        .merge(data)
-        .merge(admin)
-        .with_state(state)
+        // Any role may read; only editor/admin may mutate. auth_middleware is
+        // added last so it is outermost and runs before require_role, which
+        // reads the AuthUser it inserts.
+        let data = data
+            .route_layer(from_fn(require_role))
+            .route_layer(from_fn_with_state(state.clone(), auth_middleware));
+
+        // Admin user management, admins only.
+        let admin = Router::new()
+            .nest("/admin", users::routes())
+            .route_layer(from_fn(require_admin))
+            .route_layer(from_fn_with_state(state.clone(), auth_middleware));
+
+        session_only.merge(data).merge(admin)
+    } else {
+        // Open mode: serve the data routes unauthenticated; the session and admin
+        // route groups are not mounted at all.
+        data
+    };
+
+    public.merge(protected).with_state(state)
 }
 
 #[utoipa::path(

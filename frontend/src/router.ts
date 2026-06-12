@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { initAuth, useAuth } from './composables/useAuth';
+import { loadConfig } from './composables/useConfig';
 
 const routes = [
   // Public auth pages
@@ -122,10 +123,15 @@ const router = createRouter({
   routes,
 });
 
-// Auth guard: resolve the session once (shared promise), then gate routes.
+// Auth guard: resolve config + session once (shared promises), then gate routes.
 router.beforeEach(async (to) => {
+  await loadConfig().catch(() => undefined);
+  const { authEnabled, isAuthenticated, isAdmin } = useAuth();
+
+  // Open mode (no login method enabled): no gating at all.
+  if (!authEnabled.value) return true;
+
   await initAuth();
-  const { isAuthenticated, isAdmin } = useAuth();
 
   if (!to.meta.public && !isAuthenticated.value) {
     return { path: '/login' };

@@ -14,8 +14,8 @@ const version = ref<string | null>(null);
 const configReady = ref(false);
 const configFailed = ref(false);
 
-// NavBar (and its user menu) only makes sense once authenticated.
-const { isAuthenticated } = useAuth();
+// Show the app chrome when authenticated, or always in open mode (auth off).
+const { isAuthenticated, authEnabled } = useAuth();
 
 onMounted(async () => {
   try {
@@ -54,7 +54,7 @@ onMounted(async () => {
     </template>
   </Toaster>
   <div class="flex min-h-screen flex-col bg-base-100">
-    <NavBar v-if="isAuthenticated" />
+    <NavBar v-if="!authEnabled || isAuthenticated" />
     <main class="container mx-auto flex-1">
       <router-view v-if="configReady" />
       <div

@@ -1,4 +1,4 @@
-# Example auto.toml — optional configuration file.
+# Example auto.toml; optional configuration file.
 #
 # Configuration is layered: built-in defaults < auto.toml < environment.
 # That is, this file overrides the built-in defaults, and environment variables
@@ -21,10 +21,13 @@
 # infra_ip_refresh_days = 10
 
 # --- Authentication ---
+# Auth is opt-in: it is ENFORCED only when at least one login method is enabled.
+# With both disabled (the default) the app serves unauthenticated, exactly as it
+# did before auth existed so upgrading without touching config is non-breaking.
 # Session lifetime in hours (default 168 = 7 days).
 # session_hours = 168
-# Which login methods are offered (any combination):
-# auth_password_enabled = true
+# Which login methods are offered (any combination); both default to false:
+# auth_password_enabled = false
 # auth_oidc_enabled = false
 #
 # First-admin seed: applied once, only when no users exist yet. After the first
