@@ -207,6 +207,22 @@ export interface InfraIp {
   last_synced_at: string;
 }
 
+/** Current Zabbix load for an infra host (percentages; null when unavailable). */
+export interface InfraLoad {
+  cpu: number | null;
+  mem: number | null;
+  swap: number | null;
+}
+
+/** One timestamped load sample (`t` = unix seconds). The history endpoint
+ *  returns these sorted; the last element is the current value. */
+export interface LoadPoint {
+  t: number;
+  cpu: number | null;
+  mem: number | null;
+  swap: number | null;
+}
+
 export interface InfraRelation {
   id: string;
   name: string;

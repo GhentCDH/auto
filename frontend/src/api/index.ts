@@ -28,7 +28,9 @@ import type {
   HealthcheckWithRelations,
   Infra,
   InfraFilterParams,
+  InfraLoad,
   InfraWithRelations,
+  LoadPoint,
   KumaEndpoint,
   KumaMonitor,
   LinkDomain,
@@ -268,6 +270,12 @@ export const infraApi = {
   syncAll: () => request<void>('/infra/sync', { method: 'POST' }),
   syncOne: (id: string) =>
     request<InfraWithRelations>(`/infra/${id}/sync`, { method: 'POST' }),
+
+  // Zabbix load: bulk current load per infra (only Zabbix-matched infra), and
+  // per-infra history. Both empty when Zabbix is unconfigured / unmatched.
+  loads: () => request<Record<string, InfraLoad>>('/infra/loads'),
+  loadHistory: (id: string, hours = 24) =>
+    request<LoadPoint[]>(`/infra/${id}/load/history?hours=${hours}`),
 };
 
 // Domains API

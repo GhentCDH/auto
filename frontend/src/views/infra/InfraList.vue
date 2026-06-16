@@ -1,16 +1,27 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { toast } from 'vue-sonner';
 import { infraApi } from '@/api';
-import type { Infra } from '@/types';
+import type { Infra, InfraLoad } from '@/types';
 import { useUptime } from '@/composables/useUptime';
 import EntityList from '@/components/common/EntityList.vue';
 import InfraForm from '@/components/forms/InfraForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import HealthStats from '@/components/common/HealthStats.vue';
+import LoadBars from '@/components/common/LoadBars.vue';
 import { infraTypes, infraTypeFilterOptions } from '@/values';
 
 useUptime();
+
+// Current Zabbix load per infra id (one bulk call; empty when Zabbix is off).
+const loads = ref<Record<string, InfraLoad>>({});
+onMounted(async () => {
+  try {
+    loads.value = await infraApi.loads();
+  } catch {
+    // Non-fatal: list still renders without load bars.
+  }
+});
 
 const entityListRef = ref<{
   updateFilter: (key: string, value: string | null) => void;
@@ -115,6 +126,7 @@ function matchesIpFilter(ip: string): boolean {
         </div>
       </th>
       <th>Uptime</th>
+      <th>Load</th>
     </template>
 
     <template #row="{ item }: { item: Infra }">
@@ -143,6 +155,14 @@ function matchesIpFilter(ip: string): boolean {
       </td>
       <td>
         <HealthStats :kuma-ids="item.healthcheck_kuma_ids ?? []" />
+      </td>
+      <td>
+        <LoadBars
+          v-if="loads[item.id]"
+          :load="loads[item.id]"
+          orientation="horizontal"
+        />
+        <span v-else class="text-base-content/50">-</span>
       </td>
     </template>
 

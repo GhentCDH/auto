@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { infraApi } from '@/api';
-import type { InfraHealthcheckRelation, InfraWithRelations } from '@/types';
+import type {
+  InfraHealthcheckRelation,
+  InfraWithRelations,
+  LoadPoint,
+} from '@/types';
 import { useUptime } from '@/composables/useUptime';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import EnvironmentBadge from '@/components/common/EnvironmentBadge.vue';
 import HealthPlot from '@/components/common/HealthPlot.vue';
+import LoadChart from '@/components/common/LoadChart.vue';
+import LoadBars from '@/components/common/LoadBars.vue';
 import Modal from '@/components/common/Modal.vue';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import InfraForm from '@/components/forms/InfraForm.vue';
@@ -71,6 +77,48 @@ function parentLabel(hc: InfraHealthcheckRelation): string {
 
 const id = route.params.id as string;
 
+// ---- Zabbix load -------------------------------------------------------
+const loadPoints = ref<LoadPoint[]>([]);
+const loadHours = ref(24);
+const hourOptions = [
+  { label: '6h', value: 6 },
+  { label: '24h', value: 24 },
+  { label: '7d', value: 168 },
+];
+// Current = last sample of each metric (samples are interleaved per metric).
+const currentLoad = computed(() => {
+  const last = (key: 'cpu' | 'mem' | 'swap') => {
+    for (let i = loadPoints.value.length - 1; i >= 0; i--) {
+      const v = loadPoints.value[i][key];
+      if (v != null) return v;
+    }
+    return null;
+  };
+  return { cpu: last('cpu'), mem: last('mem'), swap: last('swap') };
+});
+const hasLoad = computed(() => loadPoints.value.length > 0);
+const loadReady = ref(false); // drives fade-in once data lands
+
+function loadColor(v: number | null): string {
+  if (v == null) return 'text-base-content/40';
+  if (v < 70) return 'text-success';
+  if (v < 90) return 'text-warning';
+  return 'text-error';
+}
+
+async function fetchLoad() {
+  try {
+    const points = await infraApi.loadHistory(id, loadHours.value);
+    loadReady.value = false;
+    loadPoints.value = points;
+    // Wait for the card to mount at opacity-0, then fade in.
+    await nextTick();
+    requestAnimationFrame(() => (loadReady.value = true));
+  } catch {
+    loadPoints.value = [];
+  }
+}
+
 async function loadData() {
   loading.value = true;
   error.value = '';
@@ -126,6 +174,12 @@ async function handleDelete() {
 }
 
 onMounted(loadData);
+onMounted(fetchLoad);
+
+function setHours(h: number) {
+  loadHours.value = h;
+  fetchLoad();
+}
 
 // Keyboard shortcuts
 function handleGlobalKeydown(e: KeyboardEvent) {
@@ -326,6 +380,41 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                 >
                   Linked healthchecks are not synced to Kuma yet
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Load Card (Zabbix) -->
+          <div
+            v-if="hasLoad"
+            class="card bg-base-200 transition-opacity duration-500"
+            :class="loadReady ? 'opacity-100' : 'opacity-0'"
+          >
+            <div class="card-body">
+              <div class="flex items-center justify-between">
+                <h2 class="card-title">Load</h2>
+                <div class="join">
+                  <button
+                    v-for="opt in hourOptions"
+                    :key="opt.value"
+                    class="btn btn-xs join-item"
+                    :class="loadHours === opt.value ? 'btn-active' : ''"
+                    @click="setHours(opt.value)"
+                  >
+                    {{ opt.label }}
+                  </button>
+                </div>
+              </div>
+              <div class="flex flex-col gap-6">
+                <div class="flex gap-3">
+                  current:
+                  <LoadBars
+                    :load="currentLoad"
+                    orientation="horizontal"
+                    :numbers="true"
+                  />
+                </div>
+                <LoadChart :points="loadPoints" />
               </div>
             </div>
           </div>

@@ -8,7 +8,7 @@ import { useUptime } from '@/composables/useUptime';
 import HealthPlot from '@/components/common/HealthPlot.vue';
 
 const router = useRouter();
-const { data, loading, error, progress, refresh } = useOrgGraph();
+const { data, loading, error, progress, refresh, infraLoads } = useOrgGraph();
 const { monitors } = useUptime();
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -50,6 +50,19 @@ function nodePct(node: SimNode): number | null {
 }
 
 function fillClass(node: SimNode): string {
+  // Infra nodes are colored by Zabbix load (worst of cpu/mem), not uptime.
+  // Loads arrive in the background, so this recolors reactively when ready.
+  if (node.type === 'infra') {
+    const load = infraLoads.value[node.id];
+    const vals = load
+      ? [load.cpu, load.mem].filter((v): v is number => v != null)
+      : [];
+    if (!vals.length) return 'fill-base-300';
+    const worst = Math.max(...vals);
+    if (worst < 70) return 'fill-success';
+    if (worst < 90) return 'fill-warning';
+    return 'fill-error';
+  }
   const pct = nodePct(node);
   if (pct === null) return 'fill-base-300';
   if (pct >= 99) return 'fill-success';
@@ -318,6 +331,7 @@ onBeforeUnmount(() => ro?.disconnect());
               :width="n.radius * 2"
               :height="n.radius * 2"
               rx="2"
+              class="[transition:fill_0.6s_ease-out]"
               :class="fillClass(n)"
             />
             <!-- service = diamond (45°-rotated square) -->
