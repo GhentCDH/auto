@@ -15,14 +15,18 @@ pub struct Stack {
 /// DTO for creating a new stack
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateStack {
+    #[serde(deserialize_with = "super::trim_str")]
     pub name: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 
 /// DTO for updating a stack
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateStack {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub name: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 

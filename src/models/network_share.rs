@@ -21,12 +21,19 @@ pub struct NetworkShare {
 /// DTO for creating a new network share
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateNetworkShare {
+    #[serde(deserialize_with = "super::trim_str")]
     pub name: String,
+    #[serde(deserialize_with = "super::trim_str")]
     pub path: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub share_type: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub server: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub purpose: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub status: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 
@@ -41,12 +48,19 @@ impl CreateNetworkShare {
 /// DTO for updating a network share
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateNetworkShare {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub name: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub path: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub share_type: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub server: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub purpose: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub status: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 
@@ -68,9 +82,13 @@ pub struct NetworkShareRelation {
 /// DTO for linking a network share to an application
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkNetworkShare {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub usage: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub mount_point: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub permissions: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 

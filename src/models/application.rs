@@ -22,13 +22,21 @@ pub struct Application {
 /// DTO for creating a new application
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateApplication {
+    #[serde(deserialize_with = "super::trim_str")]
     pub name: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub description: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub repository_url: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub environment: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub url: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub status: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub image_refs: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub outline_url: Option<String>,
 }
 
@@ -44,13 +52,21 @@ impl CreateApplication {
 /// DTO for updating an application
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateApplication {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub name: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub description: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub repository_url: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub environment: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub url: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub status: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub image_refs: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub outline_url: Option<String>,
 }
 
