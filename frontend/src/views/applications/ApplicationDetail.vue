@@ -1069,7 +1069,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                           </span>
                         </span>
                       </td>
-                      <td class="font-mono text-xs truncate max-w-50">
+                      <td class="text-xs truncate max-w-50">
                         {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
                       </td>
                       <td>{{ h.expected_status }}</td>
