@@ -24,10 +24,12 @@ pub struct InfraFilters {
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list).post(create))
-        // Static `/sync` registered before the `/{id}` param route.
+        // Static routes registered before the `/{id}` param route.
         .route("/sync", post(sync_all))
+        .route("/loads", get(loads))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
         .route("/{id}/sync", post(sync_one))
+        .route("/{id}/load/history", get(load_history))
 }
 
 #[utoipa::path(
@@ -168,6 +170,48 @@ async fn sync_one(
     infra::get(&state.pool, &id).await?; // 404 if unknown
     infra_sync::sync_infra_ips(&state, Some(&id)).await?;
     let result = infra::get_with_relations(&state.pool, &id).await?;
+    Ok(Json(result))
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct HistoryParams {
+    pub hours: Option<i64>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/infra/loads",
+    tag = "infra",
+    responses(
+        (status = 200, description = "Current CPU/memory/swap load per infra (only infra matched to a Zabbix host; empty when Zabbix is unconfigured)", body = std::collections::HashMap<String, crate::zabbix::Load>),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn loads(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
+    let result = crate::zabbix::loads_for_infra(&state).await?;
+    Ok(Json(result))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/infra/{id}/load/history",
+    tag = "infra",
+    params(
+        ("id" = String, Path, description = "Infrastructure ID"),
+        ("hours" = Option<i64>, Query, description = "Look-back window in hours (default 24, max 168)"),
+    ),
+    responses(
+        (status = 200, description = "Load samples over time (empty when no Zabbix match)", body = Vec<crate::zabbix::LoadPoint>),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn load_history(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(params): Query<HistoryParams>,
+) -> Result<impl axum::response::IntoResponse> {
+    let hours = params.hours.unwrap_or(24).clamp(1, 168);
+    let result = crate::zabbix::history_for_infra(&state, &id, hours).await?;
     Ok(Json(result))
 }
 

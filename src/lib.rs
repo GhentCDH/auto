@@ -18,6 +18,7 @@ pub mod outline;
 pub mod overview;
 mod routes;
 mod service;
+pub mod zabbix;
 
 pub use config::Config;
 pub use error::Error;

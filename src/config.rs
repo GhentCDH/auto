@@ -21,6 +21,12 @@ pub struct Config {
     pub kuma_password: String,
     #[serde(default)]
     pub kuma_notification_name: Option<String>,
+    /// Zabbix instance for infra load metrics (`ZABBIX_URL`/`ZABBIX_TOKEN`).
+    /// Both optional; the load endpoints no-op when either is unset.
+    #[serde(default)]
+    pub zabbix_url: Option<Url>,
+    #[serde(default)]
+    pub zabbix_token: Option<String>,
     #[serde(default)]
     pub outline_url: Option<Url>,
     #[serde(default)]

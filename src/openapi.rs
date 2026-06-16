@@ -75,6 +75,8 @@ use utoipa::{Modify, OpenApi};
         crate::api::infra::delete_one,
         crate::api::infra::sync_all,
         crate::api::infra::sync_one,
+        crate::api::infra::loads,
+        crate::api::infra::load_history,
 
         // Domains
         crate::api::domains::list,
@@ -195,6 +197,8 @@ use utoipa::{Modify, OpenApi};
             crate::models::LinkInfra,
             crate::models::InfraWithRelations,
             crate::models::InfraListItem,
+            crate::zabbix::Load,
+            crate::zabbix::LoadPoint,
             crate::models::InfraHealthcheckRelation,
             crate::models::ApplicationInfraRelation,
             crate::models::ServiceInfraRelation,
