@@ -15,9 +15,9 @@ pub enum Error {
     #[error("IOError: {0}")]
     IOError(#[from] std::io::Error),
     #[error("SqlxError: {0}")]
-    SqlxError(#[from] sqlx::Error),
+    SqlxError(#[from] Box<sqlx::Error>),
     #[error("SqlxMigrateError: {0}")]
-    SqlxMigrateError(#[from] sqlx::migrate::MigrateError),
+    SqlxMigrateError(#[from] Box<sqlx::migrate::MigrateError>),
     #[error("{0}")]
     NotFound(String),
     #[error("{0}")]
@@ -35,7 +35,25 @@ pub enum Error {
     #[error("DnsError: {0}")]
     DnsError(String),
     #[error("ConfigError: {0}")]
-    ConfigError(#[from] figment::Error),
+    ConfigError(#[from] Box<figment::Error>),
+}
+
+impl From<sqlx::Error> for Error {
+    fn from(value: sqlx::Error) -> Self {
+        Self::SqlxError(Box::new(value))
+    }
+}
+
+impl From<figment::Error> for Error {
+    fn from(value: figment::Error) -> Self {
+        Self::ConfigError(Box::new(value))
+    }
+}
+
+impl From<sqlx::migrate::MigrateError> for Error {
+    fn from(value: sqlx::migrate::MigrateError) -> Self {
+        Self::SqlxMigrateError(Box::new(value))
+    }
 }
 
 /// Error response body for API endpoints
@@ -60,27 +78,34 @@ impl IntoResponse for Error {
                 "internal_error",
                 msg.clone(),
             ),
-            Error::SqlxError(sqlx::Error::RowNotFound) => (
-                StatusCode::NOT_FOUND,
-                "not_found",
-                "Resource not found".to_string(),
-            ),
-            Error::SqlxError(sqlx::Error::Database(db_err)) => {
-                // Handle unique constraint violations
-                if db_err.is_unique_violation() {
-                    (
-                        StatusCode::CONFLICT,
-                        "conflict",
-                        "Resource already exists".to_string(),
-                    )
-                } else {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "database_error",
-                        format!("Database error: {}", db_err),
-                    )
+            Error::SqlxError(boxed) => match boxed.as_ref() {
+                sqlx::Error::RowNotFound => (
+                    StatusCode::NOT_FOUND,
+                    "not_found",
+                    "Resource not found".to_string(),
+                ),
+                sqlx::Error::Database(db_err) => {
+                    // Handle unique constraint violations
+                    if db_err.is_unique_violation() {
+                        (
+                            StatusCode::CONFLICT,
+                            "conflict",
+                            "Resource already exists".to_string(),
+                        )
+                    } else {
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "database_error",
+                            format!("Database error: {}", db_err),
+                        )
+                    }
                 }
-            }
+                _ => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal_error",
+                    "Internal server error".to_string(),
+                ),
+            },
             Error::DnsError(msg) => (StatusCode::BAD_GATEWAY, "dns_error", msg.clone()),
             Error::KumaConvertError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
