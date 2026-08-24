@@ -435,7 +435,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
                         <Bell class="w-3.5 h-3.5 text-primary shrink-0" />
                       </span>
                     </span>
-                    <div class="text-xs text-base-content/70 font-mono">
+                    <div class="text-xs text-base-content/70">
                       {{ h.protocol }}://{{ h.domain_fqdn }}{{ h.path }}
                     </div>
                     <HealthPlot

@@ -124,7 +124,7 @@ async function handleDuplicateSubmit(formData: CreateService | UpdateService) {
     <template #columns>
       <th class="flex justify-start">
         <span class="badge badge-sm badge-neutral">env</span>
-        <div class="ml-4">
+        <div class="ml-4 min-w-48">
           Name
           <ColumnFilter
             :options="environmentFilterOptions"
