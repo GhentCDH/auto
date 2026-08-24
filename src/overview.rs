@@ -360,7 +360,7 @@ impl Overview for ApplicationWithRelations {
                     .iter()
                     .map(|s| {
                         let s_url = format!("{}/{}", state.config.base_url, &s.id[..8]);
-                        format!("[{}]({})", &s.name, s_url)
+                        format!("[{}]({})", s.name, s_url)
                     })
                     .filter(|i| !i.is_empty())
                     .join(", "),

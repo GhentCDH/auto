@@ -24,7 +24,7 @@ async fn main() -> auto::Result<()> {
 
     info!("Starting server");
 
-    let listen_addr = format!("{}:{}", &state.config.host, &state.config.port);
+    let listen_addr = format!("{}:{}", state.config.host, state.config.port);
     let listener = tokio::net::TcpListener::bind(listen_addr).await?;
     axum::serve(listener, auto::router(state)).await?;
 
