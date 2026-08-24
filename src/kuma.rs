@@ -12,12 +12,12 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use futures::FutureExt as _;
 use rust_socketio::{
-    Payload,
+    Event, Payload,
     asynchronous::{Client as SocketClient, ClientBuilder},
 };
 use serde::Deserialize;
@@ -432,12 +432,26 @@ pub async fn sync_healthchecks_to_kuma(state: AppState) -> Result<()> {
 
 // ── Persistent Kuma Poller ──────────────────────────────────────────
 
+/// If no heartbeat arrives for this long, the connection is presumed dead even
+/// though the socket still looks open. Kuma pushes a heartbeat per monitor per
+/// interval (default 60s), so ten minutes of total silence means we are no
+/// longer a subscriber.
+const KUMA_IDLE_TIMEOUT: Duration = Duration::from_secs(600);
+
+/// How often to check the idle timer.
+const KUMA_WATCHDOG_TICK: Duration = Duration::from_secs(30);
+
 /// Spawns the persistent Kuma poller on a dedicated OS thread.
 ///
 /// The poller maintains a Socket.IO connection to Kuma, listens for
 /// heartbeat events, and broadcasts them to SSE clients. It reconnects
 /// automatically on disconnect with exponential backoff, and reconnects
 /// immediately when notified of a sync (to pick up new kuma_ids).
+///
+/// Reconnection is handled *here* rather than by `rust_socketio`'s built-in
+/// reconnect: Kuma binds authentication to the Socket.IO session, so a
+/// transport-level reconnect yields an anonymous socket that Kuma never sends
+/// heartbeats to again. Only a full connect + `login` restores the stream.
 pub fn spawn_kuma_poller(
     config: crate::Config,
     uptime_state: UptimeState,
@@ -526,6 +540,17 @@ async fn connect_and_poll(
     let ready = Arc::new(tokio::sync::Notify::new());
     let ready_signal = ready.clone();
 
+    // Signalled when Kuma closes the connection, so we can reconnect *and
+    // re-login* rather than keep a socket that will never send another beat.
+    let closed = Arc::new(tokio::sync::Notify::new());
+    let closed_signal = closed.clone();
+
+    // Time of the last heartbeat. `None` until the first one arrives, which
+    // keeps the idle check disarmed on a Kuma with no monitors.
+    let last_beat: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
+    let beat_for_hb_list = last_beat.clone();
+    let beat_for_hb = last_beat.clone();
+
     // Clone state/tx for each handler closure (they need 'static + Send)
     let state_for_hb_list = uptime_state.clone();
     let tx_for_hb_list = uptime_tx.clone();
@@ -534,6 +559,8 @@ async fn connect_and_poll(
     let state_for_nf_list = uptime_state.clone();
 
     let mut client_builder = ClientBuilder::new(config.kuma_url.as_str())
+        // Let this loop own reconnection — see `spawn_kuma_poller`.
+        .reconnect(false)
         .on_any(move |event, _payload, _client| {
             let ready = ready_signal.clone();
             async move {
@@ -542,11 +569,20 @@ async fn connect_and_poll(
             }
             .boxed()
         })
+        .on(Event::Close, move |_payload, _client| {
+            let closed = closed_signal.clone();
+            async move {
+                closed.notify_one();
+            }
+            .boxed()
+        })
         .on("heartbeatList", move |payload: Payload, _client| {
             let state = state_for_hb_list.clone();
             let tx = tx_for_hb_list.clone();
+            let last_beat = beat_for_hb_list.clone();
             async move {
                 if let Payload::Text(values) = payload {
+                    *last_beat.lock().unwrap() = Some(Instant::now());
                     handle_heartbeat_list(values, state, tx).await;
                 }
             }
@@ -555,8 +591,10 @@ async fn connect_and_poll(
         .on("heartbeat", move |payload: Payload, _client| {
             let state = state_for_hb.clone();
             let tx = tx_for_hb.clone();
+            let last_beat = beat_for_hb.clone();
             async move {
                 if let Payload::Text(values) = payload {
+                    *last_beat.lock().unwrap() = Some(Instant::now());
                     handle_heartbeat(values, state, tx).await;
                 }
             }
@@ -633,16 +671,40 @@ async fn connect_and_poll(
 
     info!("Kuma poller: authenticated, listening for heartbeats");
 
-    // Wait for refresh signal. Previously we used `futures::future::pending()`
-    // inside a `select!`, but dropping the future doesn't run async cleanup on
-    // the socket — the old connection's handlers keep firing as zombies,
-    // causing duplicate heartbeats in uptime_state. By awaiting the refresh
-    // signal here, we can explicitly disconnect before returning.
-    let _ = refresh_rx.changed().await;
+    // Wait for whatever ends this connection. Note we always fall through to an
+    // explicit `disconnect()` below: dropping the socket doesn't run its async
+    // cleanup, so the old connection's handlers keep firing as zombies and
+    // duplicate heartbeats into uptime_state.
+    let mut watchdog = tokio::time::interval(KUMA_WATCHDOG_TICK);
+    watchdog.tick().await; // the first tick completes immediately
 
-    info!("Kuma poller: disconnecting for refresh");
+    let outcome = loop {
+        tokio::select! {
+            _ = refresh_rx.changed() => {
+                info!("Kuma poller: disconnecting for refresh");
+                break Ok(());
+            }
+            _ = closed.notified() => {
+                break Err(Error::KumaError("Kuma closed the connection".into()));
+            }
+            _ = watchdog.tick() => {
+                // A silent transport reconnect leaves the socket looking healthy
+                // but unauthenticated, so Kuma stops sending heartbeats. Silence
+                // is the only symptom.
+                let idle = last_beat.lock().unwrap().map(|t| t.elapsed());
+                if let Some(idle) = idle
+                    && idle > KUMA_IDLE_TIMEOUT
+                {
+                    break Err(Error::KumaError(format!(
+                        "No heartbeat from Kuma in {idle:?}; connection is stale"
+                    )));
+                }
+            }
+        }
+    };
+
     let _ = socket.disconnect().await;
-    Ok(())
+    outcome
 }
 
 // ── Heartbeat handlers ──────────────────────────────────────────────
