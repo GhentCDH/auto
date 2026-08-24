@@ -22,26 +22,42 @@ pub struct Domain {
 /// DTO for creating a new domain
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateDomain {
+    #[serde(deserialize_with = "super::trim_str")]
     pub fqdn: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub registrar: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub dns_provider: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub expires_at: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub target_application_id: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub target_service_id: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub target_infra_id: Option<String>,
 }
 
 /// DTO for updating a domain
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateDomain {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub fqdn: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub registrar: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub dns_provider: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub expires_at: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub target_application_id: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub target_service_id: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub target_infra_id: Option<String>,
 }
 
@@ -60,6 +76,7 @@ pub struct DomainRelation {
 /// DTO for linking a domain to an application
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkDomain {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 

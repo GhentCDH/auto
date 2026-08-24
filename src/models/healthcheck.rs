@@ -38,25 +38,38 @@ pub struct Healthcheck {
 /// DTO for creating a new healthcheck
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateHealthcheck {
+    #[serde(deserialize_with = "super::trim_str")]
     pub name: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub application_id: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub service_id: Option<String>,
     pub kuma_id: Option<i32>,
+    #[serde(deserialize_with = "super::trim_str")]
     pub domain_id: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub protocol: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub path: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub method: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub headers: Option<String>,
     pub expected_status: Option<i32>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub expected_body: Option<String>,
     pub timeout_seconds: Option<i32>,
     pub interval: Option<i32>,
     pub is_enabled: Option<bool>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
     pub retry: Option<i32>,
     pub retry_interval: Option<i32>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub request_body_encoding: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub request_body: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub http_auth_user: Option<String>,
     pub http_auth_pass: Option<String>,
     pub notifications: Option<bool>,
@@ -83,25 +96,38 @@ impl CreateHealthcheck {
 /// DTO for updating a healthcheck
 #[derive(Debug, Deserialize, Default, ToSchema)]
 pub struct UpdateHealthcheck {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub name: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub application_id: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub service_id: Option<String>,
     pub kuma_id: Option<i32>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub domain_id: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub protocol: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub path: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub method: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub headers: Option<String>,
     pub expected_status: Option<i32>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub expected_body: Option<String>,
     pub timeout_seconds: Option<i32>,
     pub interval: Option<i32>,
     pub is_enabled: Option<bool>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
     pub retry: Option<i32>,
     pub retry_interval: Option<i32>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub request_body_encoding: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub request_body: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub http_auth_user: Option<String>,
     pub http_auth_pass: Option<String>,
     pub notifications: Option<bool>,

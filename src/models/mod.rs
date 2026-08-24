@@ -22,8 +22,23 @@ pub use service::*;
 pub use stack::*;
 pub use uptime::*;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use utoipa::ToSchema;
+
+pub(crate) fn trim_str<'de, D: Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    Ok(String::deserialize(d)?.trim().to_string())
+}
+
+pub(crate) fn trim_opt_str<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+    Ok(Option::<String>::deserialize(d)?.map(|s| s.trim().to_string()))
+}
+
+pub(crate) fn trim_opt_vec_str<'de, D: Deserializer<'de>>(
+    d: D,
+) -> Result<Option<Vec<String>>, D::Error> {
+    Ok(Option::<Vec<String>>::deserialize(d)?
+        .map(|v| v.into_iter().map(|s| s.trim().to_string()).collect()))
+}
 
 /// Common pagination parameters
 #[derive(Debug, Deserialize, Default, ToSchema)]

@@ -21,12 +21,19 @@ pub struct Service {
 /// DTO for creating a new service
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateService {
+    #[serde(deserialize_with = "super::trim_str")]
     pub name: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub description: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub repository_url: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub environment: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub status: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub image_refs: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub outline_url: Option<String>,
 }
 
@@ -42,12 +49,19 @@ impl CreateService {
 /// DTO for updating a service
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateService {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub name: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub description: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub repository_url: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub environment: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub status: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub image_refs: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub outline_url: Option<String>,
 }
 
@@ -64,6 +78,7 @@ pub struct ServiceRelation {
 /// DTO for linking a service to an application
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkService {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 

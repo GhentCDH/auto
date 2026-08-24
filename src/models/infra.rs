@@ -38,10 +38,15 @@ pub struct InfraDomainRef {
 /// (a domain requires a target, an infra resolves IPs from its domain).
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct NewInfraDomain {
+    #[serde(deserialize_with = "super::trim_str")]
     pub fqdn: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub registrar: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub dns_provider: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub expires_at: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 
@@ -53,24 +58,32 @@ pub struct NewInfraDomain {
 /// fixed IPs directly.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateInfra {
+    #[serde(deserialize_with = "super::trim_str")]
     pub name: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub description: Option<String>,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", deserialize_with = "super::trim_str")]
     pub infra_type: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub domain_id: Option<String>,
     pub new_domain: Option<NewInfraDomain>,
+    #[serde(default, deserialize_with = "super::trim_opt_vec_str")]
     pub manual_ips: Option<Vec<String>>,
 }
 
 /// DTO for updating an infra. See [`CreateInfra`] for the field semantics.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateInfra {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub name: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub description: Option<String>,
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type", deserialize_with = "super::trim_opt_str")]
     pub infra_type: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub domain_id: Option<String>,
     pub new_domain: Option<NewInfraDomain>,
+    #[serde(default, deserialize_with = "super::trim_opt_vec_str")]
     pub manual_ips: Option<Vec<String>>,
 }
 
@@ -88,6 +101,7 @@ pub struct InfraRelation {
 /// DTO for linking infra to an application or service
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct LinkInfra {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub notes: Option<String>,
 }
 

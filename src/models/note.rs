@@ -21,11 +21,17 @@ pub struct Note {
 /// DTO for creating a new note
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateNote {
+    #[serde(deserialize_with = "super::trim_str")]
     pub entity_type: String,
+    #[serde(deserialize_with = "super::trim_str")]
     pub entity_id: String,
+    #[serde(deserialize_with = "super::trim_str")]
     pub title: String,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub content: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub note_type: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub url: Option<String>,
     #[serde(default)]
     pub is_pinned: bool,
@@ -41,9 +47,13 @@ impl CreateNote {
 /// DTO for updating a note
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateNote {
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub title: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub content: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub note_type: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub url: Option<String>,
     pub is_pinned: Option<bool>,
 }
