@@ -5,13 +5,19 @@ use serde::Deserialize;
 ///
 /// Resolution order (later overrides earlier):
 /// 1. `~/.config/auto-tui/config.toml`
-/// 2. Environment variables `AUTO_URL`, `AUTO_USERNAME`, `AUTO_PASSWORD`
+/// 2. Environment variables `AUTO_URL`, `AUTO_USERNAME`, `AUTO_PASSWORD`,
+///    `AUTO_TOKEN`
 /// 3. Interactive password prompt when a username is set without a password
+///
+/// Authentication is optional: a server with auth disabled needs none. When
+/// auth is enabled, either set `username`/`password` (password login) or
+/// `token` (a personal API token, which also works for OIDC/SSO accounts).
 #[derive(Debug, Default, Deserialize)]
 pub struct Config {
     pub url: Option<String>,
     pub username: Option<String>,
     pub password: Option<String>,
+    pub token: Option<String>,
 }
 
 impl Config {
@@ -45,6 +51,9 @@ impl Config {
         if let Ok(password) = std::env::var("AUTO_PASSWORD") {
             self.password = Some(password);
         }
+        if let Ok(token) = std::env::var("AUTO_TOKEN") {
+            self.token = Some(token);
+        }
     }
 
     fn resolve(self) -> Result<ResolvedConfig> {
@@ -68,7 +77,11 @@ impl Config {
         } else {
             format!("https://{url}")
         };
-        Ok(ResolvedConfig { url, credentials })
+        Ok(ResolvedConfig {
+            url,
+            credentials,
+            token: self.token,
+        })
     }
 }
 
@@ -77,4 +90,5 @@ impl Config {
 pub struct ResolvedConfig {
     pub url: String,
     pub credentials: Option<(String, String)>,
+    pub token: Option<String>,
 }

@@ -13,9 +13,11 @@ use event::Event;
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
-    // Resolve config (may prompt for a password) before entering raw mode.
+    // Resolve config (may prompt for a password) and authenticate before
+    // entering raw mode, so any error prints to a normal terminal.
     let config = config::Config::load()?;
     let client = api::ApiClient::new(&config)?;
+    client.ensure_authenticated().await?;
 
     // ratatui::init installs a panic hook that restores the terminal first,
     // so color-eyre reports stay readable after a crash.

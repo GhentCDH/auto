@@ -1,8 +1,8 @@
 pub mod models;
 pub mod sse;
 
-use base64::Engine;
 use color_eyre::eyre::{Result, eyre};
+use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
@@ -62,35 +62,95 @@ impl EntityKind {
     }
 }
 
-/// HTTP client for the auto API. Cheap to clone; carries the precomputed
-/// basic-auth header for the reverse proxy in front of the backend.
+/// Public config served at `GET /api/config`; only what the client needs.
+#[derive(Debug, Deserialize)]
+struct ConfigResponse {
+    auth: AuthConfig,
+}
+
+#[derive(Debug, Deserialize)]
+struct AuthConfig {
+    password_enabled: bool,
+    oidc_enabled: bool,
+}
+
+/// HTTP client for the auto API. Cheap to clone; carries an optional bearer
+/// token and a cookie store (populated by `POST /api/auth/login`).
 #[derive(Debug, Clone)]
 pub struct ApiClient {
     http: reqwest::Client,
     base: String,
-    auth: Option<String>,
+    token: Option<String>,
+    credentials: Option<(String, String)>,
 }
 
 impl ApiClient {
     pub fn new(config: &ResolvedConfig) -> Result<Self> {
-        let auth = config.credentials.as_ref().map(|(user, pass)| {
-            let encoded =
-                base64::engine::general_purpose::STANDARD.encode(format!("{user}:{pass}"));
-            format!("Basic {encoded}")
-        });
         Ok(Self {
-            http: reqwest::Client::builder().build()?,
+            http: reqwest::Client::builder().cookie_store(true).build()?,
             base: format!("{}/api", config.url),
-            auth,
+            token: config.token.clone(),
+            credentials: config.credentials.clone(),
         })
     }
 
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
         let mut builder = self.http.request(method, format!("{}{path}", self.base));
-        if let Some(auth) = &self.auth {
-            builder = builder.header(reqwest::header::AUTHORIZATION, auth.clone());
+        if let Some(token) = &self.token {
+            builder = builder.bearer_auth(token);
         }
         builder
+    }
+
+    /// Resolve authentication before the UI starts. In open mode (no login
+    /// method enabled) this is a no-op; otherwise it validates the token or
+    /// performs a password login so the cookie store is primed.
+    pub async fn ensure_authenticated(&self) -> Result<()> {
+        let config: ConfigResponse = self.get_json("/config", &[]).await?;
+        if !config.auth.password_enabled && !config.auth.oidc_enabled {
+            return Ok(());
+        }
+
+        if self.token.is_some() {
+            let response = self
+                .request(reqwest::Method::GET, "/auth/me")
+                .send()
+                .await?;
+            return match response.status() {
+                status if status.is_success() => Ok(()),
+                reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN => {
+                    Err(eyre!("API token rejected: check `token` / AUTO_TOKEN"))
+                }
+                status => Err(eyre!("authentication check failed ({status})")),
+            };
+        }
+
+        if let Some((username, password)) = &self.credentials {
+            if !config.auth.password_enabled {
+                return Err(eyre!(
+                    "this server offers OIDC login only; set `token` / AUTO_TOKEN to a \
+                     personal API token created from the web UI"
+                ));
+            }
+            let response = self
+                .http
+                .post(format!("{}/auth/login", self.base))
+                .json(&serde_json::json!({ "username": username, "password": password }))
+                .send()
+                .await?;
+            return match response.status() {
+                status if status.is_success() => Ok(()),
+                reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN => {
+                    Err(eyre!("login failed: check username/password"))
+                }
+                status => Err(eyre!("login failed ({status})")),
+            };
+        }
+
+        Err(eyre!(
+            "this server requires authentication: set `username`/`password` or `token` \
+             in ~/.config/auto-tui/config.toml (or AUTO_USERNAME/AUTO_PASSWORD/AUTO_TOKEN)"
+        ))
     }
 
     async fn send<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
@@ -98,7 +158,7 @@ impl ApiClient {
         let status = response.status();
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
             return Err(eyre!(
-                "authentication failed ({status}): check basic-auth credentials for the reverse proxy"
+                "authentication failed ({status}): check credentials or API token"
             ));
         }
         if !status.is_success() {
@@ -124,7 +184,7 @@ impl ApiClient {
         let status = response.status();
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
             return Err(eyre!(
-                "authentication failed ({status}): check basic-auth credentials for the reverse proxy"
+                "authentication failed ({status}): check credentials or API token"
             ));
         }
         if !status.is_success() {

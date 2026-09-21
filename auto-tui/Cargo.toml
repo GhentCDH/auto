@@ -14,12 +14,11 @@ tokio = { version = "1.52.3", features = [
   "sync",
   "time",
 ] }
-reqwest = { version = "0.13.4", features = ["json", "query", "stream"] }
+reqwest = { version = "0.13.4", features = ["json", "query", "stream", "cookies"] }
 futures = "0.3.32"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 toml = "1.1.2"
 dirs = "6.0.0"
 color-eyre = "0.6"
-base64 = "0.22"
 rpassword = "7"
