@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
+import { Icon } from '@iconify/vue';
 import { stacksApi } from '@/api';
 import type { StackWithRelations } from '@/types';
+import { useConfig } from '@/composables/useConfig';
+import { useStackIcons } from '@/composables/useStackIcons';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import Modal from '@/components/common/Modal.vue';
@@ -13,11 +16,28 @@ import StackForm from '@/components/forms/StackForm.vue';
 const route = useRoute();
 const router = useRouter();
 
+const { config } = useConfig();
+const { iconsReady, loadStackIcons, iconFor, colorFor } = useStackIcons();
+
 const stack = ref<StackWithRelations | null>(null);
 const loading = ref(true);
 const error = ref('');
 const showEditModal = ref(false);
 const showDeleteDialog = ref(false);
+
+const stackIcon = computed(() => {
+  if (!config.value?.stack_icons_enabled || !iconsReady.value || !stack.value) {
+    return undefined;
+  }
+  return iconFor(stack.value.name);
+});
+
+const stackIconColor = computed(() => {
+  if (!config.value?.stack_icons_enabled || !iconsReady.value || !stack.value) {
+    return undefined;
+  }
+  return colorFor(stack.value.name);
+});
 
 const id = route.params.id as string;
 
@@ -59,6 +79,12 @@ async function handleDelete() {
 
 onMounted(loadData);
 
+onMounted(() => {
+  if (config.value?.stack_icons_enabled) {
+    loadStackIcons();
+  }
+});
+
 // Keyboard shortcuts
 function handleGlobalKeydown(e: KeyboardEvent) {
   if (
@@ -95,6 +121,12 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
           </div>
           <h1 class="text-2xl font-bold flex items-center gap-3">
             {{ stack.name }}
+            <Icon
+              v-if="stackIcon"
+              :icon="stackIcon"
+              :color="stackIconColor"
+              class="w-6 h-6 shrink-0"
+            />
           </h1>
         </div>
         <div class="flex gap-2">

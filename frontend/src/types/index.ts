@@ -874,6 +874,7 @@ export interface PublicConfig {
   defaults: Defaults;
   options: Options;
   auth: PublicAuthConfig;
+  stack_icons_enabled: boolean;
 }
 
 // Authentication ----------------------------------------------------------

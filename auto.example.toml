@@ -20,6 +20,10 @@
 # outline_api_key = "ol_api_..."
 # infra_ip_refresh_days = 10
 
+# Render brand icons on stack pills by matching stack names to the bundled
+# Simple Icons set. Set false to disable; the frontend then skips loading the icon data entirely.
+# stack_icons_enabled = true
+
 # --- Authentication ---
 # Auth is opt-in: it is ENFORCED only when at least one login method is enabled.
 # With both disabled (the default) the app serves unauthenticated, exactly as it

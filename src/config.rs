@@ -68,10 +68,18 @@ pub struct Config {
     /// Absolute URL the IdP redirects back to, e.g. `https://host/api/auth/oidc/callback`.
     #[serde(default)]
     pub oidc_redirect_url: Option<Url>,
+    /// Render brand icons on stack pills by matching stack names to a bundled
+    /// icon set (`STACK_ICONS_ENABLED`, default true).
+    #[serde(default = "default_true")]
+    pub stack_icons_enabled: bool,
 }
 
 fn default_infra_ip_refresh_days() -> u64 {
     10
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_session_hours() -> i64 {
@@ -84,6 +92,8 @@ pub struct PublicConfig {
     pub defaults: Defaults,
     pub options: Options,
     pub auth: PublicAuthConfig,
+    /// Whether the frontend should match stack names to icons and render them.
+    pub stack_icons_enabled: bool,
 }
 
 /// Which auth methods are offered, so the login page renders the right options.
@@ -102,6 +112,7 @@ impl From<&Config> for PublicConfig {
                 password_enabled: c.auth_password_enabled,
                 oidc_enabled: c.auth_oidc_enabled,
             },
+            stack_icons_enabled: c.stack_icons_enabled,
         }
     }
 }

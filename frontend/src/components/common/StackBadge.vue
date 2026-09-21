@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
+import { Icon } from '@iconify/vue';
 import { getStackColor } from '@/utils/colors';
+import { useConfig } from '@/composables/useConfig';
+import { useStackIcons } from '@/composables/useStackIcons';
 import { X } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -14,7 +17,26 @@ const emit = defineEmits<{
   click: [];
 }>();
 
+const { config } = useConfig();
+const { iconsReady, loadStackIcons, iconFor } = useStackIcons();
+
 const colorClass = computed(() => getStackColor(props.name));
+
+const iconsEnabled = computed(() => config.value?.stack_icons_enabled ?? false);
+
+// Depend on `iconsReady` so the icon appears once the set has loaded.
+const icon = computed(() => {
+  if (!iconsEnabled.value || !iconsReady.value) {
+    return undefined;
+  }
+  return iconFor(props.name);
+});
+
+onMounted(() => {
+  if (iconsEnabled.value) {
+    loadStackIcons();
+  }
+});
 
 function click() {
   if (props.clickable) {
@@ -28,6 +50,7 @@ function click() {
     class="badge badge-sm gap-1.5"
     :class="removable ? `${colorClass} pr-1` : `${colorClass}`"
   >
+    <Icon v-if="icon" :icon="icon" class="w-3.5 h-3.5 shrink-0" />
     <p @click="click" :class="clickable ? 'cursor-pointer' : ''">
       {{ name }}
     </p>

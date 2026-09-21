@@ -60,6 +60,9 @@ import StackForm from '@/components/forms/StackForm.vue';
 import NoteForm from '@/components/forms/NoteForm.vue';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import StackBadge from '@/components/common/StackBadge.vue';
+import { Icon } from '@iconify/vue';
+import { useConfig } from '@/composables/useConfig';
+import { useStackIcons } from '@/composables/useStackIcons';
 import { infraTypes } from '@/values';
 import type { ImageRef } from '@/types';
 import { Pin, ExternalLink, Plus, Edit, Link2Off, Bell } from 'lucide-vue-next';
@@ -136,6 +139,36 @@ const imageRefs: ComputedRef<ImageRef[]> = computed(() => {
   } catch {
     return [];
   }
+});
+
+const { config } = useConfig();
+const { iconsReady, loadStackIcons, iconFor, colorFor } = useStackIcons();
+
+/** Icons for the application's linked stacks, shown next to the title. */
+interface HeaderStackIcon {
+  id: string;
+  name: string;
+  icon: string;
+  color?: string;
+}
+
+const stackIcons = computed<HeaderStackIcon[]>(() => {
+  if (!config.value?.stack_icons_enabled || !iconsReady.value || !app.value) {
+    return [];
+  }
+  const result: HeaderStackIcon[] = [];
+  for (const stack of app.value.stacks) {
+    const icon = iconFor(stack.name);
+    if (icon) {
+      result.push({
+        id: stack.id,
+        name: stack.name,
+        icon,
+        color: colorFor(stack.name),
+      });
+    }
+  }
+  return result;
 });
 
 async function loadData() {
@@ -640,6 +673,12 @@ async function handleUnlink() {
 
 onMounted(loadData);
 
+onMounted(() => {
+  if (config.value?.stack_icons_enabled) {
+    loadStackIcons();
+  }
+});
+
 // Keyboard shortcuts
 function handleGlobalKeydown(e: KeyboardEvent) {
   if (
@@ -681,6 +720,16 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
             {{ app.name }}
             <EnvironmentBadge :environment="app.environment" />
             <StatusBadge :status="app.status" />
+            <span v-if="stackIcons.length" class="flex items-center gap-1.5">
+              <Icon
+                v-for="s in stackIcons"
+                :key="s.id"
+                :icon="s.icon"
+                :color="s.color"
+                :title="s.name"
+                class="w-5 h-5 shrink-0"
+              />
+            </span>
           </h1>
         </div>
         <div class="flex gap-2">
