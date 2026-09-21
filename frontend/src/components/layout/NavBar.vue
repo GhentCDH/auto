@@ -286,6 +286,9 @@ onMounted(refreshPendingResets);
             <span class="badge badge-ghost badge-sm">{{ user?.role }}</span>
           </li>
           <li><button @click="openPwModal">Change password</button></li>
+          <li>
+            <router-link to="/settings/tokens">API tokens</router-link>
+          </li>
           <li v-if="isAdmin">
             <router-link to="/admin/users" class="flex justify-between">
               <span>User management</span>
@@ -325,11 +328,7 @@ onMounted(refreshPendingResets);
           autocomplete="new-password"
         />
         <div class="modal-action">
-          <button
-            type="button"
-            class="btn btn-ghost"
-            @click="pwModal?.close()"
-          >
+          <button type="button" class="btn btn-ghost" @click="pwModal?.close()">
             Cancel
           </button>
           <button type="submit" class="btn btn-primary" :disabled="pwSaving">

@@ -25,6 +25,11 @@ const routes = [
     component: () => import('./views/admin/UserManagementView.vue'),
     meta: { requiresAdmin: true },
   },
+  // Account settings
+  {
+    path: '/settings/tokens',
+    component: () => import('./views/settings/TokensView.vue'),
+  },
   {
     path: '/',
     component: () => import('./views/dashboard/DashboardView.vue'),

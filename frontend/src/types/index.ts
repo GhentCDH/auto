@@ -881,7 +881,10 @@ export interface PublicConfig {
 
 export type Role = 'admin' | 'editor' | 'viewer';
 
-export type AuthMethod = { type: 'password' } | { type: 'oidc'; issuer: string };
+export type AuthMethod =
+  | { type: 'password' }
+  | { type: 'oidc'; issuer: string }
+  | { type: 'token' };
 
 export interface AuthUser {
   id: string;
@@ -889,6 +892,24 @@ export interface AuthUser {
   email: string | null;
   role: Role;
   method: AuthMethod;
+}
+
+// Personal API tokens (for non-browser clients such as the TUI).
+export interface ApiToken {
+  id: string;
+  name: string;
+  created_at: string;
+  expires_at: string | null;
+  last_used_at: string | null;
+}
+
+export interface CreateApiToken {
+  name: string;
+  expires_in_days?: number;
+}
+
+export interface CreatedApiToken extends ApiToken {
+  secret: string;
 }
 
 export interface UserSummary {

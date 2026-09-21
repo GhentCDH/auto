@@ -3,6 +3,9 @@ import type {
   ApplicationFilterParams,
   ApplicationWithRelations,
   AuthUser,
+  ApiToken,
+  CreateApiToken,
+  CreatedApiToken,
   PublicConfig,
   Role,
   ResetRequestSummary,
@@ -513,6 +516,15 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ link_token, username, password }),
     }),
+  // Personal API tokens (for non-browser clients such as the TUI).
+  listTokens: () => request<ApiToken[]>('/auth/tokens'),
+  createToken: (data: CreateApiToken) =>
+    request<CreatedApiToken>('/auth/tokens', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteToken: (id: string) =>
+    request<void>(`/auth/tokens/${id}`, { method: 'DELETE' }),
   // OIDC login is a full-page redirect, not a fetch.
   oidcStartUrl: '/api/auth/oidc/start',
 };
@@ -536,6 +548,5 @@ export const usersApi = {
     request<SetupLink>(`/admin/users/${id}/setup-link`, { method: 'POST' }),
   revokeSessions: (id: string) =>
     request<void>(`/admin/users/${id}/revoke-sessions`, { method: 'POST' }),
-  resetRequests: () =>
-    request<ResetRequestSummary[]>('/admin/reset-requests'),
+  resetRequests: () => request<ResetRequestSummary[]>('/admin/reset-requests'),
 };
