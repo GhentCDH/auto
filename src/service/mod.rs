@@ -12,4 +12,5 @@ pub mod search;
 #[allow(clippy::module_inception)]
 pub mod service;
 pub mod stack;
+pub mod token;
 pub mod user;

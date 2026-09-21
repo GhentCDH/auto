@@ -57,7 +57,11 @@ impl Role {
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum AuthMethod {
     Password,
-    Oidc { issuer: String },
+    Oidc {
+        issuer: String,
+    },
+    /// Authenticated with a personal API token.
+    Token,
 }
 
 impl AuthMethod {
@@ -66,15 +70,19 @@ impl AuthMethod {
         match self {
             AuthMethod::Password => "password".to_string(),
             AuthMethod::Oidc { issuer } => format!("oidc:{issuer}"),
+            AuthMethod::Token => "token".to_string(),
         }
     }
 
     pub fn from_db(s: &str) -> Self {
-        match s.strip_prefix("oidc:") {
-            Some(issuer) => AuthMethod::Oidc {
-                issuer: issuer.to_string(),
+        match s {
+            "token" => AuthMethod::Token,
+            _ => match s.strip_prefix("oidc:") {
+                Some(issuer) => AuthMethod::Oidc {
+                    issuer: issuer.to_string(),
+                },
+                None => AuthMethod::Password,
             },
-            None => AuthMethod::Password,
         }
     }
 }

@@ -4,10 +4,10 @@
 //! valid session but no particular role. Password-setup, reset and OIDC live in
 //! the sibling modules but share this route group.
 
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use openidconnect::{Nonce, PkceCodeVerifier};
@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::auth::{AuthMethod, AuthUser, session};
+use crate::models::{ApiToken, CreateApiToken, CreatedApiToken};
+use crate::service::token as token_service;
 use crate::service::user as user_service;
 use crate::{AppState, Error, Result};
 
@@ -40,6 +42,8 @@ pub fn session_routes() -> Router<AppState> {
     Router::new()
         .route("/me", get(me))
         .route("/change-password", post(change_password))
+        .route("/tokens", get(list_tokens).post(create_token))
+        .route("/tokens/{id}", delete(delete_token))
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -359,4 +363,73 @@ async fn link(
     let jar =
         session::set_session_cookie(jar, token, state.config.session_hours, secure_from(&state));
     Ok((jar, Json(authed)))
+}
+
+// ---------------------------------------------------------------------------
+// Personal API tokens (for non-browser clients such as the TUI). Self-service:
+// any authenticated user manages their own tokens.
+// ---------------------------------------------------------------------------
+
+#[utoipa::path(
+    get,
+    path = "/api/auth/tokens",
+    tag = "auth",
+    responses(
+        (status = 200, description = "The caller's API tokens", body = Vec<ApiToken>),
+        (status = 401, description = "Not authenticated")
+    )
+)]
+async fn list_tokens(State(state): State<AppState>, user: AuthUser) -> Result<Json<Vec<ApiToken>>> {
+    Ok(Json(token_service::list(&state.pool, &user.id).await?))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/tokens",
+    tag = "auth",
+    request_body = CreateApiToken,
+    responses(
+        (status = 201, description = "Token created; the secret is returned once", body = CreatedApiToken),
+        (status = 400, description = "Invalid token name or lifetime")
+    )
+)]
+async fn create_token(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Json(body): Json<CreateApiToken>,
+) -> Result<impl IntoResponse> {
+    if body.name.is_empty() {
+        return Err(Error::ValidationError("token name is required".to_string()));
+    }
+    if let Some(days) = body.expires_in_days
+        && days <= 0
+    {
+        return Err(Error::ValidationError(
+            "expires_in_days must be greater than zero".to_string(),
+        ));
+    }
+    let created =
+        token_service::create(&state.pool, &user.id, &body.name, body.expires_in_days).await?;
+    Ok((StatusCode::CREATED, Json(created)))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/auth/tokens/{id}",
+    tag = "auth",
+    params(
+        ("id" = String, Path, description = "Token ID")
+    ),
+    responses(
+        (status = 204, description = "Token revoked"),
+        (status = 404, description = "Token not found")
+    )
+)]
+async fn delete_token(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse> {
+    token_service::revoke(&state.pool, &user.id, &id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }

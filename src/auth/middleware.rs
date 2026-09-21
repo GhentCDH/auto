@@ -5,7 +5,7 @@
 //! of specific route groups; they assume `auth_middleware` ran first.
 
 use axum::extract::{Request, State};
-use axum::http::Method;
+use axum::http::{HeaderMap, Method, header};
 use axum::middleware::Next;
 use axum::response::Response;
 use axum_extra::extract::cookie::CookieJar;
@@ -14,24 +14,49 @@ use super::AuthUser;
 use super::session::{self, SESSION_COOKIE};
 use crate::{AppState, Error, Result};
 
-/// Resolve the session cookie into an [`AuthUser`] or reject with 401.
+/// Resolve a session cookie or bearer token into an [`AuthUser`], or reject
+/// with 401. Browsers carry the session cookie; non-browser clients (for example
+/// the TUI) carry a personal API token as `Authorization: Bearer <token>`.
 pub async fn auth_middleware(
     State(state): State<AppState>,
     mut req: Request,
     next: Next,
 ) -> Result<Response> {
-    let jar = CookieJar::from_headers(req.headers());
-    let token = jar
-        .get(SESSION_COOKIE)
-        .map(|c| c.value().to_string())
-        .ok_or_else(|| Error::Unauthorized("authentication required".to_string()))?;
-
-    let user = session::load_session(&state.pool, &token)
+    let user = resolve_user(&state, req.headers())
         .await?
-        .ok_or_else(|| Error::Unauthorized("invalid or expired session".to_string()))?;
+        .ok_or_else(|| Error::Unauthorized("authentication required".to_string()))?;
 
     req.extensions_mut().insert(user);
     Ok(next.run(req).await)
+}
+
+/// Try the session cookie first, then a bearer token.
+async fn resolve_user(state: &AppState, headers: &HeaderMap) -> Result<Option<AuthUser>> {
+    let jar = CookieJar::from_headers(headers);
+    if let Some(cookie) = jar.get(SESSION_COOKIE)
+        && let Some(user) = session::load_session(&state.pool, cookie.value()).await?
+    {
+        return Ok(Some(user));
+    }
+
+    if let Some(token) = bearer_token(headers)
+        && let Some(user) = crate::service::token::find_user(&state.pool, &token).await?
+    {
+        return Ok(Some(user));
+    }
+
+    Ok(None)
+}
+
+/// Extract a `Authorization: Bearer <token>` value.
+fn bearer_token(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(header::AUTHORIZATION)?
+        .to_str()
+        .ok()?
+        .strip_prefix("Bearer ")
+        .map(|token| token.trim().to_string())
+        .filter(|token| !token.is_empty())
 }
 
 /// Allow reads for any authenticated role; require editor or admin for mutations.
