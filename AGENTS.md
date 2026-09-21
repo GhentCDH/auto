@@ -120,9 +120,20 @@ carry only the opaque session token. See `AUTHENTICATION.md` for the design.
 - **Roles** (`user_roles`, denormalised onto `sessions`): `admin` (all),
   `editor` (all except `/api/admin/*` user management), `viewer` (read-only).
 - **Route tiers** (wired in `src/api/mod.rs`): public (login, logout,
-  set-password, reset-request, oidc/*, link, config, version, health);
-  session-only any-role (`/auth/me`, `/auth/change-password`); data routes
-  (GET any role, mutations editor+ via `require_role`); admin (`require_admin`).
+  set-password, reset-request, oidc/*, link, cli/*, config, version, health);
+  session-only any-role (`/auth/me`, `/auth/change-password`, `/auth/tokens`);
+  data routes (GET any role, mutations editor+ via `require_role`); admin
+  (`require_admin`).
+- **API tokens** are self-service per-user secrets for non-browser clients (for
+  example the TUI). Created/listed/revoked at `/api/auth/tokens`; only a SHA-256
+  hash is stored and the plaintext is shown once. `auth_middleware` accepts
+  `Authorization: Bearer <token>` alongside the session cookie, resolving the
+  owner's live role.
+- **Browser (loopback) login** for non-browser clients: `/api/auth/cli/start`
+  binds a flow to a loopback port, `/api/auth/cli/authorize` (browser) authorizes
+  it after login (password or OIDC) and redirects to the listener with a one-time
+  code, and `/api/auth/cli/exchange` trades the code for a normal session token.
+  The `cli_flow` cookie carries the flow through the OIDC round-trip.
 - **Accounts** are admin-created only (no self-registration). Users set their own
   password via a one-time setup link (`password_setup_tokens`); forgotten-password
   requests (`password_reset_requests`) surface to admins who issue a new link.
