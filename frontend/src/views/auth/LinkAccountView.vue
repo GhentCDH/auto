@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { authApi } from '../../api';
 import { useAuth } from '../../composables/useAuth';
+import { safeRedirect } from '../../utils/redirect';
 
 const route = useRoute();
 const router = useRouter();
@@ -20,7 +21,12 @@ async function submit() {
     await authApi.link(token, username.value, password.value);
     await refresh();
     toast.success('Account linked');
-    router.push('/');
+    const redirect = safeRedirect(route.query.redirect);
+    if (redirect) {
+      window.location.assign(redirect);
+    } else {
+      router.push('/');
+    }
   } catch (e: any) {
     toast.error(e.message || 'Could not link account');
   } finally {

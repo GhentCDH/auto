@@ -28,6 +28,9 @@ use utoipa::{Modify, OpenApi};
         crate::api::auth::list_tokens,
         crate::api::auth::create_token,
         crate::api::auth::delete_token,
+        crate::api::auth::cli_start,
+        crate::api::auth::cli_authorize,
+        crate::api::auth::cli_exchange,
 
         // Admin user management
         crate::api::users::list_users,
@@ -152,6 +155,10 @@ use utoipa::{Modify, OpenApi};
             crate::models::ApiToken,
             crate::models::CreateApiToken,
             crate::models::CreatedApiToken,
+            crate::api::auth::CliStartBody,
+            crate::api::auth::CliStartResponse,
+            crate::api::auth::CliExchangeBody,
+            crate::api::auth::CliExchangeResponse,
             crate::api::users::CreateUserBody,
             crate::api::users::UpdateRoleBody,
             crate::api::users::SetupLink,

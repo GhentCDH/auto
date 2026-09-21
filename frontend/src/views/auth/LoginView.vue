@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { useAuth } from '../../composables/useAuth';
 import { useConfig } from '../../composables/useConfig';
 import { authApi } from '../../api';
+import { safeRedirect } from '../../utils/redirect';
 
+const route = useRoute();
 const router = useRouter();
 const { login } = useAuth();
 const { config } = useConfig();
@@ -23,7 +25,13 @@ async function submit() {
   submitting.value = true;
   try {
     await login(username.value, password.value);
-    router.push('/');
+    // CLI/loopback flows ask to be returned to a server route.
+    const redirect = safeRedirect(route.query.redirect);
+    if (redirect) {
+      window.location.assign(redirect);
+    } else {
+      router.push('/');
+    }
   } catch (e: any) {
     toast.error(e.message || 'Login failed');
   } finally {

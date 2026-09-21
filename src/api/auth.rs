@@ -10,15 +10,20 @@ use axum::response::{IntoResponse, Redirect};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
+use chrono::{Duration, Utc};
 use openidconnect::{Nonce, PkceCodeVerifier};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::auth::{AuthMethod, AuthUser, session};
 use crate::models::{ApiToken, CreateApiToken, CreatedApiToken};
+use crate::service::cli_login as cli_login_service;
 use crate::service::token as token_service;
 use crate::service::user as user_service;
 use crate::{AppState, Error, Result};
+
+/// Cookie holding the in-flight CLI flow id while the browser logs in.
+const CLI_FLOW_COOKIE: &str = "cli_flow";
 
 /// Short-lived cookie holding the CSRF / nonce / PKCE values for an in-flight
 /// OIDC login, replayed when the IdP redirects back to the callback.
@@ -35,6 +40,9 @@ pub fn public_routes() -> Router<AppState> {
         .route("/oidc/start", get(oidc_start))
         .route("/oidc/callback", get(oidc_callback))
         .route("/link", post(link))
+        .route("/cli/start", post(cli_start))
+        .route("/cli/authorize", get(cli_authorize))
+        .route("/cli/exchange", post(cli_exchange))
 }
 
 /// Routes requiring a valid session but no particular role.
@@ -277,6 +285,8 @@ async fn oidc_callback(
     // Done with the flow secrets regardless of outcome.
     let jar = jar.remove(Cookie::build(OIDC_FLOW_COOKIE).path("/").build());
     let secure = secure_from(&state);
+    // Remember a pending CLI (loopback) login, if this browser is in one.
+    let cli_flow = cli_flow_of(&jar);
 
     let user_id = match user_service::find_user_by_oidc(
         &state.pool,
@@ -298,7 +308,14 @@ async fn oidc_callback(
                 Some(_) => {
                     let token =
                         user_service::store_pending_identity(&state.pool, &identity).await?;
-                    return Ok((jar, Redirect::to(&format!("/link-account?token={token}"))));
+                    let mut target = format!("/link-account?token={token}");
+                    if let Some(flow) = &cli_flow {
+                        target.push_str(&format!(
+                            "&redirect={}",
+                            encode_redirect(&cli_authorize_path(flow))
+                        ));
+                    }
+                    return Ok((jar, Redirect::to(&target)));
                 }
                 None => user_service::create_oidc_user(&state.pool, &identity).await?,
             }
@@ -315,7 +332,17 @@ async fn oidc_callback(
     .await?;
     let token = session::create_session(&state.pool, &user, state.config.session_hours).await?;
     let jar = session::set_session_cookie(jar, token, state.config.session_hours, secure);
-    Ok((jar, Redirect::to("/")))
+    // Send a pending CLI login back through the loopback authorization.
+    let target = match &cli_flow {
+        Some(flow) => cli_authorize_path(flow),
+        None => "/".to_string(),
+    };
+    let jar = if cli_flow.is_some() {
+        jar.remove(Cookie::build(CLI_FLOW_COOKIE).path("/").build())
+    } else {
+        jar
+    };
+    Ok((jar, Redirect::to(&target)))
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -432,4 +459,150 @@ async fn delete_token(
 ) -> Result<impl IntoResponse> {
     token_service::revoke(&state.pool, &user.id, &id).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+// ---------------------------------------------------------------------------
+// Browser-assisted (loopback) login for non-browser clients. The client listens
+// on 127.0.0.1 and receives a one-time code it exchanges for a session token.
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct CliStartBody {
+    /// Loopback port the client is listening on.
+    pub port: u16,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CliStartResponse {
+    pub flow_id: String,
+    pub authorize_url: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct CliExchangeBody {
+    pub flow_id: String,
+    pub code: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CliExchangeResponse {
+    pub token: String,
+    pub expires_at: String,
+}
+
+/// The path the browser must visit to authorize a flow.
+fn cli_authorize_path(flow_id: &str) -> String {
+    format!("/api/auth/cli/authorize?flow={flow_id}")
+}
+
+/// Read the pending CLI flow id from the browser's cookie, if any.
+fn cli_flow_of(jar: &CookieJar) -> Option<String> {
+    jar.get(CLI_FLOW_COOKIE).map(|c| c.value().to_string())
+}
+
+/// Percent-encode a path for use as a `redirect` query parameter.
+fn encode_redirect(path: &str) -> String {
+    url::form_urlencoded::byte_serialize(path.as_bytes()).collect()
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/cli/start",
+    tag = "auth",
+    request_body = CliStartBody,
+    responses(
+        (status = 200, description = "Loopback flow started", body = CliStartResponse),
+        (status = 400, description = "Invalid port")
+    )
+)]
+async fn cli_start(
+    State(state): State<AppState>,
+    Json(body): Json<CliStartBody>,
+) -> Result<Json<CliStartResponse>> {
+    if body.port == 0 {
+        return Err(Error::ValidationError("port must be non-zero".to_string()));
+    }
+    let flow_id = cli_login_service::start(&state.pool, body.port).await?;
+    Ok(Json(CliStartResponse {
+        authorize_url: cli_authorize_path(&flow_id),
+        flow_id,
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+struct CliAuthorizeQuery {
+    flow: String,
+}
+
+/// Browser entry point: authorize the flow with the caller's session, then send
+/// the browser back to the loopback listener with a one-time code.
+#[utoipa::path(
+    get,
+    path = "/api/auth/cli/authorize",
+    tag = "auth",
+    params(
+        ("flow" = String, Query, description = "Loopback flow id")
+    ),
+    responses(
+        (status = 303, description = "Redirect to the loopback listener or to login")
+    )
+)]
+async fn cli_authorize(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    Query(params): Query<CliAuthorizeQuery>,
+) -> Result<impl IntoResponse> {
+    // This route is public, so resolve the browser session by hand.
+    let user = match jar.get(session::SESSION_COOKIE) {
+        Some(cookie) => session::load_session(&state.pool, cookie.value()).await?,
+        None => None,
+    };
+
+    if let Some(user) = user {
+        let authorized =
+            cli_login_service::authorize(&state.pool, &params.flow, &user.id, &user.method.to_db())
+                .await?
+                .ok_or_else(|| Error::ValidationError("login flow expired".to_string()))?;
+        let target = format!(
+            "http://127.0.0.1:{}/callback?flow={}&code={}",
+            authorized.port, params.flow, authorized.code
+        );
+        return Ok((jar, Redirect::to(&target)));
+    }
+
+    // Not logged in: remember the flow, then send the browser through login.
+    let cookie = Cookie::build((CLI_FLOW_COOKIE, params.flow.clone()))
+        .http_only(true)
+        .secure(secure_from(&state))
+        .same_site(SameSite::Lax)
+        .path("/")
+        .max_age(time::Duration::minutes(10))
+        .build();
+    let redirect = encode_redirect(&cli_authorize_path(&params.flow));
+    Ok((
+        jar.add(cookie),
+        Redirect::to(&format!("/login?redirect={redirect}")),
+    ))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/cli/exchange",
+    tag = "auth",
+    request_body = CliExchangeBody,
+    responses(
+        (status = 200, description = "Session issued", body = CliExchangeResponse),
+        (status = 401, description = "Invalid or expired code")
+    )
+)]
+async fn cli_exchange(
+    State(state): State<AppState>,
+    Json(body): Json<CliExchangeBody>,
+) -> Result<Json<CliExchangeResponse>> {
+    let exchanged = cli_login_service::exchange(&state.pool, &body.flow_id, &body.code).await?;
+    let method = AuthMethod::from_db(&exchanged.method);
+    let user = user_service::load_auth_user(&state.pool, &exchanged.user_id, method).await?;
+    let token = session::create_session(&state.pool, &user, state.config.session_hours).await?;
+    let expires_at = (Utc::now() + Duration::hours(state.config.session_hours)).to_rfc3339();
+    Ok(Json(CliExchangeResponse { token, expires_at }))
 }

@@ -1,12 +1,15 @@
 pub mod models;
 pub mod sse;
 
+use std::sync::{Arc, RwLock};
+
 use color_eyre::eyre::{Result, eyre};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use crate::config::ResolvedConfig;
+use crate::session_store;
 use models::*;
 
 /// The entity kinds browsable in the TUI, in tab order.
@@ -74,24 +77,79 @@ struct AuthConfig {
     oidc_enabled: bool,
 }
 
+/// Outcome of the silent (no user interaction) authentication attempt.
+#[derive(Debug)]
+pub enum AuthStatus {
+    Authenticated,
+    LoginRequired { reason: Option<String> },
+}
+
+#[derive(Debug, Deserialize)]
+struct CliStartResponse {
+    flow_id: String,
+    authorize_url: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CliExchangeResponse {
+    token: String,
+}
+
+/// A started browser-loopback login: the URL to open and the listener awaiting
+/// the callback.
+pub struct LoopbackSession {
+    pub authorize_url: String,
+    flow_id: String,
+    listener: tokio::net::TcpListener,
+}
+
 /// HTTP client for the auto API. Cheap to clone; carries an optional bearer
-/// token and a cookie store (populated by `POST /api/auth/login`).
+/// token and/or session cookie. The session is shared so a login performed
+/// after construction is visible to every clone.
 #[derive(Debug, Clone)]
 pub struct ApiClient {
     http: reqwest::Client,
+    root: String,
     base: String,
     token: Option<String>,
-    credentials: Option<(String, String)>,
+    username: Option<String>,
+    password: Option<String>,
+    session: Arc<RwLock<Option<String>>>,
 }
 
 impl ApiClient {
     pub fn new(config: &ResolvedConfig) -> Result<Self> {
         Ok(Self {
-            http: reqwest::Client::builder().cookie_store(true).build()?,
+            http: reqwest::Client::builder().build()?,
+            root: config.url.clone(),
             base: format!("{}/api", config.url),
             token: config.token.clone(),
-            credentials: config.credentials.clone(),
+            username: config.username.clone(),
+            password: config.password.clone(),
+            session: Arc::new(RwLock::new(None)),
         })
+    }
+
+    /// Configured username, used to prefill the login screen.
+    pub fn username(&self) -> Option<&str> {
+        self.username.as_deref()
+    }
+
+    /// Configured password, used to prefill the login screen.
+    pub fn password(&self) -> Option<&str> {
+        self.password.as_deref()
+    }
+
+    /// Base server URL (no `/api` suffix), e.g. for opening in a browser.
+    pub fn server_url(&self) -> &str {
+        &self.root
+    }
+
+    /// Set (or clear) the session token used as the `auto_session` cookie.
+    pub fn set_session(&self, token: Option<String>) {
+        if let Ok(mut guard) = self.session.write() {
+            *guard = token;
+        }
     }
 
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
@@ -99,58 +157,101 @@ impl ApiClient {
         if let Some(token) = &self.token {
             builder = builder.bearer_auth(token);
         }
+        let session = self.session.read().ok().and_then(|guard| guard.clone());
+        if let Some(session) = session {
+            builder = builder.header(reqwest::header::COOKIE, format!("auto_session={session}"));
+        }
         builder
     }
 
-    /// Resolve authentication before the UI starts. In open mode (no login
-    /// method enabled) this is a no-op; otherwise it validates the token or
-    /// performs a password login so the cookie store is primed.
-    pub async fn ensure_authenticated(&self) -> Result<()> {
+    /// Authenticate without user interaction: open mode, a configured API
+    /// token, or a previously stored loopback session.
+    pub async fn try_silent_auth(&self) -> Result<AuthStatus> {
         let config: ConfigResponse = self.get_json("/config", &[]).await?;
         if !config.auth.password_enabled && !config.auth.oidc_enabled {
-            return Ok(());
+            return Ok(AuthStatus::Authenticated);
         }
 
         if self.token.is_some() {
-            let response = self
-                .request(reqwest::Method::GET, "/auth/me")
-                .send()
-                .await?;
-            return match response.status() {
-                status if status.is_success() => Ok(()),
-                reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN => {
-                    Err(eyre!("API token rejected: check `token` / AUTO_TOKEN"))
-                }
-                status => Err(eyre!("authentication check failed ({status})")),
-            };
-        }
-
-        if let Some((username, password)) = &self.credentials {
-            if !config.auth.password_enabled {
-                return Err(eyre!(
-                    "this server offers OIDC login only; set `token` / AUTO_TOKEN to a \
-                     personal API token created from the web UI"
-                ));
+            if self.check_me().await {
+                return Ok(AuthStatus::Authenticated);
             }
-            let response = self
-                .http
-                .post(format!("{}/auth/login", self.base))
-                .json(&serde_json::json!({ "username": username, "password": password }))
-                .send()
-                .await?;
-            return match response.status() {
-                status if status.is_success() => Ok(()),
-                reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN => {
-                    Err(eyre!("login failed: check username/password"))
-                }
-                status => Err(eyre!("login failed ({status})")),
-            };
+            return Ok(AuthStatus::LoginRequired {
+                reason: Some("the configured API token was rejected".to_string()),
+            });
         }
 
-        Err(eyre!(
-            "this server requires authentication: set `username`/`password` or `token` \
-             in ~/.config/auto-tui/config.toml (or AUTO_USERNAME/AUTO_PASSWORD/AUTO_TOKEN)"
-        ))
+        if let Some(session) = session_store::load() {
+            self.set_session(Some(session));
+            if self.check_me().await {
+                return Ok(AuthStatus::Authenticated);
+            }
+            self.set_session(None);
+            session_store::clear();
+        }
+
+        Ok(AuthStatus::LoginRequired { reason: None })
+    }
+
+    /// Whether the current token/session is accepted by `GET /auth/me`.
+    async fn check_me(&self) -> bool {
+        match self.request(reqwest::Method::GET, "/auth/me").send().await {
+            Ok(response) => response.status().is_success(),
+            Err(_) => false,
+        }
+    }
+
+    /// Password login; stores the returned session cookie and persists it.
+    pub async fn login_password(&self, username: &str, password: &str) -> Result<()> {
+        let response = self
+            .http
+            .post(format!("{}/auth/login", self.base))
+            .json(&serde_json::json!({ "username": username, "password": password }))
+            .send()
+            .await?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(eyre!("login failed ({status}): {body}"));
+        }
+        let token = session_cookie(response.headers())
+            .ok_or_else(|| eyre!("login succeeded but no session cookie was returned"))?;
+        self.set_session(Some(token.clone()));
+        session_store::save(&token)?;
+        Ok(())
+    }
+
+    /// Start a browser-loopback login and return the session awaiting its
+    /// callback. The caller opens [`LoopbackSession::authorize_url`].
+    pub async fn start_loopback(&self) -> Result<LoopbackSession> {
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await?;
+        let port = listener.local_addr()?.port();
+        let start: CliStartResponse = self
+            .post_json("/auth/cli/start", &serde_json::json!({ "port": port }))
+            .await?;
+        Ok(LoopbackSession {
+            authorize_url: format!("{}{}", self.root, start.authorize_url),
+            flow_id: start.flow_id,
+            listener,
+        })
+    }
+
+    /// POST a JSON body and deserialize the response.
+    async fn post_json<T: DeserializeOwned>(&self, path: &str, body: &Value) -> Result<T> {
+        let response = self
+            .request(reqwest::Method::POST, path)
+            .json(body)
+            .send()
+            .await?;
+        let status = response.status();
+        if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+            return Err(eyre!("authentication failed ({status})"));
+        }
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(eyre!("request failed ({status}): {body}"));
+        }
+        Ok(response.json().await?)
     }
 
     async fn send<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
@@ -258,4 +359,72 @@ impl ApiClient {
         self.post_empty(&format!("/healthchecks/sync/kuma/{id}"))
             .await
     }
+}
+
+impl LoopbackSession {
+    /// Wait for the browser callback, exchange the one-time code for a session,
+    /// store it, and return it.
+    pub async fn finish(self, client: &ApiClient) -> Result<String> {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let (mut socket, _) =
+            tokio::time::timeout(std::time::Duration::from_secs(300), self.listener.accept())
+                .await
+                .map_err(|_| eyre!("timed out waiting for the browser"))??;
+
+        let mut buffer = vec![0u8; 8192];
+        let read = socket.read(&mut buffer).await?;
+        let request = String::from_utf8_lossy(&buffer[..read]);
+        let target = request.split_whitespace().nth(1).unwrap_or_default();
+        let query = target
+            .split_once('?')
+            .map(|(_, query)| query)
+            .unwrap_or_default();
+
+        let mut flow = None;
+        let mut code = None;
+        for pair in query.split('&') {
+            match pair.split_once('=') {
+                Some(("flow", value)) => flow = Some(value.to_string()),
+                Some(("code", value)) => code = Some(value.to_string()),
+                _ => {}
+            }
+        }
+
+        let body = "<!doctype html><meta charset=\"utf-8\"><title>Signed in</title>\
+                    <body style=\"font-family:sans-serif;padding:2rem\">\
+                    <h1>Signed in</h1><p>You can return to the terminal.</p></body>";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\
+             Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        );
+        let _ = socket.write_all(response.as_bytes()).await;
+        let _ = socket.flush().await;
+
+        if flow.as_deref() != Some(self.flow_id.as_str()) {
+            return Err(eyre!("login flow mismatch"));
+        }
+        let code = code.ok_or_else(|| eyre!("missing login code"))?;
+
+        let exchange: CliExchangeResponse = client
+            .post_json(
+                "/auth/cli/exchange",
+                &serde_json::json!({ "flow_id": self.flow_id, "code": code }),
+            )
+            .await?;
+        client.set_session(Some(exchange.token.clone()));
+        session_store::save(&exchange.token)?;
+        Ok(exchange.token)
+    }
+}
+
+/// Pull the `auto_session` value out of a response's `Set-Cookie` headers.
+fn session_cookie(headers: &reqwest::header::HeaderMap) -> Option<String> {
+    headers
+        .get_all(reqwest::header::SET_COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .filter_map(|value| value.split(';').next())
+        .find_map(|pair| pair.strip_prefix("auto_session=").map(str::to_string))
 }

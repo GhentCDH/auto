@@ -7,11 +7,12 @@ use serde::Deserialize;
 /// 1. `~/.config/auto-tui/config.toml`
 /// 2. Environment variables `AUTO_URL`, `AUTO_USERNAME`, `AUTO_PASSWORD`,
 ///    `AUTO_TOKEN`
-/// 3. Interactive password prompt when a username is set without a password
 ///
 /// Authentication is optional: a server with auth disabled needs none. When
-/// auth is enabled, either set `username`/`password` (password login) or
-/// `token` (a personal API token, which also works for OIDC/SSO accounts).
+/// auth is enabled the client tries, in order: a configured `token` (personal
+/// API token, also works for OIDC/SSO accounts), a session stored from a
+/// previous browser login, then the login screen (browser loopback first,
+/// password second, prefilled from `username`/`password`).
 #[derive(Debug, Default, Deserialize)]
 pub struct Config {
     pub url: Option<String>,
@@ -62,14 +63,6 @@ impl Config {
                 "no server url configured: set `url` in ~/.config/auto-tui/config.toml or AUTO_URL"
             )
         })?;
-        let credentials = match (self.username, self.password) {
-            (Some(username), Some(password)) => Some((username, password)),
-            (Some(username), None) => {
-                let password = rpassword::prompt_password(format!("password for {username}: "))?;
-                Some((username, password))
-            }
-            (None, _) => None,
-        };
         // A bare host like "auto.example.org" is fine — assume https.
         let url = url.trim_end_matches('/');
         let url = if url.contains("://") {
@@ -79,8 +72,9 @@ impl Config {
         };
         Ok(ResolvedConfig {
             url,
-            credentials,
             token: self.token,
+            username: self.username,
+            password: self.password,
         })
     }
 }
@@ -89,6 +83,7 @@ impl Config {
 #[derive(Debug)]
 pub struct ResolvedConfig {
     pub url: String,
-    pub credentials: Option<(String, String)>,
     pub token: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
 }

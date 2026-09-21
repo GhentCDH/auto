@@ -1,4 +1,5 @@
 pub mod application;
+pub mod cli_login;
 pub mod dashboard;
 pub mod dns;
 pub mod domain;

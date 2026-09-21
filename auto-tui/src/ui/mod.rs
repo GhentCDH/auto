@@ -3,6 +3,7 @@ pub mod detail;
 pub mod dns;
 pub mod healthchecks;
 pub mod list;
+pub mod login;
 pub mod search;
 pub mod theme;
 pub mod widgets;
