@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { Icon } from '@iconify/vue';
-import { getStackColor } from '@/utils/colors';
+import { getStackColor, readableTextColor } from '@/utils/colors';
 import { useConfig } from '@/composables/useConfig';
 import { useStackIcons } from '@/composables/useStackIcons';
 import { X } from 'lucide-vue-next';
@@ -18,7 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const { config } = useConfig();
-const { iconsReady, loadStackIcons, iconFor } = useStackIcons();
+const { iconsReady, loadStackIcons, iconFor, colorFor } = useStackIcons();
 
 const colorClass = computed(() => getStackColor(props.name));
 
@@ -31,6 +31,25 @@ const icon = computed(() => {
   }
   return iconFor(props.name);
 });
+
+// When the stack has an icon, tint the pill with its brand colour; otherwise
+// fall back to the deterministic DaisyUI colour class.
+const brandColor = computed(() => {
+  if (!iconsEnabled.value || !iconsReady.value) {
+    return undefined;
+  }
+  return colorFor(props.name);
+});
+
+const badgeStyle = computed(() =>
+  brandColor.value
+    ? {
+        backgroundColor: brandColor.value,
+        borderColor: brandColor.value,
+        color: readableTextColor(brandColor.value),
+      }
+    : undefined
+);
 
 onMounted(() => {
   if (iconsEnabled.value) {
@@ -48,7 +67,8 @@ function click() {
 <template>
   <span
     class="badge badge-sm gap-1.5"
-    :class="removable ? `${colorClass} pr-1` : `${colorClass}`"
+    :class="[brandColor ? '' : colorClass, removable ? 'pr-1' : '']"
+    :style="badgeStyle"
   >
     <Icon v-if="icon" :icon="icon" class="w-3.5 h-3.5 shrink-0" />
     <p @click="click" :class="clickable ? 'cursor-pointer' : ''">

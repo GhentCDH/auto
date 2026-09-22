@@ -21,3 +21,22 @@ export function getStackColor(name: string): string {
   }
   return badgeColors[Math.abs(hash) % badgeColors.length];
 }
+
+/** Relative luminance (0..1) of a `#RRGGBB` colour, per WCAG. */
+function luminance(hex: string): number {
+  const value = hex.replace('#', '');
+  if (value.length !== 6) return 0;
+  const channel = (offset: number) => {
+    const c = parseInt(value.slice(offset, offset + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+}
+
+/**
+ * Pick black or white text for the best contrast against a `#RRGGBB`
+ * background. The threshold is where both choices contrast equally.
+ */
+export function readableTextColor(hex: string): string {
+  return luminance(hex) > 0.179 ? '#18181b' : '#ffffff';
+}
