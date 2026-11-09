@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 
 use chrono::{NaiveDateTime, Utc};
+use futures::{StreamExt, stream};
 
 use crate::service::{application, dns, service as service_svc};
 use crate::{AppState, Result};
@@ -70,6 +71,82 @@ pub async fn sync_infra_ips(state: &AppState, infra_id: Option<&str>) -> Result<
     }
 
     reconcile_infra_links(state, None).await
+}
+
+/// Max concurrent domain resolutions during a full domain IP sync.
+const DOMAIN_SYNC_CONCURRENCY: usize = 8;
+
+/// Resolve and store the IPs every domain points to (`domain_ip`).
+///
+/// The resolver chases CNAMEs, so an alias domain still yields the final A/AAAA
+/// IPs; those rows get `via = 'CNAME'` and the alias target in `cname`. A domain
+/// that fails to resolve keeps its previously stored IPs.
+pub async fn sync_domain_ips(state: &AppState, domain_id: Option<&str>) -> Result<()> {
+    let domains: Vec<(String, String)> = if let Some(id) = domain_id {
+        sqlx::query_as("SELECT id, fqdn FROM domain WHERE id = ?1")
+            .bind(id)
+            .fetch_all(&state.pool)
+            .await?
+    } else {
+        sqlx::query_as("SELECT id, fqdn FROM domain")
+            .fetch_all(&state.pool)
+            .await?
+    };
+
+    let resolved: Vec<(String, Option<crate::models::DnsLookup>)> = stream::iter(domains)
+        .map(|(id, fqdn)| async move {
+            match dns::lookup(state, &fqdn).await {
+                Ok(l) => (id, Some(l)),
+                Err(e) => {
+                    tracing::warn!(
+                        "domain IP sync: {fqdn} failed to resolve, keeping old IPs: {e}"
+                    );
+                    (id, None)
+                }
+            }
+        })
+        .buffer_unordered(DOMAIN_SYNC_CONCURRENCY)
+        .collect()
+        .await;
+
+    for (id, lookup) in resolved {
+        let Some(lookup) = lookup else { continue };
+        let cname = lookup
+            .records
+            .iter()
+            .find(|r| r.record_type == "CNAME")
+            .map(|r| r.value.as_str());
+        let via = if cname.is_some() { "CNAME" } else { "A" };
+
+        let mut tx = state.pool.begin().await?;
+        sqlx::query("DELETE FROM domain_ip WHERE domain_id = ?1")
+            .bind(&id)
+            .execute(&mut *tx)
+            .await?;
+        for ip in lookup
+            .records
+            .iter()
+            .filter(|r| r.record_type == "A" || r.record_type == "AAAA")
+            .map(|r| normalize_ip(&r.value))
+        {
+            sqlx::query(
+                r#"
+                INSERT INTO domain_ip (domain_id, ip, via, cname, last_synced_at)
+                VALUES (?1, ?2, ?3, ?4, datetime('now'))
+                ON CONFLICT (domain_id, ip) DO NOTHING
+                "#,
+            )
+            .bind(&id)
+            .bind(&ip)
+            .bind(via)
+            .bind(cname)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+    }
+
+    Ok(())
 }
 
 /// Re-resolve an infra's IPs only if they're stale (older than the configured

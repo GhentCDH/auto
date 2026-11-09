@@ -39,7 +39,9 @@ export interface InfraFilterParams extends PaginationParams {
   ip?: string;
 }
 
-export interface DomainFilterParams extends PaginationParams {}
+export interface DomainFilterParams extends PaginationParams {
+  ip?: string;
+}
 
 // Image reference types
 export interface ImageRef {
@@ -240,6 +242,7 @@ export interface InfraWithRelations extends Infra {
   applications: ApplicationInfraRelation[];
   services: ServiceInfraRelation[];
   healthchecks: InfraHealthcheckRelation[];
+  pointing_domains: InfraPointingDomain[];
 }
 
 export interface ApplicationInfraRelation {
@@ -342,6 +345,24 @@ export interface DomainRelation {
 
 export interface DomainWithRelations extends Domain {
   applications: ApplicationDomainRelation[];
+  ips: DomainIp[];
+}
+
+/** An IP a domain resolves to, directly (`A`) or through an alias (`CNAME`). */
+export interface DomainIp {
+  ip: string;
+  via: 'A' | 'CNAME';
+  cname: string | null;
+  last_synced_at: string;
+}
+
+/** A domain that resolves to one of an infra's IPs. */
+export interface InfraPointingDomain {
+  id: string;
+  fqdn: string;
+  ip: string;
+  via: 'A' | 'CNAME';
+  cname: string | null;
 }
 
 export interface DomainNamedWithRelations extends DomainWithRelations {

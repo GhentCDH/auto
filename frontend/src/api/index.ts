@@ -321,6 +321,9 @@ export const domainsApi = {
   // Live DNS records — resolved server-side on demand, never persisted.
   getDns: (id: string) => request<DnsLookup>(`/domains/${id}/dns`),
   getAllDns: () => request<DnsLookup[]>(`/domains/dns`),
+
+  // Re-resolve and store the IPs every domain points to.
+  syncAll: () => request<void>('/domains/sync', { method: 'POST' }),
 };
 
 // People API

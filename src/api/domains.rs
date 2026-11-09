@@ -1,7 +1,7 @@
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    routing::get,
+    routing::{get, post},
 };
 use serde::Deserialize;
 
@@ -16,11 +16,13 @@ pub struct DomainFilters {
     pub page: Option<u32>,
     pub per_page: Option<u32>,
     pub search: Option<String>,
+    pub ip: Option<String>,
 }
 
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(list).post(create))
+        .route("/sync", post(sync_all))
         // Static `/dns` is matched ahead of the `/{id}` param route by axum's router.
         .route("/dns", get(dns_records_all))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
@@ -35,6 +37,7 @@ pub fn routes() -> Router<AppState> {
         ("page" = Option<u32>, Query, description = "Page number"),
         ("per_page" = Option<u32>, Query, description = "Items per page (max 100)"),
         ("search" = Option<String>, Query, description = "Search query"),
+        ("ip" = Option<String>, Query, description = "Filter by resolved IP, A or CNAME (substring match)"),
     ),
     responses(
         (status = 200, description = "List of domains", body = inline(crate::models::PaginatedResponse<DomainWithRelations>)),
@@ -50,7 +53,7 @@ async fn list(
         per_page: filters.per_page,
         search: filters.search,
     };
-    let result = domain::list(&state.pool, &params).await?;
+    let result = domain::list(&state.pool, &params, filters.ip.as_deref()).await?;
     Ok(Json(result))
 }
 
@@ -91,6 +94,7 @@ async fn create(
     Json(input): Json<CreateDomain>,
 ) -> Result<impl axum::response::IntoResponse> {
     let result = domain::create(&state.pool, input).await?;
+    let _ = infra_sync::sync_domain_ips(&state, Some(&result.id)).await;
     // If this domain resolves to a known infra IP, link the infra to the
     // app/service it's attached to (add-only, best-effort).
     let _ = infra_sync::reconcile_infra_links(&state, Some(&result.id)).await;
@@ -118,8 +122,23 @@ async fn update(
     Json(input): Json<UpdateDomain>,
 ) -> Result<impl axum::response::IntoResponse> {
     let result = domain::update(&state.pool, &id, input).await?;
+    let _ = infra_sync::sync_domain_ips(&state, Some(&result.id)).await;
     let _ = infra_sync::reconcile_infra_links(&state, Some(&result.id)).await;
     Ok(Json(result))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/domains/sync",
+    tag = "domains",
+    responses(
+        (status = 204, description = "All domain IPs re-resolved"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn sync_all(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
+    infra_sync::sync_domain_ips(&state, None).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(

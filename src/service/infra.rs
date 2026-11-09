@@ -2,8 +2,8 @@ use sqlx::SqlitePool;
 
 use crate::models::{
     ApplicationInfraRelation, CreateDomain, CreateInfra, Infra, InfraDomainRef, InfraIp,
-    InfraListItem, InfraWithRelations, NewInfraDomain, PaginatedResponse, PaginationParams,
-    ServiceInfraRelation, UpdateDomain, UpdateInfra, new_id,
+    InfraListItem, InfraPointingDomain, InfraWithRelations, NewInfraDomain, PaginatedResponse,
+    PaginationParams, ServiceInfraRelation, UpdateDomain, UpdateInfra, new_id,
 };
 use crate::{Error, Result, service};
 
@@ -177,6 +177,20 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<InfraWith
 
     let healthchecks = service::healthcheck::get_for_infra(pool, id).await?;
 
+    let pointing_domains = sqlx::query_as::<_, InfraPointingDomain>(
+        r#"
+        SELECT d.id, d.fqdn, di.ip, di.via, di.cname
+        FROM domain_ip di
+        JOIN domain d ON d.id = di.domain_id
+        JOIN infra_ip ii ON ii.ip = di.ip
+        WHERE ii.infra_id = ?1
+        ORDER BY d.fqdn COLLATE NOCASE, di.ip
+        "#,
+    )
+    .bind(id)
+    .fetch_all(pool)
+    .await?;
+
     Ok(InfraWithRelations {
         infra,
         ips,
@@ -184,6 +198,7 @@ pub async fn get_with_relations(pool: &SqlitePool, id: &str) -> Result<InfraWith
         applications,
         services,
         healthchecks,
+        pointing_domains,
     })
 }
 

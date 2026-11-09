@@ -150,6 +150,19 @@ pub struct InfraWithRelations {
     pub applications: Vec<ApplicationInfraRelation>,
     pub services: Vec<ServiceInfraRelation>,
     pub healthchecks: Vec<InfraHealthcheckRelation>,
+    /// Domains whose A record (directly or through a CNAME) resolves to one of
+    /// this infra's IPs.
+    pub pointing_domains: Vec<InfraPointingDomain>,
+}
+
+/// A domain that resolves to one of an infra's IPs.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct InfraPointingDomain {
+    pub id: String,
+    pub fqdn: String,
+    pub ip: String,
+    pub via: String,
+    pub cname: Option<String>,
 }
 
 /// Application relation for infra detail view

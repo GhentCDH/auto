@@ -150,6 +150,7 @@ async fn update(
 )]
 async fn sync_all(State(state): State<AppState>) -> Result<impl axum::response::IntoResponse> {
     infra_sync::sync_infra_ips(&state, None).await?;
+    infra_sync::sync_domain_ips(&state, None).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 

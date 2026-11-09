@@ -104,6 +104,17 @@ pub struct DomainWithRelations {
     pub target_service_name: Option<String>,
     pub target_infra_name: Option<String>,
     pub applications: Vec<ApplicationDomainRelation>,
+    pub ips: Vec<DomainIp>,
+}
+
+/// An IP a domain resolves to. `via` is `"A"` for a direct A/AAAA record, or
+/// `"CNAME"` when the domain is an alias (`cname` holds the alias target).
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct DomainIp {
+    pub ip: String,
+    pub via: String,
+    pub cname: Option<String>,
+    pub last_synced_at: String,
 }
 
 /// Application relation for domain detail view

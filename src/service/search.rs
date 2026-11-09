@@ -160,6 +160,7 @@ async fn search_domains(
            OR d.notes LIKE ?1
            OR a.name LIKE ?1
            OR s.name LIKE ?1
+           OR EXISTS (SELECT 1 FROM domain_ip di WHERE di.domain_id = d.id AND di.ip LIKE ?1)
         ORDER BY CASE WHEN d.fqdn LIKE ?2 THEN 0 ELSE 1 END, d.fqdn COLLATE NOCASE ASC
         LIMIT 20
         "#,

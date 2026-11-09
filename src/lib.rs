@@ -162,3 +162,13 @@ impl AppState {
         }
     }
 }
+
+/// Resolve every domain's IPs in the background, so `domain_ip` is filled
+/// before anyone filters or searches on it.
+pub fn spawn_domain_ip_sync(state: AppState) {
+    tokio::spawn(async move {
+        if let Err(e) = service::infra_sync::sync_domain_ips(&state, None).await {
+            tracing::warn!("startup domain IP sync failed: {e}");
+        }
+    });
+}

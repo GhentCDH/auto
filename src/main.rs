@@ -22,6 +22,9 @@ async fn main() -> auto::Result<()> {
         state.kuma_refresh_tx.subscribe(),
     );
 
+    info!("Resolving domain IPs in the background");
+    auto::spawn_domain_ip_sync(state.clone());
+
     info!("Starting server");
 
     let listen_addr = format!("{}:{}", state.config.host, state.config.port);

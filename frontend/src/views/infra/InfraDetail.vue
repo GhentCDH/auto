@@ -313,6 +313,60 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
             </div>
           </div>
 
+          <!-- Pointing Domains Card -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h2 class="card-title">
+                Domains pointing here ({{ infra.pointing_domains.length }})
+              </h2>
+              <div
+                v-if="infra.pointing_domains.length === 0"
+                class="text-base-content/70"
+              >
+                No domain resolves to these IPs.
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Domain</th>
+                      <th>IP</th>
+                      <th>Via</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="d in infra.pointing_domains"
+                      :key="`${d.id}-${d.ip}`"
+                    >
+                      <td>
+                        <router-link :to="`/domains/${d.id}`" class="link">{{
+                          d.fqdn
+                        }}</router-link>
+                      </td>
+                      <td class="font-mono break-all">{{ d.ip }}</td>
+                      <td>
+                        <span
+                          class="badge badge-sm"
+                          :class="
+                            d.via === 'CNAME' ? 'badge-info' : 'badge-ghost'
+                          "
+                          :title="d.cname ? `alias of ${d.cname}` : undefined"
+                          >{{ d.via }}</span
+                        >
+                        <span
+                          v-if="d.cname"
+                          class="text-xs text-base-content/60 ml-1"
+                          >{{ d.cname }}</span
+                        >
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
           <!-- Health Card -->
           <div class="card bg-base-200">
             <div class="card-body">

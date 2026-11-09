@@ -2,18 +2,20 @@ use futures::future::try_join_all;
 use sqlx::SqlitePool;
 
 use crate::models::{
-    ApplicationDomainRelation, CreateDomain, Domain, DomainWithRelations, PaginatedResponse,
-    PaginationParams, TargetName, UpdateDomain, new_id,
+    ApplicationDomainRelation, CreateDomain, Domain, DomainIp, DomainWithRelations,
+    PaginatedResponse, PaginationParams, TargetName, UpdateDomain, new_id,
 };
 use crate::{Error, Result, service};
 
 pub async fn list(
     pool: &SqlitePool,
     params: &PaginationParams,
+    ip: Option<&str>,
 ) -> Result<PaginatedResponse<DomainWithRelations>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
     let search_pattern = params.search.as_ref().map(|s| format!("%{}%", s));
+    let ip_pattern = ip.map(|s| format!("%{}%", s));
 
     let domains = sqlx::query_as::<_, Domain>(
         r#"
@@ -21,6 +23,9 @@ pub async fn list(
             target_application_id, target_service_id, target_infra_id, created_at, updated_at, created_by
         FROM domain
         WHERE (?1 IS NULL OR fqdn LIKE ?1 OR registrar LIKE ?1)
+          AND (?4 IS NULL OR EXISTS (
+              SELECT 1 FROM domain_ip WHERE domain_id = domain.id AND ip LIKE ?4
+          ))
         ORDER BY fqdn COLLATE NOCASE ASC
         LIMIT ?2 OFFSET ?3
         "#,
@@ -28,6 +33,7 @@ pub async fn list(
     .bind(&search_pattern)
     .bind(limit)
     .bind(offset)
+    .bind(&ip_pattern)
     .fetch_all(pool)
     .await?;
 
@@ -38,9 +44,13 @@ pub async fn list(
         SELECT COUNT(*)
         FROM domain
         WHERE (?1 IS NULL OR fqdn LIKE ?1 OR registrar LIKE ?1)
+          AND (?2 IS NULL OR EXISTS (
+              SELECT 1 FROM domain_ip WHERE domain_id = domain.id AND ip LIKE ?2
+          ))
         "#,
     )
     .bind(&search_pattern)
+    .bind(&ip_pattern)
     .fetch_one(pool)
     .await?;
 
@@ -130,12 +140,20 @@ pub async fn extend_relations(pool: &SqlitePool, domain: Domain) -> Result<Domai
         None
     };
 
+    let ips = sqlx::query_as::<_, DomainIp>(
+        "SELECT ip, via, cname, last_synced_at FROM domain_ip WHERE domain_id = ?1 ORDER BY ip",
+    )
+    .bind(&domain.id)
+    .fetch_all(pool)
+    .await?;
+
     Ok(DomainWithRelations {
         domain,
         applications,
         target_application_name,
         target_service_name,
         target_infra_name,
+        ips,
     })
 }
 
