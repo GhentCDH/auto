@@ -22,6 +22,9 @@ export const infraTypes = computed(
 export const shareUsages = computed(
   () => config.value?.options.share_usages ?? {}
 );
+export const infraStatus = computed(
+  () => config.value?.options.infra_status ?? {}
+);
 export const shareTypes = computed(
   () => config.value?.options.share_types ?? {}
 );
@@ -51,6 +54,9 @@ export const shareTypeFilterOptions = computed(() =>
 );
 export const infraTypeFilterOptions = computed(() =>
   toFilterOptions(infraTypes.value)
+);
+export const infraStatusFilterOptions = computed(() =>
+  toFilterOptions(infraStatus.value)
 );
 
 // Not config-driven: a fixed boolean facet, not an entity option list.

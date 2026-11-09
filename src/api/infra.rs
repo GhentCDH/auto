@@ -19,6 +19,7 @@ pub struct InfraFilters {
     #[serde(rename = "type")]
     pub infra_type: Option<String>,
     pub ip: Option<String>,
+    pub status: Option<String>,
 }
 
 pub fn routes() -> Router<AppState> {
@@ -42,6 +43,7 @@ pub fn routes() -> Router<AppState> {
         ("search" = Option<String>, Query, description = "Search query"),
         ("type" = Option<String>, Query, description = "Filter by infrastructure type"),
         ("ip" = Option<String>, Query, description = "Filter by stored IP (substring match)"),
+        ("status" = Option<String>, Query, description = "Filter by status (active, deleted)"),
     ),
     responses(
         (status = 200, description = "List of infrastructure", body = inline(crate::models::PaginatedResponse<InfraListItem>)),
@@ -62,6 +64,7 @@ async fn list(
         &params,
         filters.infra_type.as_deref(),
         filters.ip.as_deref(),
+        filters.status.as_deref(),
     )
     .await?;
     Ok(Json(result))

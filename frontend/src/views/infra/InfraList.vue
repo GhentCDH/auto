@@ -9,7 +9,12 @@ import InfraForm from '@/components/forms/InfraForm.vue';
 import ColumnFilter from '@/components/common/ColumnFilter.vue';
 import HealthStats from '@/components/common/HealthStats.vue';
 import LoadBars from '@/components/common/LoadBars.vue';
-import { infraTypes, infraTypeFilterOptions } from '@/values';
+import StatusBadge from '@/components/common/StatusBadge.vue';
+import {
+  infraTypes,
+  infraTypeFilterOptions,
+  infraStatusFilterOptions,
+} from '@/values';
 
 useUptime();
 
@@ -28,6 +33,7 @@ const entityListRef = ref<{
 } | null>(null);
 const filters = ref<Record<string, string | null>>({
   type: null,
+  status: null,
   ip: null,
 });
 
@@ -113,6 +119,14 @@ function matchesIpFilter(ip: string): boolean {
         />
       </th>
       <th>
+        Status
+        <ColumnFilter
+          :options="infraStatusFilterOptions"
+          :model-value="filters.status"
+          @update:model-value="onFilterChange('status', $event)"
+        />
+      </th>
+      <th>
         <div class="flex flex-col gap-1">
           <span>IP</span>
           <input
@@ -137,15 +151,14 @@ function matchesIpFilter(ip: string): boolean {
       <td>
         {{ infraTypes[item.type as keyof typeof infraTypes] || item.type }}
       </td>
+      <td><StatusBadge :status="item.status" /></td>
       <td class="font-mono text-xs">
         <div v-if="item.ips && item.ips.length" class="flex flex-wrap gap-1">
           <span
             v-for="ipRow in item.ips"
             :key="ipRow.ip"
             class="badge badge-sm"
-            :class="
-              matchesIpFilter(ipRow.ip) ? 'badge-primary' : 'badge-ghost'
-            "
+            :class="matchesIpFilter(ipRow.ip) ? 'badge-primary' : 'badge-ghost'"
             :title="`${ipRow.source} · ${ipRow.last_synced_at}`"
           >
             {{ ipRow.ip }}

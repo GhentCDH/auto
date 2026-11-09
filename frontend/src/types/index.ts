@@ -35,6 +35,7 @@ export interface ShareFilterParams extends PaginationParams {
 
 export interface InfraFilterParams extends PaginationParams {
   type?: string;
+  status?: string;
   ip?: string;
 }
 
@@ -161,6 +162,7 @@ export interface Infra {
   name: string;
   description: string | null;
   type: string;
+  status: string;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -184,6 +186,7 @@ export interface CreateInfra {
   name: string;
   description?: string;
   type: string;
+  status?: string;
   /** If set, points this existing domain at the infra so its IPs resolve from DNS. */
   domain_id?: string;
   /** Create a fresh domain targeting this infra in the same request. */
@@ -196,6 +199,7 @@ export interface UpdateInfra {
   name?: string;
   description?: string;
   type?: string;
+  status?: string;
   domain_id?: string;
   new_domain?: NewInfraDomain;
   manual_ips?: string[];
@@ -857,6 +861,7 @@ export interface Options {
   statuses: Record<string, string>;
   environments: Record<string, string>;
   infra_types: Record<string, string>;
+  infra_status: Record<string, string>;
   share_usages: Record<string, string>;
   share_types: Record<string, string>;
   domain_types: Record<string, string>;

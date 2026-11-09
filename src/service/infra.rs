@@ -12,6 +12,7 @@ pub async fn list(
     params: &PaginationParams,
     infra_type: Option<&str>,
     ip: Option<&str>,
+    status: Option<&str>,
 ) -> Result<PaginatedResponse<InfraListItem>> {
     let limit = params.limit() as i32;
     let offset = params.offset() as i32;
@@ -21,13 +22,14 @@ pub async fn list(
     // EXISTS subquery keeps each infra row distinct even when multiple IPs match.
     let items = sqlx::query_as::<_, Infra>(
         r#"
-        SELECT id, name, description, type, created_at, updated_at, created_by
+        SELECT id, name, description, type, status, created_at, updated_at, created_by
         FROM infra
         WHERE (?1 IS NULL OR name LIKE ?1 OR description LIKE ?1)
           AND (?2 IS NULL OR type = ?2)
           AND (?3 IS NULL OR EXISTS (
               SELECT 1 FROM infra_ip WHERE infra_id = infra.id AND ip LIKE ?3
           ))
+          AND (?6 IS NULL OR status = ?6)
         ORDER BY name COLLATE NOCASE ASC
         LIMIT ?4 OFFSET ?5
         "#,
@@ -37,6 +39,7 @@ pub async fn list(
     .bind(&ip_pattern)
     .bind(limit)
     .bind(offset)
+    .bind(status)
     .fetch_all(pool)
     .await?;
 
@@ -49,11 +52,13 @@ pub async fn list(
           AND (?3 IS NULL OR EXISTS (
               SELECT 1 FROM infra_ip WHERE infra_id = infra.id AND ip LIKE ?3
           ))
+          AND (?4 IS NULL OR status = ?4)
         "#,
     )
     .bind(&search_pattern)
     .bind(infra_type)
     .bind(&ip_pattern)
+    .bind(status)
     .fetch_one(pool)
     .await?;
 
@@ -109,7 +114,7 @@ async fn attach_list_data(pool: &SqlitePool, items: Vec<Infra>) -> Result<Vec<In
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Infra> {
     sqlx::query_as::<_, Infra>(
         r#"
-        SELECT id, name, description, type, created_at, updated_at, created_by
+        SELECT id, name, description, type, status, created_at, updated_at, created_by
         FROM infra
         WHERE id = ?1
         "#,
@@ -261,14 +266,15 @@ pub async fn create(pool: &SqlitePool, input: CreateInfra) -> Result<Infra> {
 
     sqlx::query(
         r#"
-        INSERT INTO infra (id, name, description, type)
-        VALUES (?1, ?2, ?3, ?4)
+        INSERT INTO infra (id, name, description, type, status)
+        VALUES (?1, ?2, ?3, ?4, COALESCE(?5, 'active'))
         "#,
     )
     .bind(&id)
     .bind(&input.name)
     .bind(&input.description)
     .bind(&input.infra_type)
+    .bind(&input.status)
     .execute(pool)
     .await?;
 
@@ -291,17 +297,19 @@ pub async fn update(pool: &SqlitePool, id: &str, input: UpdateInfra) -> Result<I
     let name = input.name.unwrap_or(existing.name);
     let description = input.description.or(existing.description);
     let infra_type = input.infra_type.unwrap_or(existing.infra_type);
+    let status = input.status.unwrap_or(existing.status);
 
     sqlx::query(
         r#"
         UPDATE infra
-        SET name = ?1, description = ?2, type = ?3, updated_at = datetime('now')
-        WHERE id = ?4
+        SET name = ?1, description = ?2, type = ?3, status = ?4, updated_at = datetime('now')
+        WHERE id = ?5
         "#,
     )
     .bind(&name)
     .bind(&description)
     .bind(&infra_type)
+    .bind(&status)
     .bind(id)
     .execute(pool)
     .await?;

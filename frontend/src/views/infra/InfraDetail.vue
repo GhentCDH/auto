@@ -223,6 +223,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleGlobalKeydown));
             <span class="badge badge-outline">{{
               infraTypes[infra.type as keyof typeof infraTypes] || infra.type
             }}</span>
+            <StatusBadge :status="infra.status" />
           </h1>
         </div>
         <div class="flex gap-2">

@@ -11,6 +11,7 @@ pub struct Infra {
     #[sqlx(rename = "type")]
     #[serde(rename = "type")]
     pub infra_type: String,
+    pub status: String,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -65,6 +66,8 @@ pub struct CreateInfra {
     #[serde(rename = "type", deserialize_with = "super::trim_str")]
     pub infra_type: String,
     #[serde(default, deserialize_with = "super::trim_opt_str")]
+    pub status: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub domain_id: Option<String>,
     pub new_domain: Option<NewInfraDomain>,
     #[serde(default, deserialize_with = "super::trim_opt_vec_str")]
@@ -80,6 +83,8 @@ pub struct UpdateInfra {
     pub description: Option<String>,
     #[serde(default, rename = "type", deserialize_with = "super::trim_opt_str")]
     pub infra_type: Option<String>,
+    #[serde(default, deserialize_with = "super::trim_opt_str")]
+    pub status: Option<String>,
     #[serde(default, deserialize_with = "super::trim_opt_str")]
     pub domain_id: Option<String>,
     pub new_domain: Option<NewInfraDomain>,

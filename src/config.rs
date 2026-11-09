@@ -306,6 +306,8 @@ pub struct Options {
     #[schema(value_type = std::collections::HashMap<String, String>)]
     pub infra_types: OptionList,
     #[schema(value_type = std::collections::HashMap<String, String>)]
+    pub infra_status: OptionList,
+    #[schema(value_type = std::collections::HashMap<String, String>)]
     pub share_usages: OptionList,
     #[schema(value_type = std::collections::HashMap<String, String>)]
     pub share_types: OptionList,
@@ -346,6 +348,7 @@ impl Default for Options {
                 ("server", "Server"),
                 ("vm", "Virtual Machine"),
             ]),
+            infra_status: map(&[("active", "Active"), ("deleted", "Deleted")]),
             share_usages: map(&[
                 ("data", "Data Storage"),
                 ("config", "Configuration"),

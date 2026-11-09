@@ -117,6 +117,10 @@ nomad_cluster = "Nomad Cluster"
 server = "Server"
 vm = "Virtual Machine"
 
+[options.infra_status]
+active = "Active"
+deleted = "Deleted"
+
 [options.share_usages]
 data = "Data Storage"
 config = "Configuration"

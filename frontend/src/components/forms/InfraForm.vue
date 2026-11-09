@@ -8,7 +8,7 @@ import type {
   NewInfraDomain,
   CreateDomain,
 } from '@/types';
-import { infraTypes } from '@/values';
+import { infraTypes, infraStatus } from '@/values';
 import { requireConfig } from '@/composables/useConfig';
 import SelectWithCustom from '../common/SelectWithCustom.vue';
 import EntityPicker from '../common/EntityPicker.vue';
@@ -32,6 +32,7 @@ const form = ref<CreateInfra>({
   name: props.initialName || '',
   description: '',
   type: 'server',
+  status: 'active',
 });
 
 // IP source: a domain (server resolves IPs) or manually-entered IPs.
@@ -51,6 +52,7 @@ watch(
         name: inf.name,
         description: inf.description || '',
         type: inf.type,
+        status: inf.status,
       };
       // Prefill the targeting domain if present, else manual IPs.
       if (inf.domain) {
@@ -111,6 +113,7 @@ function handleSubmit() {
     name: form.value.name,
     description: form.value.description,
     type: form.value.type,
+    status: form.value.status,
   };
   if (ipMode.value === 'domain') {
     if (form.value.domain_id) data.domain_id = form.value.domain_id;
@@ -147,6 +150,19 @@ onMounted(() => {
     </fieldset>
 
     <SelectWithCustom v-model="form.type" :options="infraTypes" allow-custom />
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Status</legend>
+      <select v-model="form.status" class="select w-full">
+        <option
+          v-for="(label, value) in infraStatus"
+          :key="value"
+          :value="value"
+        >
+          {{ label }}
+        </option>
+      </select>
+    </fieldset>
 
     <fieldset class="fieldset">
       <legend class="fieldset-legend">IP address</legend>

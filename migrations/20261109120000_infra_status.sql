@@ -1,0 +1,1 @@
+ALTER TABLE infra ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
