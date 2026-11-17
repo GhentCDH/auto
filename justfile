@@ -53,13 +53,15 @@ dev:
 watch:
     @cargo watch -x run
 
-# Run the TUI client (backend should be running)
-tui:
-    cargo run -p auto-tui
+# Run the `auto` CLI; without args it opens the TUI (backend should be running)
+cli *args:
+    cargo run -p auto-cli -- {{args}}
 
-# Type-check the TUI without building the server
-tui-check:
-    cargo check -p auto-tui
+alias tui := cli
+
+# Type-check the CLI/TUI without building the server
+cli-check:
+    cargo check -p auto-cli
 
 docker-build:
     docker build -t auto:latest .

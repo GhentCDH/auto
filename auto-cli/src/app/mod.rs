@@ -70,7 +70,7 @@ pub struct App {
     /// Transient error shown in the footer until the next keypress.
     pub error: Option<String>,
     pub dashboard: Loadable<DashboardStats>,
-    /// One browsing state per entity tab, indexed like `EntityKind::ALL`.
+    /// One browsing state per entity tab, indexed like `EntityKind::TABS`.
     pub lists: [EntityList; 8],
     /// Drill-down stack of detail views; non-empty means a detail is shown.
     pub detail_stack: Vec<DetailView>,
@@ -458,7 +458,10 @@ impl App {
     }
 
     fn list_index(kind: EntityKind) -> usize {
-        EntityKind::ALL.iter().position(|k| *k == kind).unwrap_or(0)
+        EntityKind::TABS
+            .iter()
+            .position(|k| *k == kind)
+            .unwrap_or(0)
     }
 
     fn fetch_list(&mut self, kind: EntityKind) {

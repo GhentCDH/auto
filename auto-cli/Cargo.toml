@@ -1,11 +1,17 @@
 [package]
-name = "auto-tui"
-version = "0.2.0"
+name = "auto-cli"
+version.workspace = true
 edition = "2024"
-description = "Terminal UI client for the auto admin API"
+description = "Command line, TUI and MCP client for the auto admin API"
 authors = ["Miel Peeters <peetersmiel@gmail.com>"]
 
+[[bin]]
+name = "auto"
+path = "src/main.rs"
+
 [dependencies]
+clap = { version = "4.6.8", features = ["derive", "env"] }
+rmcp = { version = "3.10.0", features = ["server", "transport-io"] }
 ratatui = "0.30.1"
 crossterm = { version = "0.29.0", features = ["event-stream"] }
 tokio = { version = "1.52.3", features = [

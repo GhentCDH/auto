@@ -128,7 +128,7 @@ onMounted(load);
               v-model="name"
               type="text"
               class="input w-full"
-              placeholder="e.g., auto-tui laptop"
+              placeholder="e.g., auto cli laptop"
               required
             />
           </fieldset>

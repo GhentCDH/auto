@@ -1,34 +1,27 @@
-mod api;
-mod app;
-mod config;
-mod event;
-mod login;
-mod session_store;
-mod ui;
+//! The read-only TUI, started by `auto` without a subcommand.
 
 use color_eyre::eyre::Result;
 use tokio::sync::mpsc;
 
-use api::AuthStatus;
-use app::App;
-use event::Event;
+use crate::api::{self, AuthStatus};
+use crate::app::App;
+use crate::event::{self, Event};
+use crate::{config, login, ui};
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    color_eyre::install()?;
-    // Resolve config (may prompt for a password) before entering raw mode.
-    let config = config::Config::load()?;
+pub async fn run(url: Option<&str>) -> Result<()> {
+    // Resolve config before entering raw mode.
+    let config = config::Config::load(url)?;
     let client = api::ApiClient::new(&config)?;
 
     // ratatui::init installs a panic hook that restores the terminal first,
     // so color-eyre reports stay readable after a crash.
     let mut terminal = ratatui::init();
-    let result = run(&mut terminal, client).await;
+    let result = run_app(&mut terminal, client).await;
     ratatui::restore();
     result
 }
 
-async fn run(terminal: &mut ratatui::DefaultTerminal, client: api::ApiClient) -> Result<()> {
+async fn run_app(terminal: &mut ratatui::DefaultTerminal, client: api::ApiClient) -> Result<()> {
     // Authenticate before the main UI: open mode or an existing token/session
     // pass silently, otherwise show the login screen (loopback browser first).
     match client.try_silent_auth().await? {

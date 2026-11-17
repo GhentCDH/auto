@@ -12,7 +12,10 @@ use crate::config::ResolvedConfig;
 use crate::session_store;
 use models::*;
 
-/// The entity kinds browsable in the TUI, in tab order.
+/// The entity kinds of the auto API.
+///
+/// This is the only hand-written entity table in the client. Fields, link
+/// relations and request bodies come from the server's OpenAPI document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EntityKind {
     Applications,
@@ -23,10 +26,25 @@ pub enum EntityKind {
     Shares,
     Stacks,
     Healthchecks,
+    Notes,
 }
 
 impl EntityKind {
-    pub const ALL: [EntityKind; 8] = [
+    /// Every entity kind, for the CLI and MCP.
+    pub const ALL: [EntityKind; 9] = [
+        EntityKind::Applications,
+        EntityKind::Services,
+        EntityKind::Infra,
+        EntityKind::Domains,
+        EntityKind::People,
+        EntityKind::Shares,
+        EntityKind::Stacks,
+        EntityKind::Healthchecks,
+        EntityKind::Notes,
+    ];
+
+    /// The kinds that get a TUI tab, in tab order.
+    pub const TABS: [EntityKind; 8] = [
         EntityKind::Applications,
         EntityKind::Services,
         EntityKind::Infra,
@@ -48,6 +66,7 @@ impl EntityKind {
             EntityKind::Shares => "shares",
             EntityKind::Stacks => "stacks",
             EntityKind::Healthchecks => "healthchecks",
+            EntityKind::Notes => "notes",
         }
     }
 
@@ -61,9 +80,88 @@ impl EntityKind {
             EntityKind::Shares => "Shares",
             EntityKind::Stacks => "Stacks",
             EntityKind::Healthchecks => "Healthchecks",
+            EntityKind::Notes => "Notes",
+        }
+    }
+
+    /// Singular name, as used for keys in the server's `/api/config` defaults.
+    pub fn singular(self) -> &'static str {
+        match self {
+            EntityKind::Applications => "application",
+            EntityKind::Services => "service",
+            EntityKind::Infra => "infra",
+            EntityKind::Domains => "domain",
+            EntityKind::People => "person",
+            EntityKind::Shares => "share",
+            EntityKind::Stacks => "stack",
+            EntityKind::Healthchecks => "healthcheck",
+            EntityKind::Notes => "note",
+        }
+    }
+
+    /// Parse a user-typed kind: the path name, or a singular or common alias
+    /// (`app`, `person`, `share`, `hc`, ...).
+    pub fn from_name(name: &str) -> Option<Self> {
+        let name = name.to_ascii_lowercase();
+        Self::ALL
+            .into_iter()
+            .find(|kind| kind.path() == name)
+            .or(match name.as_str() {
+                "app" | "apps" | "application" => Some(EntityKind::Applications),
+                "service" | "svc" => Some(EntityKind::Services),
+                "server" | "servers" | "vm" | "vms" => Some(EntityKind::Infra),
+                "domain" | "dns" => Some(EntityKind::Domains),
+                "person" => Some(EntityKind::People),
+                "share" | "network_shares" | "network-shares" => Some(EntityKind::Shares),
+                "stack" | "tech" => Some(EntityKind::Stacks),
+                "healthcheck" | "hc" => Some(EntityKind::Healthchecks),
+                "note" => Some(EntityKind::Notes),
+                _ => None,
+            })
+    }
+}
+
+impl std::str::FromStr for EntityKind {
+    type Err = String;
+
+    fn from_str(name: &str) -> std::result::Result<Self, Self::Err> {
+        Self::from_name(name).ok_or_else(|| {
+            let known = Self::ALL.map(EntityKind::path).join(", ");
+            format!("unknown entity `{name}` (expected one of: {known})")
+        })
+    }
+}
+
+impl std::fmt::Display for EntityKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.path())
+    }
+}
+
+/// A non-success API response. Kept typed so callers can react to a status
+/// (e.g. a 404 during name lookup) via `downcast_ref`.
+#[derive(Debug)]
+pub struct ApiError {
+    pub status: u16,
+    pub message: String,
+}
+
+impl std::fmt::Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let message = &self.message;
+        match self.status {
+            401 => write!(
+                f,
+                "not signed in ({message}): run `auto login`, or set AUTO_TOKEN \
+                 (create one with `auto token create <name> --save`)"
+            ),
+            403 => write!(f, "not allowed: {message}"),
+            status => write!(f, "{status}: {message}"),
         }
     }
 }
+
+impl std::error::Error for ApiError {}
 
 /// Public config served at `GET /api/config`; only what the client needs.
 #[derive(Debug, Deserialize)]
@@ -293,6 +391,63 @@ impl ApiClient {
             return Err(eyre!("request failed ({status}): {body}"));
         }
         Ok(())
+    }
+
+    /// Send any request to `/api{path}` and return the body: parsed JSON, a
+    /// JSON string for non-JSON bodies (e.g. markdown), or `null` when empty.
+    ///
+    /// Error responses become readable messages built from the backend's
+    /// `{ "error", "message" }` body.
+    pub async fn call(
+        &self,
+        method: reqwest::Method,
+        path: &str,
+        query: &[(String, String)],
+        body: Option<&Value>,
+    ) -> Result<Value> {
+        let path = path.strip_prefix("/api").unwrap_or(path);
+        let mut builder = self.request(method, path).query(query);
+        if let Some(body) = body {
+            builder = builder.json(body);
+        }
+        let response = builder.send().await?;
+        let status = response.status();
+        let is_json = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.contains("json"));
+        let text = response.text().await?;
+
+        if !status.is_success() {
+            let message = serde_json::from_str::<Value>(&text)
+                .ok()
+                .and_then(|body| body.get("message")?.as_str().map(str::to_string))
+                .unwrap_or(text);
+            return Err(ApiError {
+                status: status.as_u16(),
+                message,
+            }
+            .into());
+        }
+
+        Ok(match text.is_empty() {
+            true => Value::Null,
+            false if is_json => serde_json::from_str(&text)?,
+            false => Value::String(text),
+        })
+    }
+
+    /// Authenticate without interaction, or fail with a hint. For commands
+    /// that cannot show the login screen (CLI subcommands, MCP).
+    pub async fn require_auth(&self) -> Result<()> {
+        match self.try_silent_auth().await? {
+            AuthStatus::Authenticated => Ok(()),
+            AuthStatus::LoginRequired { reason } => Err(eyre!(
+                "{}: run `auto login`, or set AUTO_TOKEN",
+                reason.unwrap_or_else(|| "not signed in".to_string())
+            )),
+        }
     }
 
     /// Request builder for the SSE uptime stream (sent by the SSE task).
