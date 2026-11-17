@@ -3,6 +3,7 @@ mod app;
 mod cli;
 mod config;
 mod event;
+mod here;
 mod login;
 mod mcp;
 mod openapi;

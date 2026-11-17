@@ -17,6 +17,7 @@ use serde_json::{Value, json};
 use tokio::sync::OnceCell;
 
 use crate::api::{ApiClient, EntityKind};
+use crate::cli::PROBLEM_STATES;
 use crate::ops::{Action, ListQuery, Ops};
 use crate::view::row_label;
 
@@ -27,6 +28,13 @@ maintains what, network shares, technology stacks, healthchecks and notes.
 
 Use it to answer questions about what runs where, who owns or maintains \
 something, which domains point to which machines, and what is monitored.
+
+Shortcuts:
+- \"What is down?\": auto_status with problems=true. One call; never run \
+  healthchecks one by one.
+- Where an app runs, who maintains it, its domains: auto_get on the \
+  application. What runs on a server and which domains point to it: auto_get \
+  on the infra.
 
 Rules:
 - Read before you write. Find the entity with auto_search or auto_list, and \
@@ -133,6 +141,20 @@ impl AutoMcp {
             }
             "auto_get" => ops.get(args.entity("entity")?, args.str("id")?).await,
             "auto_search" => ops.search(args.str("query")?).await,
+            "auto_status" => {
+                let states: Vec<String> = match args.flag("problems") {
+                    true => PROBLEM_STATES.map(String::from).to_vec(),
+                    false => args
+                        .0
+                        .get("state")
+                        .and_then(Value::as_array)
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|s| s.as_str().map(str::to_string))
+                        .collect(),
+                };
+                ops.status(&states).await
+            }
             "auto_schema" => Ok(serde_json::to_value(
                 ops.schema(args.entity("entity")?).await?,
             )?),
@@ -308,6 +330,22 @@ fn tools() -> Vec<Tool> {
             "Search all entity kinds at once by name or description.",
             json!({ "query": { "type": "string" } }),
             &["query"],
+            read(),
+        ),
+        tool(
+            "auto_status",
+            "Live state of every healthcheck (website/service monitor in Uptime Kuma), \
+             worst first: state (down, pending, unknown, maintenance, up, disabled), \
+             since, message, url and the application or service it belongs to. \
+             Use this for \"what is down?\"; do not run healthchecks one by one.",
+            json!({
+                "problems": { "type": "boolean", "description": "Only down, pending and unknown" },
+                "state": {
+                    "type": "array",
+                    "items": { "type": "string", "enum": ["down", "pending", "unknown", "maintenance", "up", "disabled"] },
+                },
+            }),
+            &[],
             read(),
         ),
         tool(

@@ -24,6 +24,10 @@ pub struct Config {
     pub username: Option<String>,
     pub password: Option<String>,
     pub token: Option<String>,
+    /// Local checkouts of central deployment repos (nomad jobs, proxy
+    /// config, ...). `auto here` lists them so an audit can search them.
+    #[serde(default)]
+    pub deploy_repos: Vec<String>,
 }
 
 impl Config {
@@ -35,6 +39,12 @@ impl Config {
             config.url = Some(url.to_string());
         }
         config.resolve()
+    }
+
+    /// `deploy_repos` from the config file alone (no server url needed).
+    pub fn deploy_repo_paths() -> Result<Vec<PathBuf>> {
+        let config = Self::from_file()?.unwrap_or_default();
+        Ok(config.deploy_repos.iter().map(|p| expand_home(p)).collect())
     }
 
     fn from_file() -> Result<Option<Self>> {
@@ -67,7 +77,16 @@ impl Config {
             token: self.token,
             username: self.username,
             password: self.password,
+            deploy_repos: self.deploy_repos.iter().map(|p| expand_home(p)).collect(),
         })
+    }
+}
+
+/// Expand a leading `~/` to the home directory.
+fn expand_home(path: &str) -> PathBuf {
+    match (path.strip_prefix("~/"), dirs::home_dir()) {
+        (Some(rest), Some(home)) => home.join(rest),
+        _ => PathBuf::from(path),
     }
 }
 
@@ -108,4 +127,5 @@ pub struct ResolvedConfig {
     pub token: Option<String>,
     pub username: Option<String>,
     pub password: Option<String>,
+    pub deploy_repos: Vec<PathBuf>,
 }

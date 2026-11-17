@@ -49,7 +49,7 @@ impl Format {
     }
 }
 
-pub fn json(value: &impl serde::Serialize) -> io::Result<()> {
+pub fn json(value: &(impl serde::Serialize + ?Sized)) -> io::Result<()> {
     let text = serde_json::to_string_pretty(value).map_err(io::Error::other)?;
     writeln!(io::stdout().lock(), "{text}")
 }
@@ -158,6 +158,143 @@ pub fn search(results: &Value, format: Format) -> io::Result<()> {
         }
         false => table(&["Type", "ID", "Name", "Description"], &rows, format),
     }
+}
+
+/// Healthcheck states from `GET /api/healthchecks/status` (already sorted
+/// worst first), with a count per state on stderr.
+pub fn status(rows: &Value, format: Format) -> io::Result<()> {
+    let rows = rows.as_array().map(Vec::as_slice).unwrap_or_default();
+    let state_of = |row: &Value| {
+        row.get("state")
+            .and_then(Value::as_str)
+            .unwrap_or("?")
+            .to_string()
+    };
+    let mut counts: Vec<(String, usize)> = Vec::new();
+    rows.iter().map(state_of).for_each(|state| {
+        match counts.iter_mut().find(|(known, _)| *known == state) {
+            Some((_, count)) => *count += 1,
+            None => counts.push((state, 1)),
+        }
+    });
+    let summary: Vec<String> = counts
+        .iter()
+        .map(|(state, count)| format!("{count} {state}"))
+        .collect();
+    note(&match summary.is_empty() {
+        true => "no healthchecks match".to_string(),
+        false => summary.join(", "),
+    });
+    if format == Format::Json {
+        return json(rows);
+    }
+    if rows.is_empty() {
+        return Ok(());
+    }
+    let text = |row: &Value, key: &str| {
+        row.get(key)
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string()
+    };
+    let cells: Vec<Vec<String>> = rows
+        .iter()
+        .map(|row| {
+            let owner = ["application_name", "service_name"]
+                .iter()
+                .find_map(|key| row.get(key).and_then(Value::as_str))
+                .unwrap_or("")
+                .to_string();
+            let since: String = text(row, "since").chars().take(16).collect();
+            vec![
+                state_of(row),
+                text(row, "name"),
+                owner,
+                since,
+                text(row, "message"),
+                text(row, "url"),
+            ]
+        })
+        .collect();
+    table(
+        &["State", "Name", "For", "Since", "Message", "URL"],
+        &cells,
+        format,
+    )
+}
+
+pub fn here(here: &crate::here::Here, format: Format) -> io::Result<()> {
+    if format == Format::Json {
+        return json(here);
+    }
+    let repo = &here.repo;
+    println!(
+        "repo {} ({})",
+        repo.name,
+        repo.remote.as_deref().unwrap_or("no remote")
+    );
+    match here.matches.is_empty() {
+        true => note("no matching application or service in auto"),
+        false => {
+            let rows: Vec<Vec<String>> = here
+                .matches
+                .iter()
+                .map(|m| {
+                    vec![
+                        m.entity.clone(),
+                        m.id.get(..8).unwrap_or(&m.id).to_string(),
+                        m.name.clone(),
+                        m.environment.clone().unwrap_or_default(),
+                        m.matched_by.clone(),
+                    ]
+                })
+                .collect();
+            table(&["Type", "ID", "Name", "Env", "Matched by"], &rows, format)?;
+        }
+    }
+    match here.deploy_repos.is_empty() {
+        true => note("no deploy repos configured (deploy_repos in ~/.config/auto/config.toml)"),
+        false => {
+            println!();
+            deploy_repos(&here.deploy_repos, format)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn deploy_repos(repos: &[crate::here::DeployRepo], format: Format) -> io::Result<()> {
+    if format == Format::Json {
+        return json(repos);
+    }
+    let rows: Vec<Vec<String>> = repos
+        .iter()
+        .map(|repo| {
+            let state = match (repo.exists, repo.behind, repo.fetched) {
+                (false, _, _) => "missing".to_string(),
+                (true, _, Some(false)) => "fetch failed".to_string(),
+                (true, Some(0), _) => "up to date".to_string(),
+                (true, Some(n), _) => format!("{n} behind"),
+                (true, None, _) => "no upstream".to_string(),
+            };
+            let dirty = if repo.dirty == Some(true) {
+                ", local changes"
+            } else {
+                ""
+            };
+            vec![
+                repo.path.display().to_string(),
+                repo.kinds.join(","),
+                repo.branch.clone().unwrap_or_default(),
+                repo.last_commit.clone().unwrap_or_default(),
+                format!("{state}{dirty}"),
+            ]
+        })
+        .collect();
+    table(
+        &["Deploy repo", "Holds", "Branch", "Last commit", "State"],
+        &rows,
+        format,
+    )
 }
 
 pub fn schema(schema: &EntitySchema, format: Format) -> io::Result<()> {

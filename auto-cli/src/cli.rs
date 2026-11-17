@@ -15,6 +15,9 @@ use crate::output::{self, Format};
 use crate::session_store;
 use crate::view::row_label;
 
+/// Healthcheck states that need attention (`auto status --problems`).
+pub const PROBLEM_STATES: [&str; 3] = ["down", "pending", "unknown"];
+
 /// Client for the auto admin API. Without a subcommand it opens the TUI.
 #[derive(Debug, Parser)]
 #[command(name = "auto", version, about, long_about = None)]
@@ -75,6 +78,15 @@ pub enum Command {
     Search {
         #[arg(required = true, num_args = 1..)]
         query: Vec<String>,
+    },
+    /// Live state of every healthcheck (from Uptime Kuma), worst first.
+    Status {
+        /// Only checks that need attention: down, pending or unknown.
+        #[arg(short, long)]
+        problems: bool,
+        /// Only these states (down, pending, unknown, maintenance, up, disabled).
+        #[arg(short, long, value_delimiter = ',', conflicts_with = "problems")]
+        state: Vec<String>,
     },
     /// Show the fields, filters and link relations of an entity, read from
     /// the server's OpenAPI document. Without an entity, list the entities.
@@ -150,8 +162,24 @@ pub enum Command {
         #[arg(short, long = "query", value_name = "KEY=VALUE")]
         query: Vec<String>,
     },
+    /// Which auto application or service this git repository is (by
+    /// repository_url, else by name), plus the configured deploy repos.
+    Here,
+    /// Local checkouts of the central deploy repos (`deploy_repos` in the
+    /// config): what they hold (caddy, nomad, compose) and how fresh they are.
+    DeployRepos {
+        /// Run `git fetch` in each first, so `behind` is current.
+        #[arg(long)]
+        fetch: bool,
+    },
     /// Run an MCP server on stdio, for Claude Desktop and other agents.
     Mcp,
+    /// Claude Code plugin hook (reads the hook input on stdin).
+    #[command(hide = true)]
+    Hook {
+        #[arg(value_parser = ["session-start", "post-edit"])]
+        event: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -209,6 +237,22 @@ pub async fn run(command: Command, global: &Global) -> Result<()> {
         Command::Login => return login(global).await,
         Command::Logout => return logout(global).await,
         Command::Mcp => return crate::mcp::serve(client(global)?).await,
+        Command::Hook { event } => {
+            crate::here::run_hook(event, global.url.as_deref()).await;
+            return Ok(());
+        }
+        Command::DeployRepos { fetch } => {
+            let paths = config::Config::deploy_repo_paths()?;
+            if paths.is_empty() {
+                return Err(eyre!(
+                    "no deploy repos configured: add `deploy_repos = [\"~/path/to/checkout\", ...]` \
+                     to ~/.config/auto/config.toml"
+                ));
+            }
+            let repos = crate::here::deploy_repos(&paths, *fetch).await;
+            output::deploy_repos(&repos, format)?;
+            return Ok(());
+        }
         _ => {}
     }
 
@@ -218,7 +262,20 @@ pub async fn run(command: Command, global: &Global) -> Result<()> {
     let ops = Ops::new(client);
 
     match command {
-        Command::Login | Command::Logout | Command::Mcp => unreachable!("handled above"),
+        Command::Login
+        | Command::Logout
+        | Command::Mcp
+        | Command::Hook { .. }
+        | Command::DeployRepos { .. } => {
+            unreachable!("handled above")
+        }
+        Command::Here => {
+            let config = config::Config::load(global.url.as_deref())?;
+            let repo = crate::here::repo_at(&std::env::current_dir()?)
+                .ok_or_else(|| eyre!("not inside a git repository"))?;
+            let here = crate::here::find(&ops, &repo, &config.deploy_repos).await?;
+            output::here(&here, format)?;
+        }
         Command::Whoami => {
             let me = ops.client.call(Method::GET, "/auth/me", &[], None).await?;
             output::value(&me, format)?;
@@ -246,6 +303,13 @@ pub async fn run(command: Command, global: &Global) -> Result<()> {
         }
         Command::Get { entity, id } => output::detail(&ops.get(entity, &id).await?, format)?,
         Command::Search { query } => output::search(&ops.search(&query.join(" ")).await?, format)?,
+        Command::Status { problems, state } => {
+            let states = match problems {
+                true => PROBLEM_STATES.map(String::from).to_vec(),
+                false => state,
+            };
+            output::status(&ops.status(&states).await?, format)?;
+        }
         Command::Schema { entity: None } => {
             let entities: Vec<&str> = EntityKind::ALL.iter().map(|k| k.path()).collect();
             match format {
@@ -569,4 +633,34 @@ async fn token(ops: &Ops, command: TokenCommand, format: Format) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::CommandFactory;
+
+    use super::Cli;
+
+    /// The agent skill is the only documentation agents get, so every
+    /// command they can use must be in it.
+    #[test]
+    fn skill_mentions_every_command() {
+        const SKILL: &str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../agent/plugin/skills/auto/SKILL.md"
+        ));
+        // Not for agents: interactive or about running the client itself.
+        const SKIP: [&str; 3] = ["logout", "mcp", "help"];
+        let missing: Vec<String> = Cli::command()
+            .get_subcommands()
+            .filter(|command| !command.is_hide_set())
+            .map(|command| command.get_name().to_string())
+            .filter(|name| !SKIP.contains(&name.as_str()))
+            .filter(|name| !SKILL.contains(&format!("auto {name}")))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "agent/plugin/skills/auto/SKILL.md does not mention: {missing:?}"
+        );
+    }
 }

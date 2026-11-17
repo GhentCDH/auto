@@ -58,6 +58,7 @@ revoke it with `auto token revoke <id>` or in the web UI under Settings.
 
 ```bash
 auto                                    # read-only TUI
+auto status --problems                  # which healthchecks are down right now
 auto search wiki                        # search everything
 auto list apps -F environment=prd       # tables on a terminal, JSON when piped
 auto get infra vm-web-01                # by id, id prefix or exact name

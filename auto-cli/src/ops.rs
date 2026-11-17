@@ -266,6 +266,21 @@ impl Ops {
         Ok(self.resolve(kind, key).await?.0)
     }
 
+    /// Current state of every healthcheck (from Uptime Kuma), worst first.
+    /// `states` filters, e.g. `["down", "pending"]`.
+    pub async fn status(&self, states: &[String]) -> Result<Value> {
+        let query: Vec<(String, String)> = match states.is_empty() {
+            true => Vec::new(),
+            false => vec![("state".to_string(), states.join(","))],
+        };
+        self.get_json("/healthchecks/status", &query)
+            .await
+            .map_err(|error| match is_status(&error, 404) {
+                true => eyre!("the server is too old for `status`: it needs auto 1.16.0 or newer"),
+                false => error,
+            })
+    }
+
     pub async fn search(&self, query: &str) -> Result<Value> {
         self.get_json("/search", &[("q".to_string(), query.to_string())])
             .await

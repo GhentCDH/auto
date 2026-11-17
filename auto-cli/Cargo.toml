@@ -21,6 +21,7 @@ tokio = { version = "1.52.3", features = [
     "time",
     "net",
     "io-util",
+    "process",
 ] }
 reqwest = { version = "0.13.4", features = ["json", "query", "stream"] }
 futures = "0.3.32"
