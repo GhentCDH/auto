@@ -89,6 +89,35 @@ Custom Socket.IO client for Uptime Kuma (replaces kuma-client crate due to float
 
 `src/error.rs` defines an `Error` enum with `thiserror`. Maps to HTTP status codes via `IntoResponse`: NotFound→404, ValidationError→400, Conflict→409, InternalError→500. SQLx unique constraint violations automatically become 409 Conflict.
 
+### CLI, TUI and MCP client (`auto-cli/`)
+
+Workspace member that builds the `auto` binary (the server binary is
+`auto-server`). `auto` alone opens the read-only TUI; subcommands read and
+write through the API; `auto mcp` is a stdio MCP server. CLI and MCP share
+one generic layer (`auto-cli/src/ops.rs`) over the uniform REST shape
+(`/api/{entity}`, `/{id}`, `/{id}/{relation}/{other}`).
+
+The client does not mirror backend fields. `auto-cli/src/openapi.rs` reads
+create/update fields, list filters and link relations from `/api/openapi.json`
+at runtime, and adds allowed values and defaults from `/api/config`. So:
+
+- Keep request bodies registered as `request_body = ...` in utoipa annotations
+  and link routes shaped `/{entity}/{id}/{relation}/{other_id}`, or the CLI
+  will not see them.
+- `///` doc comments on Create/Update fields show up in `auto schema`.
+- The only hand-written entity table is `EntityKind` in
+  `auto-cli/src/api/mod.rs` (plus list columns in `auto-cli/src/view.rs`).
+
+The agent skill lives in `agent/plugin/` (Claude Code plugin, marketplace in
+`.claude-plugin/marketplace.json`); setup is documented in `docs/agents.md`.
+
+Server and CLI share one version, `[workspace.package] version` in the root
+`Cargo.toml`: bump it there for a release. The release workflow builds the
+CLI archives that `scripts/install.sh` downloads, and the CLI tells users
+when the server is newer (`auto-cli/src/update_check.rs`). The plugin has no
+`version` on purpose: Claude Code then tracks the commit SHA, so a pushed
+skill change reaches users without a version bump. Do not add one.
+
 ## Configuration
 
 Config is loaded by `Config::load()` (`src/config.rs`) via `figment`, layering:
@@ -183,3 +212,4 @@ When adding a defaultable field or option list, update both `src/config.rs`
 6. Add TypeScript types in `frontend/src/types/index.ts`
 7. Add API namespace in `frontend/src/api/index.ts`
 8. Add route in `frontend/src/router.ts`, views, and form components
+9. Add a variant to `EntityKind` in `auto-cli/src/api/mod.rs` and its list columns in `auto-cli/src/view.rs`

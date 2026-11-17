@@ -17,6 +17,27 @@ Built as a single binary with an embedded web interface.
 
 All entities can be linked together with relationship metadata, making it easy to understand dependencies and ownership.
 
+## Command line, TUI and agents
+
+The `auto` binary (in [`auto-cli/`](./auto-cli)) is a client for a running auto server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/GhentCDH/auto/main/scripts/install.sh | sh
+auto login --url auto.example.org       # browser sign-in, stores a session
+auto                                    # read-only TUI
+auto list apps -F environment=prd       # tables on a terminal, JSON when piped
+auto get infra vm-web-01                # by id, id prefix or exact name
+auto schema applications                # fields, defaults, allowed values, links
+auto create people name=Alice email=alice@example.org --dry-run
+auto link applications wiki people alice contribution_type=maintainer
+auto mcp                                # MCP server on stdio for agents
+```
+
+Fields and link relations are read from the server's OpenAPI document at
+runtime, so the CLI does not need a release when the backend gains fields.
+See [`docs/agents.md`](./docs/agents.md) for setting it up for Claude Code,
+Claude Desktop and other agents.
+
 ## Quick Start
 
 The app is built as a Rust backend at `src/` (with Axum as the web framework) with a Vue frontend at `frontend/`.
@@ -54,7 +75,7 @@ Production builds are done with the `--release/-r` option for `cargo build`:
 ```bash
 # Build and run
 cargo build --release
-./target/release/auto
+./target/release/auto-server
 ```
 
 This generates a single binary that has the frontend embedded in it.
