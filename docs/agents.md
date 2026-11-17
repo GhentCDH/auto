@@ -10,6 +10,14 @@ The `auto` binary is the client for an auto server:
 Every request runs as your own account, so you can only do what your role
 allows. A viewer can read everything but change nothing.
 
+## What do I need?
+
+| You use | Steps |
+|---|---|
+| Only the terminal | 1 Install, 2 Sign in, 3 Use it |
+| Claude Code | 1, 2 (with the token), and the plugin from step 4, which brings the MCP server, skills and hooks. In an organization with managed settings, the plugin is already installed for you. |
+| Claude Desktop, Codex, Cursor or another MCP client | 1, 2 (with the token), and the MCP server from step 5 |
+
 ## 1. Install
 
 ```bash
@@ -85,18 +93,22 @@ auto api GET /infra/loads              # any endpoint without its own command
 
 `auto --help` lists all commands.
 
-## 4. Claude Code: install the skill
+## 4. Claude Code: install the plugin
 
 The repository is a Claude Code plugin marketplace with one plugin, `auto`.
-It contains:
+It contains everything Claude Code needs:
 
+- the **MCP server** (`auto mcp`, started from your installed `auto`
+  binary), with the tools listed in section 5;
 - the `auto:auto` skill: when to consult auto (questions about servers, apps,
-  domains, ownership, uptime) and how to use the CLI;
+  domains, proxies, ownership, uptime) and which tool answers what;
 - the `auto:audit` skill: checks the record of the application or service in
   the current repo (see section 4b);
 - two hooks that make Claude suggest auto updates by itself (section 4b).
 
-Claude uses the `auto` CLI and asks before any write.
+Claude asks before any write. You do not add the MCP server yourself: if you
+added it by hand before (`claude mcp add auto ...`), remove that entry with
+`claude mcp remove auto -s user`, or every tool shows up twice.
 
 One user:
 
@@ -120,9 +132,26 @@ Put this in the organization's Claude Code
   },
   "enabledPlugins": {
     "auto@auto": true
+  },
+  "permissions": {
+    "allow": [
+      "mcp__plugin_auto_auto__auto_list",
+      "mcp__plugin_auto_auto__auto_get",
+      "mcp__plugin_auto_auto__auto_search",
+      "mcp__plugin_auto_auto__auto_status",
+      "mcp__plugin_auto_auto__auto_schema",
+      "mcp__plugin_auto_auto__auto_overview",
+      "mcp__plugin_auto_auto__auto_here",
+      "mcp__plugin_auto_auto__auto_deploy_repos"
+    ]
   }
 }
 ```
+
+The `permissions` part lets the read-only tools run without a prompt. Tools
+that change data (`auto_create`, `auto_update`, `auto_delete`, `auto_link`,
+`auto_unlink`, `auto_sync`) and the ones that reach out to live systems
+(`auto_dns`, `auto_run_healthcheck`) still ask each time.
 
 Claude Code registers the marketplace and installs the plugin at the start
 of each user's next session. `autoUpdate` keeps it current: updates for a git
@@ -147,9 +176,11 @@ repository, because it only syncs from private or internal repositories.
 The plugin has no `version`, so Claude Code follows the commit SHA. A skill
 change reaches users after it is pushed to `main`, without a version bump.
 
-Every user still needs the `auto` binary and a login (steps 1 and 2). When a
-command fails because `auto` is missing, too old, or not signed in, the skill
-tells Claude to ask the user to install, update or sign in.
+Every user still needs the `auto` binary and a login with a saved token
+(steps 1 and 2): the plugin starts `auto mcp`, and the hooks call `auto`.
+Without the binary, `/mcp` shows the `auto` server as failed, and the skill
+tells Claude to ask the user to install it. When a tool fails because the
+user is not signed in, the skill has Claude ask for that too.
 
 ## 4b. Keeping an app's record up to date
 
@@ -197,7 +228,8 @@ the real Caddy and Nomad config, not only from auto.
 
 ## 5. Claude Desktop and other MCP clients
 
-Add `auto mcp` as a stdio server. Use the full path to the binary, because
+Claude Code gets the MCP server from the plugin (section 4). Other clients
+need it added by hand: add `auto mcp` as a stdio server. Use the full path to the binary, because
 desktop apps often do not see your shell `PATH`. With a token saved by
 `auto token create ... --save`, no secret goes into the client config.
 
@@ -218,17 +250,17 @@ Other clients (Codex, Cursor, opencode, ...) take the same command and
 arguments in their own MCP config format. To point a client at another server
 or account, set `AUTO_URL` and `AUTO_TOKEN` in the server's `env`.
 
-The MCP server has 14 tools: `auto_list`, `auto_get`, `auto_search`,
-`auto_status`, `auto_schema`, `auto_overview`, `auto_create`, `auto_update`,
-`auto_delete`, `auto_link`, `auto_unlink`, `auto_dns`, `auto_run_healthcheck`
-and `auto_sync`.
+The MCP server has 16 tools: `auto_list`, `auto_get`, `auto_search`,
+`auto_status`, `auto_schema`, `auto_overview`, `auto_here`,
+`auto_deploy_repos`, `auto_create`, `auto_update`, `auto_delete`, `auto_link`,
+`auto_unlink`, `auto_dns`, `auto_run_healthcheck` and `auto_sync`.
 Reads are marked read-only and deletes as destructive, so clients can ask
 before a write. Every write tool takes `dry_run`.
 
-The skill comes with the Claude Code plugin (step 4). Do not also upload it
-as an organization skill on claude.ai: the Desktop Code tab loads both, so
-users would get it twice. The MCP server's own instructions already tell the
-model when and how to use the tools.
+The skills come with the Claude Code plugin (step 4). Do not also upload them
+as organization skills on claude.ai: the Desktop Code tab loads both, so
+users would get them twice. The MCP server's own instructions already tell
+the model when and how to use the tools.
 
 The claude.ai web app cannot start local stdio servers. It would need a
 remote MCP endpoint on the auto server, which does not exist yet.

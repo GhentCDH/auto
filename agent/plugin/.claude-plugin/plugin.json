@@ -1,7 +1,8 @@
 {
   "name": "auto",
-  "description": "Look up and update the organization's IT inventory (auto) with the `auto` CLI: applications, services, infra, domains, people, shares, stacks and healthchecks.",
+  "description": "Look up and update the organization's IT inventory (auto): MCP tools, skills and hooks for applications, services, infra, domains, people, shares, stacks and healthchecks.",
   "author": { "name": "GhentCDH" },
+  "mcpServers": "./.mcp.json",
   "repository": "https://github.com/GhentCDH/auto",
   "keywords": ["infrastructure", "inventory", "sysadmin", "cmdb"]
 }

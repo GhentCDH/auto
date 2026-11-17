@@ -10,7 +10,7 @@
     {
       "name": "auto",
       "source": "./agent/plugin",
-      "description": "Skill that lets agents read and update auto through the `auto` CLI."
+      "description": "MCP tools, skills and hooks that let agents read and update auto, and keep it in sync with the apps they work on."
     }
   ]
 }

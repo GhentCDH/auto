@@ -3,6 +3,7 @@
 //! field details come from the server via `auto_schema`, so the tool list
 //! does not change when the backend gains fields.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use color_eyre::eyre::{Result, eyre};
@@ -18,6 +19,8 @@ use tokio::sync::OnceCell;
 
 use crate::api::{ApiClient, EntityKind};
 use crate::cli::PROBLEM_STATES;
+use crate::config::Config;
+use crate::here;
 use crate::ops::{Action, ListQuery, Ops};
 use crate::view::row_label;
 
@@ -35,6 +38,12 @@ Shortcuts:
 - Where an app runs, who maintains it, its domains: auto_get on the \
   application. What runs on a server and which domains point to it: auto_get \
   on the infra.
+- Which record the current git repo is: auto_here with the project path.
+- How a site is proxied or deployed: auto says which systems are involved; \
+  auto_deploy_repos (fetch=true) lists the user's checkouts of the Caddy and \
+  Nomad config repos. If you can run commands, read the remote version \
+  (git -C <path> grep -n <fqdn> origin/<branch>) and answer with the concrete \
+  chain, citing files.
 
 Rules:
 - Read before you write. Find the entity with auto_search or auto_list, and \
@@ -229,6 +238,30 @@ impl AutoMcp {
                     other => return Err(eyre!("unknown sync target `{other}`")),
                 };
                 ops.action(action).await
+            }
+            "auto_here" => {
+                let path = args.opt_str("path").map(PathBuf::from);
+                let path = match path {
+                    Some(path) => path,
+                    None => std::env::current_dir()?,
+                };
+                let repo = here::repo_at(&path)
+                    .ok_or_else(|| eyre!("{} is not inside a git repository", path.display()))?;
+                let deploy_repos = Config::deploy_repo_paths()?;
+                let found = here::find(ops, &repo, &deploy_repos).await?;
+                Ok(serde_json::to_value(found)?)
+            }
+            "auto_deploy_repos" => {
+                let paths = Config::deploy_repo_paths()?;
+                if paths.is_empty() {
+                    return Err(eyre!(
+                        "no deploy repos configured: ask the user for the paths of their \
+                         checkouts and add `deploy_repos = [\"~/path\", ...]` to \
+                         ~/.config/auto/config.toml"
+                    ));
+                }
+                let repos = here::deploy_repos(&paths, args.flag("fetch")).await;
+                Ok(serde_json::to_value(repos)?)
             }
             other => Err(eyre!("unknown tool `{other}`")),
         }
@@ -429,6 +462,26 @@ fn tools() -> Vec<Tool> {
             &["target"],
             write().open_world(true),
         ),
+        tool(
+            "auto_here",
+            "Which auto application or service a git repository is (matched by \
+             repository_url, else by name: confirm name matches with the user), plus \
+             the user's deploy repos. Pass the repo path of the current project.",
+            json!({ "path": { "type": "string", "description": "Path inside the git repository" } }),
+            &["path"],
+            read(),
+        ),
+        tool(
+            "auto_deploy_repos",
+            "The user's local checkouts of the central deploy repos (Caddy proxy \
+             config, Nomad jobs): path, what each holds (caddy, nomad, compose), \
+             branch, local changes and how far behind its remote it is. With \
+             fetch=true it runs `git fetch` first. Read the files from \
+             origin/<branch> with git, not from the working tree.",
+            json!({ "fetch": { "type": "boolean" } }),
+            &[],
+            ToolAnnotations::new().read_only(true).open_world(true),
+        ),
     ]
 }
 
@@ -445,4 +498,28 @@ fn tool(
         _ => JsonObject::new(),
     };
     Tool::new(name, description, Arc::new(schema)).with_annotations(annotations)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tools;
+
+    /// The skill is how Claude learns when to use which tool, so every tool
+    /// must be in it.
+    #[test]
+    fn skill_mentions_every_tool() {
+        const SKILL: &str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../agent/plugin/skills/auto/SKILL.md"
+        ));
+        let missing: Vec<String> = tools()
+            .iter()
+            .map(|tool| tool.name.to_string())
+            .filter(|name| !SKILL.contains(&format!("`{name}`")))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "agent/plugin/skills/auto/SKILL.md does not mention: {missing:?}"
+        );
+    }
 }

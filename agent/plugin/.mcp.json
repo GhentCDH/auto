@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "auto": {
+      "command": "auto",
+      "args": ["mcp"]
+    }
+  }
+}

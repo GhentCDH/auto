@@ -634,33 +634,3 @@ async fn token(ops: &Ops, command: TokenCommand, format: Format) -> Result<()> {
     }
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use clap::CommandFactory;
-
-    use super::Cli;
-
-    /// The agent skill is the only documentation agents get, so every
-    /// command they can use must be in it.
-    #[test]
-    fn skill_mentions_every_command() {
-        const SKILL: &str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../agent/plugin/skills/auto/SKILL.md"
-        ));
-        // Not for agents: interactive or about running the client itself.
-        const SKIP: [&str; 3] = ["logout", "mcp", "help"];
-        let missing: Vec<String> = Cli::command()
-            .get_subcommands()
-            .filter(|command| !command.is_hide_set())
-            .map(|command| command.get_name().to_string())
-            .filter(|name| !SKIP.contains(&name.as_str()))
-            .filter(|name| !SKILL.contains(&format!("auto {name}")))
-            .collect();
-        assert!(
-            missing.is_empty(),
-            "agent/plugin/skills/auto/SKILL.md does not mention: {missing:?}"
-        );
-    }
-}

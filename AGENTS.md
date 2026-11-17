@@ -109,11 +109,13 @@ at runtime, and adds allowed values and defaults from `/api/config`. So:
   `auto-cli/src/api/mod.rs` (plus list columns in `auto-cli/src/view.rs`).
 
 The agent plugin lives in `agent/plugin/` (marketplace in
-`.claude-plugin/marketplace.json`): skills `auto` (CLI reference) and `audit`
-(compare a repo's app/service with its record), and hooks that call the
-hidden `auto hook session-start|post-edit` (`auto-cli/src/here.rs`). Setup is
-documented in `docs/agents.md`. A test in `auto-cli/src/cli.rs` fails when a
-visible CLI command is missing from `skills/auto/SKILL.md`.
+`.claude-plugin/marketplace.json`): the MCP server (`.mcp.json`, runs
+`auto mcp`), skills `auto` (which tool answers what) and `audit` (compare a
+repo's app/service with its record), and hooks that call the hidden
+`auto hook session-start|post-edit` (`auto-cli/src/here.rs`). Setup is
+documented in `docs/agents.md`. A test in `auto-cli/src/mcp.rs` fails when an
+MCP tool is missing from `skills/auto/SKILL.md`; a new tool that only reads
+also belongs in the managed-settings allow list in `docs/agents.md`.
 
 Server and CLI share one version, `[workspace.package] version` in the root
 `Cargo.toml`: bump it there for a release. The release workflow builds the
