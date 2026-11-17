@@ -74,8 +74,10 @@ jobs:
           body: ${{ needs.generate-changelog.outputs.release_body }}
 
   # Prebuilt `auto` CLI binaries, attached to the release created above.
+  # Both macOS targets build in one job: macOS runners are often scarce, so a
+  # release should need only one of them.
   cli-binaries:
-    name: CLI (${{ matrix.target }})
+    name: CLI (${{ matrix.name }})
     needs: build-and-release
     runs-on: ${{ matrix.runner }}
     permissions:
@@ -84,37 +86,36 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-unknown-linux-musl
+          - name: linux x86_64
             runner: ubuntu-latest
-          - target: aarch64-unknown-linux-musl
+            targets: x86_64-unknown-linux-musl
+          - name: linux arm64
             runner: ubuntu-24.04-arm
-          - target: aarch64-apple-darwin
+            targets: aarch64-unknown-linux-musl
+          - name: macos
             runner: macos-latest
-          - target: x86_64-apple-darwin
-            runner: macos-latest
+            targets: aarch64-apple-darwin x86_64-apple-darwin
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install musl tools
-        if: contains(matrix.target, 'musl')
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Install Rust target
-        run: rustup target add ${{ matrix.target }}
-
-      - name: Build
-        run: cargo build --release --locked -p auto-cli --target ${{ matrix.target }}
-
-      - name: Package
+      - name: Build and package
         run: |
-          tar -czf auto-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release auto
-          shasum -a 256 auto-${{ matrix.target }}.tar.gz > auto-${{ matrix.target }}.tar.gz.sha256
+          for target in ${{ matrix.targets }}; do
+            rustup target add "$target"
+            cargo build --release --locked -p auto-cli --target "$target"
+            tar -czf "auto-$target.tar.gz" -C "target/$target/release" auto
+            shasum -a 256 "auto-$target.tar.gz" > "auto-$target.tar.gz.sha256"
+          done
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            auto-${{ matrix.target }}.tar.gz
-            auto-${{ matrix.target }}.tar.gz.sha256
+            auto-*.tar.gz
+            auto-*.tar.gz.sha256
