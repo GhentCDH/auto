@@ -100,7 +100,7 @@ onMounted(() => {
       </fieldset>
     </div>
 
-    <fieldset v-if="note_type === 'link'" class="fieldset">
+    <fieldset class="fieldset">
       <legend class="fieldset-legend">URL</legend>
       <input
         v-model="url"
