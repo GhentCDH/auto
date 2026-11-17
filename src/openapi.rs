@@ -133,6 +133,7 @@ use utoipa::{Modify, OpenApi};
         crate::api::healthchecks::kuma_endpoint,
         crate::api::healthchecks::sync_kuma_one,
         crate::api::healthchecks::sync_kuma_all,
+        crate::api::healthchecks::status,
 
         // Dashboard
         crate::api::dashboard::stats,
@@ -281,6 +282,8 @@ use utoipa::{Modify, OpenApi};
             crate::models::HeartbeatEntry,
             crate::models::MonitorUptime,
             crate::models::UptimeEvent,
+            crate::models::CheckState,
+            crate::models::HealthcheckStatus,
 
             // Service layer
             crate::service::search::ResolvedEntity,

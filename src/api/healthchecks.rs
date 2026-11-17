@@ -9,8 +9,9 @@ use serde::Deserialize;
 use tracing::debug;
 
 use crate::models::{
-    CreateHealthcheck, Healthcheck, HealthcheckExecuteResult, HealthcheckWithRelations,
-    KumaEndpoint, KumaMonitor, PaginationParams, UpdateHealthcheck, UptimeEvent,
+    CheckState, CreateHealthcheck, Healthcheck, HealthcheckExecuteResult, HealthcheckStatus,
+    HealthcheckWithRelations, KumaEndpoint, KumaMonitor, PaginationParams, UpdateHealthcheck,
+    UptimeEvent,
 };
 use crate::service::healthcheck;
 use crate::{AppState, Result, kuma};
@@ -33,6 +34,7 @@ pub fn routes() -> Router<AppState> {
         .route("/kuma-endpoint", get(kuma_endpoint))
         .route("/sync/kuma/{id}", post(sync_kuma_one))
         .route("/uptime/stream", get(uptime_stream))
+        .route("/status", get(status))
         .route("/{id}", get(get_one).put(update).delete(delete_one))
         .route("/{id}/execute", get(execute))
 }
@@ -297,6 +299,64 @@ async fn uptime_stream(
     debug!("Start sending stream");
 
     Sse::new(combined).keep_alive(KeepAlive::default())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusQuery {
+    /// Comma-separated states to keep, e.g. `down,pending`.
+    pub state: Option<String>,
+}
+
+/// Current state of every healthcheck, from the latest Kuma heartbeats.
+///
+/// Answers "what is down?" in one request; the SSE stream is for live
+/// dashboards.
+#[utoipa::path(
+    get,
+    path = "/api/healthchecks/status",
+    tag = "healthchecks",
+    params(
+        ("state" = Option<String>, Query, description = "Comma-separated states to keep: down, pending, unknown, maintenance, up, disabled")
+    ),
+    responses(
+        (status = 200, description = "Healthchecks with their current state, worst first", body = Vec<HealthcheckStatus>),
+        (status = 400, description = "Unknown state in the filter"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn status(
+    State(state): State<AppState>,
+    Query(query): Query<StatusQuery>,
+) -> Result<impl axum::response::IntoResponse> {
+    let wanted: Option<Vec<CheckState>> = query
+        .state
+        .as_deref()
+        .map(|states| {
+            states
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(|s| {
+                    serde_json::from_value(serde_json::Value::String(s.to_string())).map_err(|_| {
+                        crate::Error::ValidationError(format!("unknown healthcheck state `{s}`"))
+                    })
+                })
+                .collect()
+        })
+        .transpose()?;
+    let healthchecks = healthcheck::get_all_with_relations(&state.pool).await?;
+    let rows = {
+        let uptime = state.uptime_state.read().await;
+        healthcheck::statuses(healthchecks, &uptime.uptimes)
+    };
+    let rows: Vec<HealthcheckStatus> = match wanted {
+        Some(wanted) => rows
+            .into_iter()
+            .filter(|row| wanted.contains(&row.state))
+            .collect(),
+        None => rows,
+    };
+    Ok(Json(rows))
 }
 
 /// Converts a `broadcast::Receiver` into a `Stream` of SSE events.

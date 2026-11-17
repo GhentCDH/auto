@@ -6,9 +6,9 @@ use reqwest::Client;
 use sqlx::SqlitePool;
 
 use crate::models::{
-    CreateHealthcheck, Healthcheck, HealthcheckExecuteResult, HealthcheckRelation,
-    HealthcheckWithRelations, InfraHealthcheckRelation, KumaMonitor, PaginatedResponse,
-    PaginationParams, UpdateHealthcheck, new_id,
+    CheckState, CreateHealthcheck, Healthcheck, HealthcheckExecuteResult, HealthcheckRelation,
+    HealthcheckStatus, HealthcheckWithRelations, HeartbeatEntry, InfraHealthcheckRelation,
+    KumaMonitor, MonitorUptime, PaginatedResponse, PaginationParams, UpdateHealthcheck, new_id,
 };
 use crate::{Error, Result};
 
@@ -169,6 +169,80 @@ pub async fn get_all_with_relations(pool: &SqlitePool) -> Result<Vec<Healthcheck
         .await
         .into_iter()
         .collect()
+}
+
+/// Join healthchecks with the in-memory Kuma heartbeats: worst state first,
+/// then by name. Synchronous, so callers hold the uptime lock only for this.
+pub fn statuses(
+    healthchecks: Vec<HealthcheckWithRelations>,
+    uptimes: &HashMap<i32, MonitorUptime>,
+) -> Vec<HealthcheckStatus> {
+    let mut rows: Vec<HealthcheckStatus> = healthchecks
+        .into_iter()
+        .map(|healthcheck| status_of(healthcheck, uptimes))
+        .collect();
+    rows.sort_by(|a, b| a.state.cmp(&b.state).then_with(|| a.name.cmp(&b.name)));
+    rows
+}
+
+fn status_of(
+    healthcheck: HealthcheckWithRelations,
+    uptimes: &HashMap<i32, MonitorUptime>,
+) -> HealthcheckStatus {
+    let HealthcheckWithRelations {
+        healthcheck: hc,
+        application_name,
+        service_name,
+        domain_fqdn,
+        ..
+    } = healthcheck;
+    let beats: &[HeartbeatEntry] = hc
+        .kuma_id
+        .and_then(|kuma_id| uptimes.get(&kuma_id))
+        .map(|monitor| monitor.heartbeats.as_slice())
+        .unwrap_or_default();
+    let last = beats.last();
+    let state = match (hc.is_enabled, last) {
+        (false, _) => CheckState::Disabled,
+        (true, None) => CheckState::Unknown,
+        (true, Some(beat)) => CheckState::from_kuma(beat.status),
+    };
+    let (since, uptime_percent) = summarize_beats(beats);
+
+    HealthcheckStatus {
+        url: format!("{}://{}{}", hc.protocol, domain_fqdn, hc.path),
+        id: hc.id,
+        name: hc.name,
+        state,
+        application_id: hc.application_id,
+        application_name,
+        service_id: hc.service_id,
+        service_name,
+        kuma_id: hc.kuma_id,
+        since,
+        last_check: last.map(|beat| beat.time.clone()),
+        message: last.and_then(|beat| beat.msg.clone()),
+        ping_ms: last.and_then(|beat| beat.ping),
+        uptime_percent,
+    }
+}
+
+/// (start of the current run of equal statuses, percentage of up beats),
+/// both within the kept heartbeat window. Beats are oldest first.
+fn summarize_beats(beats: &[HeartbeatEntry]) -> (Option<String>, Option<f64>) {
+    let since = beats.last().and_then(|last| {
+        beats
+            .iter()
+            .rev()
+            .take_while(|beat| beat.status == last.status)
+            .last()
+            .map(|beat| beat.time.clone())
+    });
+    let uptime_percent = (!beats.is_empty()).then(|| {
+        let up = beats.iter().filter(|beat| beat.status == 1).count();
+        (up as f64 * 1000.0 / beats.len() as f64).round() / 10.0
+    });
+    (since, uptime_percent)
 }
 
 pub async fn create(pool: &SqlitePool, input: CreateHealthcheck) -> Result<Healthcheck> {
@@ -706,4 +780,68 @@ pub async fn clear_kuma_dirty(pool: &SqlitePool, id: &str) -> Result<()> {
         .execute(pool)
         .await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod status_tests {
+    use super::summarize_beats;
+    use crate::models::{CheckState, HeartbeatEntry};
+
+    fn beat(status: i32, time: &str) -> HeartbeatEntry {
+        HeartbeatEntry {
+            status,
+            time: time.to_string(),
+            ping: None,
+            msg: None,
+        }
+    }
+
+    #[test]
+    fn since_is_start_of_current_run() {
+        let beats = [
+            beat(1, "10:00"),
+            beat(0, "10:01"),
+            beat(1, "10:02"),
+            beat(0, "10:03"),
+            beat(0, "10:04"),
+        ];
+        let (since, uptime) = summarize_beats(&beats);
+        assert_eq!(since.as_deref(), Some("10:03"));
+        assert_eq!(uptime, Some(40.0));
+    }
+
+    #[test]
+    fn whole_window_in_one_state() {
+        let beats = [beat(1, "10:00"), beat(1, "10:01"), beat(1, "10:02")];
+        assert_eq!(summarize_beats(&beats), (Some("10:00".into()), Some(100.0)));
+    }
+
+    #[test]
+    fn no_beats() {
+        assert_eq!(summarize_beats(&[]), (None, None));
+    }
+
+    #[test]
+    fn states_sort_worst_first() {
+        let mut states = [
+            CheckState::Up,
+            CheckState::Disabled,
+            CheckState::Down,
+            CheckState::Unknown,
+            CheckState::Pending,
+        ];
+        states.sort();
+        assert_eq!(
+            states,
+            [
+                CheckState::Down,
+                CheckState::Pending,
+                CheckState::Unknown,
+                CheckState::Up,
+                CheckState::Disabled
+            ]
+        );
+        assert_eq!(CheckState::from_kuma(0), CheckState::Down);
+        assert_eq!(CheckState::from_kuma(3), CheckState::Maintenance);
+    }
 }
