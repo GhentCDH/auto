@@ -19,24 +19,62 @@ All entities can be linked together with relationship metadata, making it easy t
 
 ## Command line, TUI and agents
 
-The `auto` binary (in [`auto-cli/`](./auto-cli)) is a client for a running auto server:
+The `auto` binary (in [`auto-cli/`](./auto-cli)) is a client for a running
+auto server. It opens a read-only TUI, has commands to read and change data,
+and runs an MCP server for agents.
+
+### 1. Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/GhentCDH/auto/main/scripts/install.sh | sh
-auto login --url auto.example.org       # browser sign-in, stores a session
+```
+
+This puts `auto` in `~/.local/bin`. Run the same command again to update;
+`auto` tells you when the server runs a newer version.
+
+### 2. Sign in
+
+```bash
+auto login --url auto.example.org
+```
+
+This saves the server URL and opens your browser, where you sign in with your
+password or SSO account. The session is valid for 7 days (the server's
+`SESSION_HOURS`), counted from the login, not from your last use.
+
+### 3. Save an API token
+
+```bash
+auto token create "laptop" --save
+```
+
+A token does not expire unless you give it a lifetime (`--expires-in-days`),
+so you do not have to sign in again every week. It is saved in
+`~/.config/auto/config.toml` and is used in place of the session from now on.
+Agents and the MCP server need it too. The token has your role, and you can
+revoke it with `auto token revoke <id>` or in the web UI under Settings.
+
+### 4. Use it
+
+```bash
 auto                                    # read-only TUI
+auto search wiki                        # search everything
 auto list apps -F environment=prd       # tables on a terminal, JSON when piped
 auto get infra vm-web-01                # by id, id prefix or exact name
 auto schema applications                # fields, defaults, allowed values, links
 auto create people name=Alice email=alice@example.org --dry-run
 auto link applications wiki people alice contribution_type=maintainer
-auto mcp                                # MCP server on stdio for agents
+auto --help                             # all commands
 ```
 
 Fields and link relations are read from the server's OpenAPI document at
 runtime, so the CLI does not need a release when the backend gains fields.
-See [`docs/agents.md`](./docs/agents.md) for setting it up for Claude Code,
-Claude Desktop and other agents.
+
+### 5. Agents
+
+`auto mcp` runs an MCP server on stdio, and this repository is a Claude Code
+plugin marketplace with an `auto` skill. See [`docs/agents.md`](./docs/agents.md)
+for Claude Code, Claude Desktop and other agents.
 
 ## Quick Start
 

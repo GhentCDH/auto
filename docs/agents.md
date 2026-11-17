@@ -43,8 +43,9 @@ auto login --url auto.example.org   # saves the URL, opens the browser
 auto whoami
 ```
 
-`auto login` works for password and SSO accounts. The session lasts as long as
-the server's session lifetime (default 7 days).
+`auto login` works for password and SSO accounts. The session lasts the
+server's `SESSION_HOURS` (default 7 days), counted from the login: using it
+does not extend it.
 
 Agents and MCP clients should use a personal API token, which does not expire
 unless you ask it to:
