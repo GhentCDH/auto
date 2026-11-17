@@ -5,7 +5,7 @@ resolver = "3"
 # Shared by the server and the CLI: one release tag builds both, and the CLI
 # compares its version with the server's to tell users about updates.
 [workspace.package]
-version = "1.15.0"
+version = "1.16.0"
 
 [package]
 name = "auto"
