@@ -108,8 +108,12 @@ at runtime, and adds allowed values and defaults from `/api/config`. So:
 - The only hand-written entity table is `EntityKind` in
   `auto-cli/src/api/mod.rs` (plus list columns in `auto-cli/src/view.rs`).
 
-The agent skill lives in `agent/plugin/` (Claude Code plugin, marketplace in
-`.claude-plugin/marketplace.json`); setup is documented in `docs/agents.md`.
+The agent plugin lives in `agent/plugin/` (marketplace in
+`.claude-plugin/marketplace.json`): skills `auto` (CLI reference) and `audit`
+(compare a repo's app/service with its record), and hooks that call the
+hidden `auto hook session-start|post-edit` (`auto-cli/src/here.rs`). Setup is
+documented in `docs/agents.md`. A test in `auto-cli/src/cli.rs` fails when a
+visible CLI command is missing from `skills/auto/SKILL.md`.
 
 Server and CLI share one version, `[workspace.package] version` in the root
 `Cargo.toml`: bump it there for a release. The release workflow builds the

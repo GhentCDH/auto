@@ -88,10 +88,15 @@ auto api GET /infra/loads              # any endpoint without its own command
 ## 4. Claude Code: install the skill
 
 The repository is a Claude Code plugin marketplace with one plugin, `auto`.
-It holds a skill that tells Claude when to consult auto (questions about
-servers, apps, domains, ownership, monitoring) and to offer an update after
-you change infrastructure. Claude then uses the `auto` CLI, and asks before
-any write.
+It contains:
+
+- the `auto:auto` skill: when to consult auto (questions about servers, apps,
+  domains, ownership, uptime) and how to use the CLI;
+- the `auto:audit` skill: checks the record of the application or service in
+  the current repo (see section 4b);
+- two hooks that make Claude suggest auto updates by itself (section 4b).
+
+Claude uses the `auto` CLI and asks before any write.
 
 One user:
 
@@ -142,9 +147,53 @@ repository, because it only syncs from private or internal repositories.
 The plugin has no `version`, so Claude Code follows the commit SHA. A skill
 change reaches users after it is pushed to `main`, without a version bump.
 
-Every user still needs the `auto` binary and a login (steps 1 and 2). The
-skill tells Claude to run `auto whoami` first, and to ask the user to install
-or sign in when that fails.
+Every user still needs the `auto` binary and a login (steps 1 and 2). When a
+command fails because `auto` is missing, too old, or not signed in, the skill
+tells Claude to ask the user to install, update or sign in.
+
+## 4b. Keeping an app's record up to date
+
+Work on an application or service happens in its own repository. The plugin
+connects that repository to its record in auto:
+
+- `auto here` finds the record of the current git repository: first by
+  `repository_url` (certain), then by name (a guess that Claude confirms with
+  you). Filling in `repository_url` in auto makes the match exact.
+- **Session start hook:** in a repo that matches, Claude is told which auto
+  record it is, and that it should offer an update when the work changes how
+  the app is deployed or reached. In other repos the hook stays silent.
+- **Edit hook:** when Claude edits a deploy-related file (nomad jobs,
+  compose files, Dockerfiles, Caddyfile, CI workflows, Terraform, ...), it is
+  reminded once per session to tell you which part of the record may need an
+  update.
+- **`auto:audit` skill** ("check if auto is up to date for this app"):
+  compares the repo, the central deploy repos and the live systems with
+  auto, area by area: fields, domains, infra, services, healthchecks and their
+  Uptime Kuma sync, stack, maintainers and notes. You get a table of gaps
+  with the exact commands, and nothing changes until you confirm.
+
+The hooks call `auto` with a 4-second limit and cache the lookup for 6 hours
+per repo (in `~/.cache/auto`). Without the binary, outside git repos, or when
+the server cannot be reached, they do nothing.
+
+Deployment details often live in central repos and not in the app's repo:
+the Caddy proxy config (`caddy-config`) and the Nomad jobs
+(`git@github.ugent.be:containers/nomad-jobs-ns-ghentcdh.git`). Everyone who
+works with Claude on apps should have checkouts of both and list them in
+`~/.config/auto/config.toml`:
+
+```toml
+deploy_repos = [
+  "~/Projects/admin/caddy-config",
+  "~/Projects/admin/nomad-jobs-ns-ghentcdh",
+]
+```
+
+`auto deploy-repos --fetch` shows what each one holds and whether it is
+behind its remote. Claude reads the remote version (`origin/<branch>`), so an
+old checkout does not give an old answer, and it never pulls unless you ask.
+With these repos, questions like "how is this app proxied?" are answered from
+the real Caddy and Nomad config, not only from auto.
 
 ## 5. Claude Desktop and other MCP clients
 
@@ -169,9 +218,10 @@ Other clients (Codex, Cursor, opencode, ...) take the same command and
 arguments in their own MCP config format. To point a client at another server
 or account, set `AUTO_URL` and `AUTO_TOKEN` in the server's `env`.
 
-The MCP server has 13 tools: `auto_list`, `auto_get`, `auto_search`,
-`auto_schema`, `auto_overview`, `auto_create`, `auto_update`, `auto_delete`,
-`auto_link`, `auto_unlink`, `auto_dns`, `auto_run_healthcheck` and `auto_sync`.
+The MCP server has 14 tools: `auto_list`, `auto_get`, `auto_search`,
+`auto_status`, `auto_schema`, `auto_overview`, `auto_create`, `auto_update`,
+`auto_delete`, `auto_link`, `auto_unlink`, `auto_dns`, `auto_run_healthcheck`
+and `auto_sync`.
 Reads are marked read-only and deletes as destructive, so clients can ask
 before a write. Every write tool takes `dry_run`.
 
