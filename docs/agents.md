@@ -22,8 +22,9 @@ SHA-256, and installs `auto` to `~/.local/bin` (set `AUTO_INSTALL_DIR` to
 change that). Pass a version to pin one: `sh install.sh v1.15.0`.
 
 Platforms: Linux x86_64 and arm64 (static musl builds), macOS Apple Silicon
-and Intel. Elsewhere, build from source:
-`cargo install --git https://github.com/GhentCDH/auto auto-cli`.
+and Intel. When the release has no archive for your platform, the script
+builds the CLI from the release tag with `cargo` (install it with
+[rustup](https://rustup.rs)).
 
 ### Updates
 

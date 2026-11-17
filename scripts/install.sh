@@ -4,6 +4,9 @@
 #   curl -fsSL https://raw.githubusercontent.com/GhentCDH/auto/main/scripts/install.sh | sh
 #   sh install.sh v1.15.0        # a specific release (default: latest)
 #
+# When the release has no archive for this platform, the script builds the
+# CLI from the release tag with cargo instead.
+#
 # Environment:
 #   AUTO_INSTALL_DIR   where to put the binary (default: ~/.local/bin)
 #   AUTO_DOWNLOAD_URL  base URL of the release assets (default: GitHub)
@@ -23,8 +26,7 @@ case "$(uname -s)-$(uname -m)" in
     Linux-aarch64 | Linux-arm64) target=aarch64-unknown-linux-musl ;;
     Darwin-arm64) target=aarch64-apple-darwin ;;
     Darwin-x86_64) target=x86_64-apple-darwin ;;
-    *) fail "no prebuilt auto for $(uname -s) $(uname -m); build it from source:
-  cargo install --git https://github.com/$REPO auto-cli" ;;
+    *) target= ;;
 esac
 
 if [ -n "${AUTO_DOWNLOAD_URL:-}" ]; then
@@ -53,21 +55,51 @@ sha256() {
     fi
 }
 
+latest_tag() {
+    download "https://api.github.com/repos/$REPO/releases/latest" "$tmp/latest.json" ||
+        fail "could not look up the latest release of $REPO"
+    sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' "$tmp/latest.json" | head -n 1
+}
+
+# Builds the CLI of the requested release into "$tmp/auto".
+build_from_source() {
+    echo "$1; building auto from source instead" >&2
+    command -v cargo >/dev/null 2>&1 ||
+        fail "cargo is needed to build auto from source, see https://rustup.rs"
+    if [ "$VERSION" = latest ]; then
+        tag=$(latest_tag)
+        [ -n "$tag" ] || fail "could not find the latest release of $REPO"
+    else
+        tag="v${VERSION#v}"
+    fi
+    echo "building auto-cli $tag with cargo, this can take a few minutes"
+    cargo install --locked --git "https://github.com/$REPO" --tag "$tag" \
+        --root "$tmp/cargo" auto-cli
+    cp "$tmp/cargo/bin/auto" "$tmp/auto"
+}
+
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
-asset="auto-$target.tar.gz"
-echo "downloading $asset ($VERSION)"
-download "$base/$asset" "$tmp/$asset" ||
-    fail "could not download $base/$asset (CLI binaries are published from v1.15.0 on)"
-download "$base/$asset.sha256" "$tmp/$asset.sha256" ||
-    fail "could not download the checksum $base/$asset.sha256"
+if [ -z "$target" ]; then
+    build_from_source "no prebuilt auto for $(uname -s) $(uname -m)"
+else
+    asset="auto-$target.tar.gz"
+    echo "downloading $asset ($VERSION)"
+    if download "$base/$asset" "$tmp/$asset"; then
+        download "$base/$asset.sha256" "$tmp/$asset.sha256" ||
+            fail "could not download the checksum $base/$asset.sha256"
 
-expected=$(cut -d' ' -f1 "$tmp/$asset.sha256")
-actual=$(sha256 "$tmp/$asset")
-[ "$expected" = "$actual" ] || fail "checksum mismatch for $asset"
+        expected=$(cut -d' ' -f1 "$tmp/$asset.sha256")
+        actual=$(sha256 "$tmp/$asset")
+        [ "$expected" = "$actual" ] || fail "checksum mismatch for $asset"
 
-tar -xzf "$tmp/$asset" -C "$tmp"
+        tar -xzf "$tmp/$asset" -C "$tmp"
+    else
+        build_from_source "could not download $base/$asset"
+    fi
+fi
+
 mkdir -p "$INSTALL_DIR"
 # Write next to the target and rename, so a running `auto` is not overwritten
 # in place.
