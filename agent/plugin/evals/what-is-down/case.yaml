@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: what-is-down
+context:
+  # Writes ~/.config/auto/config.toml in the eval's fresh HOME.
+  scaffold_script: setup.sh

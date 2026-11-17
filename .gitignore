@@ -5,3 +5,4 @@ frontend-dist
 frontend/node_modules
 .env
 auto.toml
+agent/plugin/evals/results
