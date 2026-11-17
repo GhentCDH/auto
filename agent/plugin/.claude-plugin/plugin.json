@@ -1,0 +1,7 @@
+{
+  "name": "auto",
+  "description": "Look up and update the organization's IT inventory (auto) with the `auto` CLI: applications, services, infra, domains, people, shares, stacks and healthchecks.",
+  "author": { "name": "GhentCDH" },
+  "repository": "https://github.com/GhentCDH/auto",
+  "keywords": ["infrastructure", "inventory", "sysadmin", "cmdb"]
+}

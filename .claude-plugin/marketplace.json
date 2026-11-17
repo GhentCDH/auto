@@ -1,0 +1,16 @@
+{
+  "name": "auto",
+  "owner": {
+    "name": "GhentCDH"
+  },
+  "metadata": {
+    "description": "Agent integration for the auto IT inventory."
+  },
+  "plugins": [
+    {
+      "name": "auto",
+      "source": "./agent/plugin",
+      "description": "Skill that lets agents read and update auto through the `auto` CLI."
+    }
+  ]
+}
