@@ -9,12 +9,13 @@ use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use color_eyre::eyre::Result;
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::api::{ApiClient, EntityKind};
-use crate::config::{APP_DIR, Config};
-use crate::ops::{ListQuery, Ops};
+use crate::config::{APP_DIR, Config, DEPLOY_REPOS_HELP};
+use crate::ops::{ListQuery, Ops, is_status};
 use crate::view::row_label;
 
 /// How long a hook may reuse a repo lookup before asking the server again.
@@ -57,6 +58,25 @@ pub struct DeployRepo {
     pub behind: Option<u32>,
     /// Whether `--fetch` refreshed it just now (`None`: not attempted).
     pub fetched: Option<bool>,
+}
+
+/// The signed-in user's role on the server.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Role {
+    Admin,
+    Editor,
+    Viewer,
+}
+
+/// The user's role; `None` when it cannot be read. A server without auth
+/// has no `/auth/me` and lets everyone do everything, like an admin.
+pub async fn user_role(client: &ApiClient) -> Option<Role> {
+    match client.call(Method::GET, "/auth/me", &[], None).await {
+        Ok(me) => Role::deserialize(me.get("role")?).ok(),
+        Err(error) if is_status(&error, 404) => Some(Role::Admin),
+        Err(_) => None,
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -320,17 +340,31 @@ async fn hook_context(event: &str, input: &HookInput, url: Option<&str>) -> Opti
     let repo = repo_at(&cwd)?;
     match event {
         "session-start" => {
-            let here = cached_here(&repo, url).await?;
+            let (here, role) = cached_here(&repo, url).await?;
             let first = here.matches.first()?;
-            Some(session_context(&here, first))
+            let context = session_context(&here, first, role);
+            // `deploy_repos = []` is an explicit "I have none": only an absent key asks.
+            let ask_deploy_repos =
+                role == Role::Admin && Config::deploy_repo_setting().is_ok_and(|s| s.is_none());
+            Some(match ask_deploy_repos {
+                true => format!(
+                    "{context}\n\nThe user has no deploy repos configured. {DEPLOY_REPOS_HELP} \
+                     Tell the user this once in this session, in two or three sentences, \
+                     and offer to add the paths of their checkouts."
+                ),
+                false => context,
+            })
         }
         "post-edit" => {
             let file = input.tool_input.get("file_path").and_then(Value::as_str)?;
-            if !is_deploy_file(file) || !remind_once(&input.session_id, &repo) {
+            if !is_deploy_file(file) {
                 return None;
             }
-            let here = cached_here(&repo, url).await?;
+            let (here, role) = cached_here(&repo, url).await?;
             let first = here.matches.first()?;
+            if role != Role::Admin || !remind_once(&input.session_id, &repo) {
+                return None;
+            }
             Some(format!(
                 "You changed {file}, which can change how {} is deployed or reached. When \
                  this change is done, tell the user which part of its auto record may need \
@@ -343,7 +377,7 @@ async fn hook_context(event: &str, input: &HookInput, url: Option<&str>) -> Opti
     }
 }
 
-fn session_context(here: &Here, first: &Match) -> String {
+fn session_context(here: &Here, first: &Match, role: Role) -> String {
     let records: Vec<String> = here
         .matches
         .iter()
@@ -360,15 +394,24 @@ fn session_context(here: &Here, first: &Match) -> String {
         "repository_url" => "",
         _ => " (matched by name only: confirm with the user before relying on it)",
     };
-    format!(
-        "This repository is in auto, the organization's IT inventory, as {}{certainty}. \
-         Keep auto in sync: when work in this session changes how it is deployed or \
-         reached (domains, servers or clusters, services it depends on such as databases, \
-         health endpoints, ports), tell the user that auto should be updated and offer the \
-         auto:audit skill, which compares the repo with auto. Do not change auto without \
-         the user's confirmation.",
-        records.join(", ")
-    )
+    let records = records.join(", ");
+    let intro = format!(
+        "This repository is in auto, the organization's IT inventory, as {records}{certainty}."
+    );
+    match role {
+        Role::Viewer => format!(
+            "{intro} The user can only read auto (viewer role): use it to answer questions \
+             about where this runs, its domains, uptime and people. Do not propose changes \
+             to auto or the auto:audit skill."
+        ),
+        Role::Admin | Role::Editor => format!(
+            "{intro} Keep auto in sync: when work in this session changes how it is deployed \
+             or reached (domains, servers or clusters, services it depends on such as \
+             databases, health endpoints, ports), tell the user that auto should be updated \
+             and offer the auto:audit skill, which compares the repo with auto. Do not change \
+             auto without the user's confirmation."
+        ),
+    }
 }
 
 /// Files whose changes usually mean the deployment changed.
@@ -436,10 +479,12 @@ fn remind_once(session_id: &str, repo: &Repo) -> bool {
 struct CacheEntry {
     at: u64,
     here: Here,
+    role: Role,
 }
 
-/// The repo lookup from cache, or from the server (and then cached).
-async fn cached_here(repo: &Repo, url: Option<&str>) -> Option<Here> {
+/// The repo lookup and the user's role from cache, or from the server (and
+/// then cached).
+async fn cached_here(repo: &Repo, url: Option<&str>) -> Option<(Here, Role)> {
     let file = cache_dir()?
         .join("repos")
         .join(format!("{}.json", path_key(&repo.root)));
@@ -448,21 +493,27 @@ async fn cached_here(repo: &Repo, url: Option<&str>) -> Option<Here> {
         .ok()
         .and_then(|text| serde_json::from_str(&text).ok());
     if let Some(entry) = cached.filter(|e| now.saturating_sub(e.at) < CACHE_TTL.as_secs()) {
-        return Some(entry.here);
+        return Some((entry.here, entry.role));
     }
 
     let config = Config::load(url).ok()?;
     let client = ApiClient::new(&config).ok()?;
     client.require_auth().await.ok()?;
-    let here = find(&Ops::new(client), repo, &config.deploy_repos)
-        .await
-        .ok()?;
+    let ops = Ops::new(client);
+    let (here, role) = tokio::join!(
+        find(&ops, repo, &config.deploy_repos),
+        user_role(&ops.client)
+    );
+    let entry = CacheEntry {
+        at: now,
+        here: here.ok()?,
+        role: role?,
+    };
     if let Some(dir) = file.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let entry = CacheEntry { at: now, here };
     let _ = std::fs::write(&file, serde_json::to_vec(&entry).ok()?);
-    Some(entry.here)
+    Some((entry.here, entry.role))
 }
 
 #[cfg(test)]
@@ -501,6 +552,31 @@ mod tests {
         assert!(names_match("ghentcdh-wiki", "Wiki")); // substring, both >= 4 chars
         assert!(!names_match("api", "rapid")); // too short to match by substring
         assert!(!names_match("", "x"));
+    }
+
+    #[test]
+    fn session_context_follows_role() {
+        let wiki = Match {
+            entity: "applications".into(),
+            id: "1".into(),
+            name: "wiki".into(),
+            environment: None,
+            matched_by: "repository_url".into(),
+        };
+        let here = Here {
+            repo: Repo {
+                root: PathBuf::from("/repo"),
+                remote: None,
+                name: "wiki".into(),
+            },
+            matches: vec![wiki.clone()],
+            deploy_repos: vec![],
+        };
+        let viewer = session_context(&here, &wiki, Role::Viewer);
+        assert!(viewer.contains("only read") && !viewer.contains("Keep auto in sync"));
+        let editor = session_context(&here, &wiki, Role::Editor);
+        assert!(editor.contains("Keep auto in sync"));
+        assert_eq!(Role::deserialize(&json!("editor")).ok(), Some(Role::Editor));
     }
 
     #[test]

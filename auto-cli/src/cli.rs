@@ -245,8 +245,8 @@ pub async fn run(command: Command, global: &Global) -> Result<()> {
             let paths = config::Config::deploy_repo_paths()?;
             if paths.is_empty() {
                 return Err(eyre!(
-                    "no deploy repos configured: add `deploy_repos = [\"~/path/to/checkout\", ...]` \
-                     to ~/.config/auto/config.toml"
+                    "no deploy repos configured. {}",
+                    config::DEPLOY_REPOS_HELP
                 ));
             }
             let repos = crate::here::deploy_repos(&paths, *fetch).await;

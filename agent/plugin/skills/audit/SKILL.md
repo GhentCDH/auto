@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Check whether auto (the organization's IT inventory) is complete and up to date for the application or service developed in the current repository, and propose the changes. Covers healthchecks and their Uptime Kuma sync, linked servers/infra, services such as databases, domains, tech stack, people and important notes. Use when the user asks to check, audit, sync or update auto for "this app", "this repo" or a named application or service, or after changes to how the app is deployed or reached (deploy files, domains, servers, dependencies, health endpoints).
+description: Check whether auto (the organization's IT inventory) is complete and up to date for the application or service developed in the current repository, and propose the changes. Covers healthchecks and their Uptime Kuma sync, linked servers/infra, services such as databases, domains, tech stack and people. Use when the user asks to check, audit, sync or update auto for "this app", "this repo" or a named application or service, or after changes to how the app is deployed or reached (deploy files, domains, servers, dependencies, health endpoints).
 ---
 
 # Audit an application or service in auto
@@ -42,8 +42,8 @@ Look only where it matters; do not read the whole repo.
 - Stack: `package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt`,
   `composer.json`, `go.mod`, `Gemfile`, `pom.xml`: the main language and
   framework.
-- Maintainers: `git shortlog -sne --since=1.year HEAD | head -5`, only as a
-  hint for the user.
+- People: only when the record has no people linked at all,
+  `git shortlog -sne --since=1.year HEAD | head -5` as a hint for the user.
 
 **Deploy repos** (Caddy proxy config, Nomad jobs)
 - Call `auto_deploy_repos` with `fetch: true`, and follow "How a site is
@@ -56,8 +56,9 @@ Look only where it matters; do not read the whole repo.
 - Nomad: the app folder's `<env>.vars.yaml` per environment (domains, image,
   ports) and `job.nomad.hcl.j2` (datacenter, constraints, services such as
   databases).
-- No deploy repos configured: say so in the report and offer to add the
-  user's checkouts as `deploy_repos = [...]` in `~/.config/auto/config.toml`.
+- `configured` is false: compare with auto from the app repo and the live
+  checks only, and follow the tool's `note` about offering the setup. Mark
+  rows that need the proxy or Nomad config as `check`.
 
 **Live checks**
 - `auto_status` (keep this record's healthcheck ids).
@@ -75,13 +76,22 @@ Look only where it matters; do not read the whole repo.
 | Services | `services` | a dependency (database, cache, search, storage) is not linked |
 | Healthchecks | `healthchecks` (`is_enabled`, `kuma_id`, `kuma_dirty`, `path`, `domain_fqdn`) | a public URL has no healthcheck; a health endpoint exists in the code but the check uses `/`; `kuma_id` is null or `kuma_dirty` is true (not synced to Kuma); `auto_status` shows down or unknown |
 | Stack | `stacks` | the main language or framework is not linked |
-| People | `people` (`contribution_type`) | no `maintainer` |
-| Notes | `notes` | important operational knowledge is missing (see below) |
+| People | `people` (`contribution_type`) | nobody is linked at all |
+| Notes | `notes` | almost never (see below) |
 
-Notes worth proposing: how to deploy or roll back, backups and restore,
-scheduled jobs, data migrations, external dependencies (APIs, SSO, mail),
-unusual ports or networking. Never put secrets in a note: refer to where they
-are stored.
+People: one person in any role (project_owner, maintainer, developer,
+stakeholder) is enough. A record with only project owners is complete. Do
+not propose a second role for someone who is already linked, and do not ask
+for a maintainer when someone else is linked.
+
+Notes are for details the user wants in auto that do not fit its data
+model. They are not a place to copy documentation from the repo. Anything a
+field or a link can hold (servers, domains, services, healthchecks, URLs,
+people) belongs there, not in a note. Propose a note only for a rare
+critical fact that has no other place in auto and is not obvious from the
+repo, for example a manual step that must happen on every deploy. At most
+one note per audit, and none is the normal result. Never put secrets in a
+note: refer to where they are stored.
 
 ## 4. Report, then fix with confirmation
 
@@ -90,7 +100,10 @@ tool call as evidence), and the proposed change. Mark each row `ok`,
 `missing`, `outdated` or `check` (not sure). Put problems first. Keep `ok`
 rows to one line.
 
-Then ask which changes to make. For each accepted change, call the tool with
+A viewer cannot make the changes (writes fail with `not allowed`): give the
+report only, so the user can pass it to someone who maintains the record.
+
+Otherwise, ask which changes to make. For each accepted change, call the tool with
 `dry_run: true` and show it, then call it for real. Use `auto_schema` when
 unsure about a field name.
 
@@ -100,11 +113,11 @@ unsure about a field name.
   gets it. Also sync a check whose `kuma_dirty` is true.
 - Link: `auto_link` from applications to `infra`, `services`, `domains`,
   `people`, `stacks`, `shares`; from services only to `infra`. People take
-  body `{contribution_type: maintainer}` (or developer, project_owner,
-  stakeholder).
+  body `{contribution_type}`: project_owner, maintainer, developer or
+  stakeholder. Ask the user which role; do not assume maintainer.
 - New domain: `auto_create`, entity `domains`, body
   `{fqdn, target_application_id}` (exactly one `target_*_id`), then link it.
-- Note: `auto_create`, entity `notes`, body
+- Note (rare, see above): `auto_create`, entity `notes`, body
   `{entity_type: application, entity_id, title, content, note_type: documentation}`.
 - Fields: `auto_update` with `{url, repository_url, ...}`.
 

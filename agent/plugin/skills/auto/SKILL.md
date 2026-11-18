@@ -20,7 +20,12 @@ When a tool fails, its error says what to do:
 - `not signed in` or `no server url configured`: ask the user to run
   `! auto login --url <server>` (it opens a browser) and then
   `! auto token create "claude" --save`.
-- `not allowed`: the user's role cannot do this.
+- `not allowed`: the user can only read (viewer). Say so, and stop
+  proposing changes to auto for the rest of the session.
+
+Many users only read: they ask where something runs or who to contact, and
+do not maintain infrastructure. Answer them plainly from auto, without
+setup steps they do not need.
 - `the server is too old`: the auto server needs an update; say so.
 
 ## Common questions
@@ -76,23 +81,33 @@ Entities: `applications`, `services`, `infra`, `domains`, `people`, `shares`,
 
 ## How a site is served (proxy, load balancer, Nomad)
 
-auto says which systems are involved; the deploy repos say how. Do not stop
-at auto: read the config, and answer with the concrete chain (domain, DNS,
-load balancer, upstream host and port, container or Nomad job), citing files.
+auto says which systems are involved; the deploy repos say how. When the
+user has checkouts of the deploy repos, read the config and answer with the
+concrete chain (domain, DNS, load balancer, upstream host and port, container
+or Nomad job), citing files. Without them, answer from auto alone (steps 1
+and 3) and say which repo holds the exact config.
 
 1. In auto: `auto_get` on the domain (its target and `ips`) or on the
    application (its `domains` and `infra`). The load balancer is a service
    in auto; its `repository_url` is its config repo.
-2. Local checkouts: `auto_deploy_repos` with `fetch: true`. It lists the
-   user's checkouts with what they hold (`caddy`, `nomad`) and whether they
-   are `behind` their remote.
+2. Local checkouts: `auto_deploy_repos` with `fetch: true`. It returns
+   `{configured, repos, note}`: the user's checkouts with what they hold
+   (`caddy`, `nomad`) and whether they are `behind` their remote. When
+   `configured` is false, follow the `note`: it says whether to offer the
+   setup (admins) or to answer from auto alone (everyone else).
    - Read the remote version, not a stale working tree, with Bash:
      `git -C <path> grep -n -e <fqdn> -e <name> origin/<branch>` and
      `git -C <path> show origin/<branch>:<file>`. Mention local changes
      (`dirty`) if they matter. Pull only when the user asks.
-   - No deploy repos configured: ask the user for the paths of their
-     checkouts of the Caddy config and Nomad jobs repos, and offer to add them
-     as `deploy_repos = [...]` in `~/.config/auto/config.toml`.
+   - When the note says to offer the setup: `deploy_repos` lists local git
+     checkouts of the Caddy proxy and load balancer config (`caddy-config`)
+     and the Nomad jobs
+     (`git@github.ugent.be:containers/nomad-jobs-ns-ghentcdh.git`). Ask for
+     the paths of their checkouts (or offer to clone them), and offer to add
+     them to `~/.config/auto/config.toml`:
+     `deploy_repos = ["~/path/to/caddy-config", "~/path/to/nomad-jobs-ns-ghentcdh"]`.
+     Someone without these checkouts can set `deploy_repos = []`, and is
+     then not asked again.
 3. Read the repo's `CLAUDE.md` or `README.md` first for its layout. Current
    layouts:
    - **Caddy** (`caddy`): one file per site, named by the reversed domain
@@ -145,6 +160,14 @@ changes, for example a new VM to create and link to the application, a
 changed URL, or `status: deprecated` for a service that was switched off.
 Wait for confirmation before you make them. For a full check of the
 application or service in the current repo, use the `auto:audit` skill.
+
+- Notes are for details the user wants in auto that do not fit its data
+  model. Use them sparingly: what a field or a link can hold goes there, and
+  repo documentation stays in the repo. Do not propose a note unless the user
+  asks or a critical fact has no other place.
+- People: one linked person in any role (project_owner, maintainer,
+  developer, stakeholder) is enough. Do not ask for a maintainer when someone
+  else is linked.
 
 ## Without the MCP tools
 

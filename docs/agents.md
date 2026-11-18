@@ -197,6 +197,14 @@ connects that repository to its record in auto:
   compose files, Dockerfiles, Caddyfile, CI workflows, Terraform, ...), it is
   reminded once per session to tell you which part of the record may need an
   update.
+
+The hooks follow your role in auto:
+
+| Role | Session start | Edit hook | `deploy_repos` hint |
+|---|---|---|---|
+| admin (or a server without auth) | record + keep it in sync | yes | yes |
+| editor | record + keep it in sync | no | no |
+| viewer | record, read-only: no change proposals | no | no |
 - **`auto:audit` skill** ("check if auto is up to date for this app"):
   compares the repo, the central deploy repos and the live systems with
   auto, area by area: fields, domains, infra, services, healthchecks and their
@@ -220,6 +228,11 @@ deploy_repos = [
 ]
 ```
 
+For admins without a `deploy_repos` key, the session start hook (in a repo
+that matches a record) has Claude explain it once per session and offer to
+add the paths. If you do not have these checkouts, set `deploy_repos = []`
+and you are not asked again. Without checkouts, Claude answers deploy and
+proxy questions from auto alone.
 `auto deploy-repos --fetch` shows what each one holds and whether it is
 behind its remote. Claude reads the remote version (`origin/<branch>`), so an
 old checkout does not give an old answer, and it never pulls unless you ask.

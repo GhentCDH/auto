@@ -19,7 +19,7 @@ use tokio::sync::OnceCell;
 
 use crate::api::{ApiClient, EntityKind};
 use crate::cli::PROBLEM_STATES;
-use crate::config::Config;
+use crate::config::{Config, DEPLOY_REPOS_HELP};
 use crate::here;
 use crate::ops::{Action, ListQuery, Ops};
 use crate::view::row_label;
@@ -43,7 +43,7 @@ Shortcuts:
   auto_deploy_repos (fetch=true) lists the user's checkouts of the Caddy and \
   Nomad config repos. If you can run commands, read the remote version \
   (git -C <path> grep -n <fqdn> origin/<branch>) and answer with the concrete \
-  chain, citing files.
+  chain, citing files. Without checkouts, answer from auto alone.
 
 Rules:
 - Read before you write. Find the entity with auto_search or auto_list, and \
@@ -53,7 +53,9 @@ Rules:
   Use dry_run=true to show the request without sending it.
 - Ids can be full ids, id prefixes, or exact names.
 - When the user has just changed infrastructure (deployed something, added a \
-  VM, changed DNS, decommissioned a service), offer to update auto to match.";
+  VM, changed DNS, decommissioned a service), offer to update auto to match.
+- A write that fails with \"not allowed\" means the user can only read: stop \
+  proposing changes to auto for the rest of the session.";
 
 pub async fn serve(client: ApiClient) -> Result<()> {
     let server = AutoMcp {
@@ -252,16 +254,31 @@ impl AutoMcp {
                 Ok(serde_json::to_value(found)?)
             }
             "auto_deploy_repos" => {
-                let paths = Config::deploy_repo_paths()?;
-                if paths.is_empty() {
-                    return Err(eyre!(
-                        "no deploy repos configured: ask the user for the paths of their \
-                         checkouts and add `deploy_repos = [\"~/path\", ...]` to \
-                         ~/.config/auto/config.toml"
-                    ));
-                }
-                let repos = here::deploy_repos(&paths, args.flag("fetch")).await;
-                Ok(serde_json::to_value(repos)?)
+                const FROM_AUTO: &str = "Answer from auto alone (the domain, its target \
+                    infra, the load balancer service) and say which repo holds the exact \
+                    config.";
+                let note = match Config::deploy_repo_setting()? {
+                    Some(paths) if !paths.is_empty() => {
+                        let repos = here::deploy_repos(&paths, args.flag("fetch")).await;
+                        return Ok(json!({ "configured": true, "repos": repos }));
+                    }
+                    Some(_) => format!(
+                        "The user set deploy_repos = [] (no checkouts). {FROM_AUTO} Do not \
+                         ask about deploy repos."
+                    ),
+                    None => match here::user_role(&ops.client).await {
+                        Some(here::Role::Admin) => format!(
+                            "Not set up yet. {DEPLOY_REPOS_HELP} Explain this to the user \
+                             once, ask for the paths of their checkouts, and offer to add \
+                             them. Until then: {FROM_AUTO}"
+                        ),
+                        _ => format!(
+                            "The user has no checkouts of the deploy repos. {FROM_AUTO} Do \
+                             not ask the user to set them up."
+                        ),
+                    },
+                };
+                Ok(json!({ "configured": false, "repos": [], "note": note }))
             }
             other => Err(eyre!("unknown tool `{other}`")),
         }
@@ -474,10 +491,11 @@ fn tools() -> Vec<Tool> {
         tool(
             "auto_deploy_repos",
             "The user's local checkouts of the central deploy repos (Caddy proxy \
-             config, Nomad jobs): path, what each holds (caddy, nomad, compose), \
-             branch, local changes and how far behind its remote it is. With \
-             fetch=true it runs `git fetch` first. Read the files from \
-             origin/<branch> with git, not from the working tree.",
+             config, Nomad jobs): {configured, repos, note}. Each repo has its path, \
+             what it holds (caddy, nomad, compose), branch, local changes and how far \
+             behind its remote it is. With fetch=true it runs `git fetch` first. Read \
+             the files from origin/<branch> with git, not from the working tree. When \
+             configured is false, follow the note.",
             json!({ "fetch": { "type": "boolean" } }),
             &[],
             ToolAnnotations::new().read_only(true).open_world(true),

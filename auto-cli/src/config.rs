@@ -6,6 +6,14 @@ use serde::Deserialize;
 /// Directory name under the OS config and data dirs.
 pub const APP_DIR: &str = "auto";
 
+/// What `deploy_repos` is for and how to set it, for users and agents.
+pub const DEPLOY_REPOS_HELP: &str = "`deploy_repos` in ~/.config/auto/config.toml lists \
+    local git checkouts of the central deploy config repos (the Caddy proxy and load \
+    balancer config, the Nomad jobs), so agents can read how apps are really proxied and \
+    deployed. Add: deploy_repos = [\"~/path/to/caddy-config\", \
+    \"~/path/to/nomad-jobs-ns-ghentcdh\"]. People without these checkouts can set \
+    deploy_repos = [] to stop being asked.";
+
 /// Connection settings for the auto backend.
 ///
 /// Resolution order (later overrides earlier):
@@ -26,8 +34,9 @@ pub struct Config {
     pub token: Option<String>,
     /// Local checkouts of central deployment repos (nomad jobs, proxy
     /// config, ...). `auto here` lists them so an audit can search them.
-    #[serde(default)]
-    pub deploy_repos: Vec<String>,
+    /// Absent: not set up yet. An explicit empty list: the user has none and
+    /// should not be asked.
+    pub deploy_repos: Option<Vec<String>>,
 }
 
 impl Config {
@@ -43,8 +52,15 @@ impl Config {
 
     /// `deploy_repos` from the config file alone (no server url needed).
     pub fn deploy_repo_paths() -> Result<Vec<PathBuf>> {
+        Ok(Self::deploy_repo_setting()?.unwrap_or_default())
+    }
+
+    /// Like [`Self::deploy_repo_paths`], but `None` when the key is absent.
+    pub fn deploy_repo_setting() -> Result<Option<Vec<PathBuf>>> {
         let config = Self::from_file()?.unwrap_or_default();
-        Ok(config.deploy_repos.iter().map(|p| expand_home(p)).collect())
+        Ok(config
+            .deploy_repos
+            .map(|paths| paths.iter().map(|p| expand_home(p)).collect()))
     }
 
     fn from_file() -> Result<Option<Self>> {
@@ -77,7 +93,12 @@ impl Config {
             token: self.token,
             username: self.username,
             password: self.password,
-            deploy_repos: self.deploy_repos.iter().map(|p| expand_home(p)).collect(),
+            deploy_repos: self
+                .deploy_repos
+                .iter()
+                .flatten()
+                .map(|p| expand_home(p))
+                .collect(),
         })
     }
 }
