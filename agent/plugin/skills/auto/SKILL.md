@@ -133,6 +133,13 @@ Never change auto without the user's explicit yes for that exact change.
    with `field = {name, type, required, default, enum}`. Do not guess names.
 3. Show the user the change: call the tool with `dry_run: true` and show the
    request.
+
+The user approves each write by reading its arguments, so use names, not
+ids: `id` and `other` take an exact name (fqdn for domains), and so do body
+fields that point at another entity (`target_service_id: "Caddy LB"`,
+`application_id: "Wiki"`, a note's `entity_id`). The tools resolve them to
+ids. Use an id only when a name matches several entities (the error lists
+them).
 4. After the user agrees, call it again without `dry_run`.
 
 | Change | Tool |

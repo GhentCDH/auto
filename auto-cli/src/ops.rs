@@ -3,7 +3,8 @@
 //! Every entity uses the same REST shape (`/api/{entity}`, `/{id}`,
 //! `/{id}/{relation}/{other}`), so one set of functions covers all of them.
 
-use color_eyre::eyre::{Result, eyre};
+use color_eyre::eyre::{Result, WrapErr, eyre};
+use futures::FutureExt;
 use reqwest::Method;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -266,6 +267,38 @@ impl Ops {
         Ok(self.resolve(kind, key).await?.0)
     }
 
+    /// Fields that point at another entity (`service_id`, `target_infra_id`,
+    /// `parent_id`, a note's `entity_id`) may hold an exact name or an id
+    /// prefix, so the person who approves the request can read it. Replace
+    /// those with full ids.
+    async fn resolve_refs(&self, kind: EntityKind, mut body: Value) -> Result<Value> {
+        let Some(fields) = body.as_object() else {
+            return Ok(body);
+        };
+        let refs: Vec<(String, EntityKind, String)> = fields
+            .iter()
+            .filter_map(|(field, value)| {
+                let key = value.as_str().filter(|key| !is_full_id(key))?;
+                Some((
+                    field.clone(),
+                    ref_kind(kind, field, fields)?,
+                    key.to_string(),
+                ))
+            })
+            .collect();
+        let ids = futures::future::try_join_all(refs.iter().map(|(field, target, key)| {
+            self.id(*target, key)
+                .map(move |id| id.wrap_err_with(|| format!("`{field}`")))
+        }))
+        .await?;
+        if let Some(fields) = body.as_object_mut() {
+            refs.into_iter().zip(ids).for_each(|((field, ..), id)| {
+                fields.insert(field, Value::String(id));
+            });
+        }
+        Ok(body)
+    }
+
     /// Current state of every healthcheck (from Uptime Kuma), worst first.
     /// `states` filters, e.g. `["down", "pending"]`.
     pub async fn status(&self, states: &[String]) -> Result<Value> {
@@ -322,16 +355,16 @@ impl Ops {
         })
     }
 
-    pub fn create(&self, kind: EntityKind, body: Value) -> Request {
-        Request {
+    pub async fn create(&self, kind: EntityKind, body: Value) -> Result<Request> {
+        Ok(Request {
             method: Method::POST,
             path: format!("/{}", kind.path()),
-            body: Some(body),
-        }
+            body: Some(self.resolve_refs(kind, body).await?),
+        })
     }
 
     pub async fn update(&self, kind: EntityKind, key: &str, body: Value) -> Result<Request> {
-        let id = self.id(kind, key).await?;
+        let (id, body) = tokio::try_join!(self.id(kind, key), self.resolve_refs(kind, body))?;
         Ok(Request {
             method: Method::PUT,
             path: format!("/{}/{id}", kind.path()),
@@ -451,8 +484,59 @@ impl Ops {
     }
 }
 
+/// A complete UUID, which needs no lookup.
+fn is_full_id(key: &str) -> bool {
+    key.len() == 36
+        && key.char_indices().all(|(i, c)| {
+            matches!(i, 8 | 13 | 18 | 23) == (c == '-') && (c == '-' || c.is_ascii_hexdigit())
+        })
+}
+
+/// The entity kind a reference field points at: `target_service_id` and
+/// `service_id` are services, `parent_id` is the same kind, and a note's
+/// `entity_id` follows its `entity_type`.
+fn ref_kind(
+    kind: EntityKind,
+    field: &str,
+    body: &serde_json::Map<String, Value>,
+) -> Option<EntityKind> {
+    match field.strip_suffix("_id")? {
+        "parent" => Some(kind),
+        "entity" => EntityKind::from_name(body.get("entity_type")?.as_str()?),
+        name => EntityKind::from_name(name.strip_prefix("target_").unwrap_or(name)),
+    }
+}
+
 pub fn is_status(error: &color_eyre::Report, status: u16) -> bool {
     error
         .downcast_ref::<ApiError>()
         .is_some_and(|e| e.status == status)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn full_ids() {
+        assert!(is_full_id("65e6cf93-cd47-4654-9480-f907e9fe7c5e"));
+        assert!(!is_full_id("65e6cf93"));
+        assert!(!is_full_id("Caddy LB"));
+        assert!(!is_full_id("65e6cf93-cd47-4654-9480-f907e9fe7c5"));
+        assert!(!is_full_id("65e6cf93cd47-4654-9480-f907e9fe7c5e-"));
+    }
+
+    #[test]
+    fn reference_fields() {
+        let note = json!({ "entity_type": "network_share", "entity_id": "x", "title": "t" });
+        let note = note.as_object().unwrap();
+        let kind = |field| ref_kind(EntityKind::Infra, field, note);
+        assert_eq!(kind("entity_id"), Some(EntityKind::Shares));
+        assert_eq!(kind("target_service_id"), Some(EntityKind::Services));
+        assert_eq!(kind("application_id"), Some(EntityKind::Applications));
+        assert_eq!(kind("domain_id"), Some(EntityKind::Domains));
+        assert_eq!(kind("parent_id"), Some(EntityKind::Infra));
+        assert_eq!(kind("kuma_id"), None);
+        assert_eq!(kind("title"), None);
+    }
 }

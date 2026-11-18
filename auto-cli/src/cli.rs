@@ -326,7 +326,7 @@ pub async fn run(command: Command, global: &Global) -> Result<()> {
             write,
         } => {
             let fields = ops.schema(entity).await?.create;
-            let request = ops.create(entity, body.build(&fields)?);
+            let request = ops.create(entity, body.build(&fields)?).await?;
             send(
                 &ops,
                 &request,

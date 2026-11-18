@@ -51,7 +51,10 @@ Rules:
 - Before any create, update, delete, link or unlink: call auto_schema for the \
   field names, show the user the exact change, and get their confirmation. \
   Use dry_run=true to show the request without sending it.
-- Ids can be full ids, id prefixes, or exact names.
+- Refer to entities by exact name (fqdn for domains), also in write bodies \
+  (target_service_id: \"Caddy LB\"): the user approves each write by reading \
+  its arguments, and names are readable where ids are not. The tools resolve \
+  names to ids. Use an id only when a name matches several entities.
 - When the user has just changed infrastructure (deployed something, added a \
   VM, changed DNS, decommissioned a service), offer to update auto to match.
 - A write that fails with \"not allowed\" means the user can only read: stop \
@@ -174,7 +177,7 @@ impl AutoMcp {
                 .await
                 .map(Value::String),
             "auto_create" => {
-                let request = ops.create(args.entity("entity")?, args.body()?);
+                let request = ops.create(args.entity("entity")?, args.body()?).await?;
                 ops.send(&request, dry_run).await
             }
             "auto_update" => {
@@ -344,7 +347,10 @@ fn summarize(row: &mut Value) {
 fn tools() -> Vec<Tool> {
     let entities: Vec<&str> = EntityKind::ALL.iter().map(|k| k.path()).collect();
     let entity = json!({ "type": "string", "enum": entities });
-    let id = json!({ "type": "string", "description": "Full id, id prefix, or exact name" });
+    let id = json!({
+        "type": "string",
+        "description": "Exact name (preferred, the user reads it when approving), id prefix, or full id"
+    });
     let dry_run =
         json!({ "type": "boolean", "description": "Return the request without sending it" });
     let read = || ToolAnnotations::new().read_only(true).open_world(false);
@@ -415,15 +421,18 @@ fn tools() -> Vec<Tool> {
         ),
         tool(
             "auto_create",
-            "Create an entity. Omitted fields get the server defaults. Confirm with the \
-             user first.",
+            "Create an entity. Omitted fields get the server defaults. Fields that point \
+             at another entity (*_id) take its exact name, which is resolved to its id. \
+             Confirm with the user first.",
             json!({ "entity": entity, "body": { "type": "object" }, "dry_run": dry_run }),
             &["entity", "body"],
             write(),
         ),
         tool(
             "auto_update",
-            "Update an entity. Only the fields in `body` change. Confirm with the user first.",
+            "Update an entity. Only the fields in `body` change. Fields that point at \
+             another entity (*_id) take its exact name, which is resolved to its id. \
+             Confirm with the user first.",
             json!({ "entity": entity, "id": id, "body": { "type": "object" }, "dry_run": dry_run }),
             &["entity", "id", "body"],
             write().idempotent(true),

@@ -112,7 +112,9 @@ impl EntityKind {
                 "server" | "servers" | "vm" | "vms" => Some(EntityKind::Infra),
                 "domain" | "dns" => Some(EntityKind::Domains),
                 "person" => Some(EntityKind::People),
-                "share" | "network_shares" | "network-shares" => Some(EntityKind::Shares),
+                "share" | "network_share" | "network_shares" | "network-shares" => {
+                    Some(EntityKind::Shares)
+                }
                 "stack" | "tech" => Some(EntityKind::Stacks),
                 "healthcheck" | "hc" => Some(EntityKind::Healthchecks),
                 "note" => Some(EntityKind::Notes),
