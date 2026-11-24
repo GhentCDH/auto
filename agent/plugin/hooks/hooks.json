@@ -1,12 +1,12 @@
 {
-  "description": "Make Claude aware of the auto record of the current repo, and remind it to suggest auto updates after deploy-related edits. Silent when `auto` is not installed, the directory is not a git repo, or the repo is not in auto.",
+  "description": "Make Claude aware of the auto record of the current repo, and remind it to suggest auto updates after deploy-related edits. At session start without `auto` installed or connected, Claude is told to offer the auto:setup skill when the user needs auto. Otherwise silent when the directory is not a git repo or the repo is not in auto.",
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "command -v auto >/dev/null 2>&1 && auto hook session-start 2>/dev/null || true",
+            "command": "if command -v auto >/dev/null 2>&1; then auto hook session-start 2>/dev/null; else printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"The auto CLI is not installed, so the auto MCP tools are not available. Only when the user asks about the infrastructure of the organization (servers, apps, domains, who maintains what) or about auto: say this in one sentence and offer the auto:setup skill. Otherwise do not mention it.\"}}'; fi; true",
             "timeout": 10
           }
         ]

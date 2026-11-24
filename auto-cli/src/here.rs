@@ -22,6 +22,13 @@ use crate::view::row_label;
 const CACHE_TTL: Duration = Duration::from_secs(6 * 60 * 60);
 /// Hooks must never slow a session down noticeably.
 const HOOK_TIMEOUT: Duration = Duration::from_secs(4);
+/// Session context when `auto` has no server url. The plugin's hooks.json has
+/// the same text for when the binary is missing.
+const NOT_SET_UP: &str = "The auto CLI is installed but not connected to a server, so \
+    the auto MCP tools are not available. Only when the user asks about the \
+    organization's infrastructure (servers, apps, domains, who maintains what) or about \
+    auto: say this in one sentence and offer the auto:setup skill. Otherwise do not \
+    mention it.";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Repo {
@@ -314,7 +321,9 @@ struct HookInput {
 }
 
 /// Run a hook. Hooks never fail and never print errors: when anything is
-/// missing (no git repo, no server, no match), they stay silent.
+/// missing (no git repo, no server, no match), they stay silent. The one
+/// exception is a session start without a server url, which points Claude at
+/// the setup skill.
 pub async fn run_hook(event: &str, url: Option<&str>) {
     let mut stdin = String::new();
     let _ = std::io::stdin().read_to_string(&mut stdin);
@@ -336,6 +345,9 @@ pub async fn run_hook(event: &str, url: Option<&str>) {
 }
 
 async fn hook_context(event: &str, input: &HookInput, url: Option<&str>) -> Option<String> {
+    if event == "session-start" && Config::load(url).is_err() {
+        return Some(NOT_SET_UP.to_string());
+    }
     let cwd = input.cwd.clone().or_else(|| std::env::current_dir().ok())?;
     let repo = repo_at(&cwd)?;
     match event {

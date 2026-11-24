@@ -110,9 +110,12 @@ at runtime, and adds allowed values and defaults from `/api/config`. So:
 
 The agent plugin lives in `agent/plugin/` (marketplace in
 `.claude-plugin/marketplace.json`): the MCP server (`.mcp.json`, runs
-`auto mcp`), skills `auto` (which tool answers what) and `audit` (compare a
-repo's app/service with its record), and hooks that call the hidden
-`auto hook session-start|post-edit` (`auto-cli/src/here.rs`). Setup is
+`auto mcp`), skills `auto` (which tool answers what), `audit` (compare a
+repo's app/service with its record) and `setup` (install, sign in, token,
+deploy repos, done by Claude with the user), and hooks that call the hidden
+`auto hook session-start|post-edit` (`auto-cli/src/here.rs`). Without the
+binary or a server url, the session start hook points Claude at `setup`
+(the missing-binary text lives in `hooks/hooks.json`). Setup is
 documented in `docs/agents.md`. A test in `auto-cli/src/mcp.rs` fails when an
 MCP tool is missing from `skills/auto/SKILL.md`; a new tool that only reads
 also belongs in the managed-settings allow list in `docs/agents.md`.

@@ -104,6 +104,9 @@ It contains everything Claude Code needs:
   domains, proxies, ownership, uptime) and which tool answers what;
 - the `auto:audit` skill: checks the record of the application or service in
   the current repo (see section 4b);
+- the `auto:setup` skill: Claude checks what is missing (binary, sign-in,
+  token, MCP connection, deploy repos for admins) and does steps 1 and 2 with
+  the user, see "Setup with Claude" below;
 - two hooks that make Claude suggest auto updates by itself (section 4b).
 
 Claude asks before any write. You do not add the MCP server yourself: if you
@@ -178,9 +181,30 @@ change reaches users after it is pushed to `main`, without a version bump.
 
 Every user still needs the `auto` binary and a login with a saved token
 (steps 1 and 2): the plugin starts `auto mcp`, and the hooks call `auto`.
-Without the binary, `/mcp` shows the `auto` server as failed, and the skill
-tells Claude to ask the user to install it. When a tool fails because the
-user is not signed in, the skill has Claude ask for that too.
+Without the binary, `/mcp` shows the `auto` server as failed.
+
+### Setup with Claude
+
+Users do not have to follow steps 1 and 2 by hand. Ask Claude "set up auto",
+or just ask a question about the infrastructure: on a machine where `auto`
+is missing or not connected to a server, the session start hook tells
+Claude so, and Claude offers the `auto:setup` skill. A tool error such as
+`not signed in` leads there too. The skill:
+
+1. checks the state with `auto --version`, `auto whoami` and the keys in the
+   config file (it never prints the file, which holds the token);
+2. installs the binary with the install script, after asking;
+3. asks the user to run `! auto login --url https://auto.ghentcdh.be`
+   (the browser login is the one step Claude cannot do), then creates and
+   saves a token with its output discarded, so the secret stays out of the
+   conversation;
+4. has the user reconnect the MCP server (`/mcp`) and tests it;
+5. for admins, sets up `deploy_repos` (see section 4b): asks for the
+   checkout paths or offers to clone them;
+6. offers to allow the read-only tools without prompts, when managed
+   settings do not already do that.
+
+Claude asks before it installs, clones or changes a file.
 
 ## 4b. Keeping an app's record up to date
 

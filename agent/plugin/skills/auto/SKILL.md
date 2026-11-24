@@ -13,20 +13,18 @@ look for other documentation.
 
 When a tool fails, its error says what to do:
 
-- The `auto_*` tools are missing, or the server failed to start: the user
-  must install the `auto` binary:
-  `curl -fsSL https://raw.githubusercontent.com/GhentCDH/auto/main/scripts/install.sh | sh`,
-  then restart Claude Code.
-- `not signed in` or `no server url configured`: ask the user to run
-  `! auto login --url <server>` (it opens a browser) and then
-  `! auto token create "claude" --save`.
+- The `auto_*` tools are missing, the server failed to start, or a tool says
+  `not signed in`, `the configured API token was rejected` or
+  `no server url configured`: auto is not set up on this machine. Use the
+  `auto:setup` skill: it checks what is missing and does the setup with the
+  user.
 - `not allowed`: the user can only read (viewer). Say so, and stop
   proposing changes to auto for the rest of the session.
+- `the server is too old`: the auto server needs an update; say so.
 
 Many users only read: they ask where something runs or who to contact, and
 do not maintain infrastructure. Answer them plainly from auto, without
 setup steps they do not need.
-- `the server is too old`: the auto server needs an update; say so.
 
 ## Common questions
 
