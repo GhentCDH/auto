@@ -1,7 +1,7 @@
 /*!
-* Generate a markdown overview of applications and services,
-* with zero-width Unicode markers for idempotent Outline sync.
-*/
+ * Generate a markdown overview of applications and services,
+ * with zero-width Unicode markers for idempotent Outline sync.
+ */
 
 use crate::AppState;
 use crate::models::{ApplicationWithRelations, ServiceWithRelations};
